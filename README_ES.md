@@ -246,7 +246,7 @@ columnas.
 | Suicidio | 自殺手 | Ilegal, salvo que la jugada capture primero |
 | Ko | コウ | Es ilegal recrear la posición inmediatamente anterior |
 | Pase | パス | Siempre legal |
-| Fin de partida | 終局 | Dos pases consecutivos |
+| Fin de partida | 終局 | Dos pases consecutivos — nunca lo decide el programa |
 | Abandono | 投了 | `q` durante la partida |
 | Komi | コミ | Configurable; compensación sumada a blancas |
 | Empate | 持碁 | Solo posible con komi entero |
@@ -255,6 +255,23 @@ columnas.
 El superko posicional (prohibir *cualquier* posición repetida del tablero
 completo, no solo la anterior) está disponible como opción — cuesta mantener un
 historial de posiciones, así que viene desactivado.
+
+### Saber cuándo parar
+
+El go no tiene final automático. La partida termina cuando **ambos jugadores
+pasan**, porque solo los jugadores pueden juzgar que no queda nada que valga la
+pena jugar — y un principiante todavía no sabe hacer ese juicio. Así que el
+programa no lo decide, pero sí avisa cuando quien tiene el turno no dispone de
+ninguna jugada que no sea ilegal o rellenar un ojo propio:
+
+```
+ no queda nada útil — pulsa p para pasar
+```
+
+Eso es `核/思考.zy` leyendo la posición: `眼()` decide si un punto vacío es un
+ojo de un color y `有用手()` lista las jugadas legales que no lo son. Esas dos
+funciones son la base sobre la que se construirá la IA — un motor que rellena
+sus propios ojos no es un rival, es una máquina de suicidarse.
 
 ---
 
@@ -432,9 +449,10 @@ real y no a un fixture de pruebas.
 | 4 | 核/計算: puntuación por área, komi, 持碁, mapa de propiedad | **hecho** |
 | 5 | 表示/描画 + 表示/主題: tablero, temas, cursor, panel, control con `>>?` | **hecho** |
 | 6 | 対局 + puntos de entrada: bucle de turnos, historial, 待った, los cuatro lanzadores | **hecho** — por turnos |
-| 7 | 核/思考: la IA y sus tres niveles | pendiente |
-| 8 | api/: capas de traducción de la API a nivel de identificadores | pendiente |
-| 9 | 棋譜 (exportación SGF), 置き碁 (handicap), superko posicional, benchmark TW contra VM | pendiente |
+| 7 | 核/思考: detección de ojos (眼) y jugadas útiles (有用手) | **hecho** |
+| 8 | 核/思考: la IA propiamente dicha y sus tres niveles | pendiente |
+| 9 | api/: capas de traducción de la API a nivel de identificadores | pendiente |
+| 10 | 棋譜 (exportación SGF), 置き碁 (handicap), superko posicional, benchmark TW contra VM | pendiente |
 
 Todo lo marcado como hecho está cubierto por `試験/全試験.sh`:
 

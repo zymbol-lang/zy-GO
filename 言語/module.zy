@@ -98,6 +98,7 @@
             "msg.occupied", "msg.suicide", "msg.ko",
             "msg.pass_you", "msg.pass_ai", "msg.undo",
             "msg.no_undo", "msg.thinking", "msg.resigned",
+            "msg.no_useful",
             "end.title", "end.stones", "end.territory", "end.komi",
             "end.total", "end.jigo", "end.result",
             "help.title", "help.move", "help.place", "help.pass",

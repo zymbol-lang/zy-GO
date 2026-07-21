@@ -243,7 +243,7 @@ one, which is exactly the class of glyph that breaks column arithmetic.
 | Suicide | 自殺手 | Illegal unless the move captures first |
 | Ko | コウ | A move that recreates the immediately previous position is illegal |
 | Pass | パス | Always legal |
-| End of game | 終局 | Two consecutive passes |
+| End of game | 終局 | Two consecutive passes — never decided by the program |
 | Resignation | 投了 | `q` during play |
 | Komi | コミ | Configurable; compensation added to White |
 | Draw | 持碁 | Possible only with an integer komi |
@@ -252,6 +252,23 @@ one, which is exactly the class of glyph that breaks column arithmetic.
 Positional superko (prohibiting *any* repeated whole-board position, not just
 the previous one) is available as an option — it costs a position history, so
 it is off by default.
+
+### Knowing when to stop
+
+Go has no automatic end. The game finishes when **both players pass**, because
+only the players can judge that nothing worth playing is left — and a beginner
+cannot yet make that judgement. So the program does not decide it, but it does
+say when the side to move has no move that is neither illegal nor a self-filled
+eye:
+
+```
+ nothing useful left — press p to pass
+```
+
+That is `核/思考.zy` reading the position: `眼()` decides whether an empty point
+is an eye of a colour, `有用手()` lists the legal moves that are not one. The
+same two functions are what the AI will be built on — an engine that fills its
+own eyes is not an opponent, it is a suicide machine.
 
 ---
 
@@ -421,9 +438,10 @@ fixture.
 | 4 | 核/計算: area scoring, komi, 持碁, ownership map | **done** |
 | 5 | 表示/描画 + 表示/主題: board, themes, cursor, panel, `>>?` gating | **done** |
 | 6 | 対局 + entry points: turn loop, history, 待った, the four launchers | **done** — hot-seat |
-| 7 | 核/思考: the AI and its three levels | pending |
-| 8 | api/: identifier-level API translation layers | pending |
-| 9 | 棋譜 (SGF export), 置き碁 (handicap), positional superko, TW vs VM benchmark | pending |
+| 7 | 核/思考: eye detection (眼) and useful-move enumeration (有用手) | **done** |
+| 8 | 核/思考: the AI itself and its three levels | pending |
+| 9 | api/: identifier-level API translation layers | pending |
+| 10 | 棋譜 (SGF export), 置き碁 (handicap), positional superko, TW vs VM benchmark | pending |
 
 Everything marked done is covered by `試験/全試験.sh`:
 

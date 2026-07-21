@@ -49,6 +49,7 @@
             "msg.undo"         => "悔棋"
             "msg.no_undo"      => "无法再悔棋"
             "msg.thinking"     => "思考中…"
+            "msg.no_useful"     => "无处可下 — 请虚手"
             "msg.resigned"     => "认输"
 
             "end.title"        => "终局"

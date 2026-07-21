@@ -49,6 +49,7 @@
             "msg.undo"         => "무름"
             "msg.no_undo"      => "더 이상 무를 수 없습니다"
             "msg.thinking"     => "생각 중…"
+            "msg.no_useful"     => "둘 만한 곳이 없습니다 — 패스를"
             "msg.resigned"     => "기권"
 
             "end.title"        => "종국"

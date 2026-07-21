@@ -50,6 +50,7 @@
             "msg.undo"         => "deshacer"
             "msg.no_undo"      => "no queda nada por deshacer"
             "msg.thinking"     => "pensando…"
+            "msg.no_useful"     => "no queda nada útil — pulsa p para pasar"
             "msg.resigned"     => "abandono"
 
             "end.title"        => "Fin de la partida"

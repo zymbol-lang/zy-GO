@@ -1,0 +1,161 @@
+// ============================================================
+// 試験/思考試験.zy — eye detection and useful moves
+//
+// Eye detection is the rule that separates a Go engine from a
+// random move generator: a group with two eyes cannot be captured,
+// so filling your own eye is never right. Every AI layer will rest
+// on these two functions, and so does the player-facing hint.
+//
+//   zymbol run 試験/思考試験.zy
+// ============================================================
+
+<# ../核/盤 => 盤
+<# ../核/思考 => 思
+<# ./図 => 図
+
+確認(名, 実際, 期待, 失敗<~) {
+    ? 実際 == 期待 {
+        >> "  ok    " 名 ¶
+    } _ {
+        >> "  FAIL  " 名 "   expected " 期待 ", got " 実際 ¶
+        失敗 = 失敗 + 1
+    }
+}
+
+失敗 = 0
+>> "囲碁 — position reading tests" ¶
+>> "" ¶
+
+// ------------------------------------------------------------
+>> "eyes — 眼" ¶
+
+// Corner eye at A1: both orthogonals are black and the single
+// on-board diagonal is black too.
+局面 = 図::読図([
+    ".X...",
+    "XX...",
+    ".....",
+    ".....",
+    "....."
+])
+確認("corner eye", 思::眼(局面, 5, 1, 1), #1, 失敗)
+確認("not an eye for the other colour", 思::眼(局面, 5, 1, 2), #0, 失敗)
+
+// Same corner, but the diagonal B2 belongs to White: on an edge
+// every on-board diagonal must be ours, so this is a false eye.
+局面 = 図::読図([
+    ".X...",
+    "XO...",
+    ".....",
+    ".....",
+    "....."
+])
+確認("corner with an enemy diagonal is not an eye", 思::眼(局面, 5, 1, 1), #0, 失敗)
+
+// Centre eye at C3: four orthogonals black, four diagonals black.
+局面 = 図::読図([
+    ".....",
+    ".XXX.",
+    ".X.X.",
+    ".XXX.",
+    "....."
+])
+確認("centre eye", 思::眼(局面, 5, 13, 1), #1, 失敗)
+
+// One enemy diagonal in the centre is survivable — still an eye.
+局面 = 図::読図([
+    ".....",
+    ".XXX.",
+    ".X.X.",
+    ".XXO.",
+    "....."
+])
+確認("centre eye survives one enemy diagonal", 思::眼(局面, 5, 13, 1), #1, 失敗)
+
+// Two enemy diagonals is a false eye.
+局面 = 図::読図([
+    ".....",
+    ".OXX.",
+    ".X.X.",
+    ".XXO.",
+    "....."
+])
+確認("two enemy diagonals — false eye", 思::眼(局面, 5, 13, 1), #0, 失敗)
+
+// An orthogonal gap is never an eye, whatever the diagonals do.
+局面 = 図::読図([
+    ".....",
+    ".XXX.",
+    ".X..X",
+    ".XXX.",
+    "....."
+])
+確認("an open side is not an eye", 思::眼(局面, 5, 13, 1), #0, 失敗)
+
+局面 = 図::読図([
+    ".....",
+    ".XXX.",
+    ".XXX.",
+    ".XXX.",
+    "....."
+])
+確認("an occupied point is not an eye", 思::眼(局面, 5, 13, 1), #0, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "useful moves — 有用手" ¶
+
+空盤 = 盤::新規(5)
+確認("every point is useful on an empty board", (思::有用手(空盤, 5, 1, 0))$#, 25, 失敗)
+確認("an empty board is not a dead end", 思::手詰まり(空盤, 5, 1, 0), #0, 失敗)
+
+// Black owns the board with two eyes at A1 and C1. Those two
+// points are legal for Black and must still be excluded: filling
+// them would turn a living group into a capturable one.
+局面 = 図::読図([
+    ".X.XX",
+    "XXXXX",
+    "XXXXX",
+    "XXXXX",
+    "XXXXX"
+])
+有 = 思::有用手(局面, 5, 1, 0)
+確認("black will not fill its own eyes", 有$#, 0, 失敗)
+確認("black has nothing left to play", 思::手詰まり(局面, 5, 1, 0), #1, 失敗)
+確認("white cannot play there either — suicide", 思::手詰まり(局面, 5, 2, 0), #1, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "a real game — 129 moves, White to move" ¶
+
+// The position a player actually reached. White's 13-stone group
+// has a single eye at G5 and one liberty: playing it is suicide,
+// and there is no other legal move anywhere on the board. This is
+// what the hint exists for — White cannot see it, and the rules
+// will not end the game on their own.
+局面 = 図::読図([
+    ".XXXXXX.X",
+    "XXXXXOOX.",
+    ".X.XOOOXX",
+    "XXXXXOOOO",
+    ".X.XXO.OX",
+    "XXXXXXOOX",
+    ".X.XXXXXX",
+    "XXOX.X.XX",
+    ".XXXXXXXX"
+])
+群 = 盤::連(局面, 9, 42)
+確認("white group is 13 stones", 群$#, 13, 失敗)
+確認("with exactly one liberty", 盤::群ダメ数(局面, 9, 群), 1, 失敗)
+確認("G5 is White's only eye", 思::眼(局面, 9, 43, 2), #1, 失敗)
+確認("White has no useful move", (思::有用手(局面, 9, 2, 0))$#, 0, 失敗)
+確認("White is at a dead end", 思::手詰まり(局面, 9, 2, 0), #1, 失敗)
+確認("Black still has moves", (思::有用手(局面, 9, 1, 0))$#, 4, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+? 失敗 == 0 {
+    >> "PASS — the engine reads the position" ¶
+} _ {
+    >> "FAIL — " 失敗 " case(s) failed" ¶
+}

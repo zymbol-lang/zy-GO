@@ -7,7 +7,7 @@ set -u
 cd "$(dirname "$0")/.."
 
 fallo=0
-for suite in 試験/文字試験.zy 試験/言語検証.zy 試験/盤試験.zy 試験/計算試験.zy 試験/描画試験.zy; do
+for suite in 試験/文字試験.zy 試験/言語検証.zy 試験/盤試験.zy 試験/計算試験.zy 試験/思考試験.zy 試験/描画試験.zy; do
     echo "─── $suite"
     salida=$(zymbol run "$suite" 2>&1)
     echo "$salida" | tail -1

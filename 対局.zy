@@ -26,6 +26,7 @@
     <# ./核/盤 => 盤
     <# ./核/規則 => 規則
     <# ./核/計算 => 計算
+    <# ./核/思考 => 思
     <# ./表示/主題 => 主
     <# ./表示/描画 => 描
     <# ./表示/文字 => 文
@@ -346,7 +347,17 @@
         } _ {
             描::下面描画(局面, 設定, 状況, 下行, 左)
         }
-        描::状態描画(伝言, 状行, 左, 路)
+
+        // Go has no automatic end: the players decide by passing.
+        // The program will not decide it for them — but it can say
+        // when the side to move has no move left that is not either
+        // illegal or a self-filled eye, which is precisely the
+        // moment a beginner does not recognise.
+        文 = 伝言
+        ? 思::手詰まり(局面, 路, 状況[1], 状況[6]) {
+            文 = 言::語("msg.no_useful")
+        }
+        描::状態描画(文, 状行, 左, 路)
     }
 
     // 中押 #1 means the game ended by resignation and 勝 is the

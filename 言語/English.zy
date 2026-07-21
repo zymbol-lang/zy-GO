@@ -49,6 +49,7 @@
             "msg.undo"         => "undo"
             "msg.no_undo"      => "nothing left to undo"
             "msg.thinking"     => "thinking…"
+            "msg.no_useful"     => "nothing useful left — press p to pass"
             "msg.resigned"     => "resigned"
 
             "end.title"        => "Game over"

@@ -1,0 +1,102 @@
+// ============================================================
+// 核/思考.zy — reading the position
+//
+// This module will grow into the AI. It starts with the two
+// functions everything else depends on:
+//
+//   眼()     is this empty point an eye of 色?
+//   有用手() the legal moves that are not self-destructive
+//
+// Eye detection is the rule that separates a Go engine from a
+// random move generator. A group with two eyes cannot be captured,
+// so filling your own eye is never right — it turns a living group
+// into a dead one. Every layer of the AI is built on top of this,
+// and the player-facing hint "nothing useful left to play" falls
+// out of it for free.
+// ============================================================
+
+# .核_思考 {
+
+    <# ./盤 => 盤
+    <# ./規則 => 規則
+
+    #> {
+        眼
+        有用手
+        手詰まり
+    }
+
+    // Diagonal neighbours that are on the board.
+    _斜(路, 点) {
+        行 = 盤::行番(路, 点)
+        列 = 盤::列番(路, 点)
+        出 = []
+        ? 行 > 1 {
+            ? 列 > 1 { 出 = 出 $+ 盤::位置(路, 行 - 1, 列 - 1) }
+            ? 列 < 路 { 出 = 出 $+ 盤::位置(路, 行 - 1, 列 + 1) }
+        }
+        ? 行 < 路 {
+            ? 列 > 1 { 出 = 出 $+ 盤::位置(路, 行 + 1, 列 - 1) }
+            ? 列 < 路 { 出 = 出 $+ 盤::位置(路, 行 + 1, 列 + 1) }
+        }
+        <~ 出
+    }
+
+    // Is 点 an eye belonging to 色?
+    //
+    // The standard approximation: every orthogonal neighbour must
+    // be 色, and the diagonals must be mostly 色 — all of them on
+    // an edge or in a corner, three of four in the middle. One
+    // enemy diagonal in the middle is survivable; on the edge it
+    // is not, because there is no room to answer.
+    //
+    // This can misjudge a false eye, and that is a known and
+    // accepted limit: it costs the AI a move, never a rule.
+    眼(局面, 路, 点, 色) {
+        ? 局面[点] <> 0 { <~ #0 }
+
+        @ q : 盤::隣(路, 点) {
+            ? 局面[q] <> 色 { <~ #0 }
+        }
+
+        斜 = _斜(路, 点)
+        総 = 斜$#
+        味方 = 0
+        @ d : 斜 {
+            ? 局面[d] == 色 { 味方 = 味方 + 1 }
+        }
+
+        // Fewer than four diagonals means the point is on an edge
+        // or in a corner: off-board counts as friendly, so every
+        // on-board diagonal has to be ours.
+        ? 総 < 4 {
+            ? 味方 == 総 { <~ #1 }
+            <~ #0
+        }
+        ? 味方 >= 3 { <~ #1 }
+        <~ #0
+    }
+
+    // Legal moves that are not an eye of the player to move.
+    // A move that fills your own eye is legal by the rules and
+    // wrong by every other measure, so no caller wants it.
+    有用手(局面, 路, 色, コウ点) {
+        出 = []
+        総 = 路 * 路
+        @ p:1..総 {
+            ? 局面[p] == 0 {
+                ? 眼(局面, 路, p, 色) == #0 {
+                    ? 規則::判定(局面, 路, p, 色, コウ点) == 0 { 出 = 出 $+ p }
+                }
+            }
+        }
+        <~ 出
+    }
+
+    // #1 when the player to move has nothing left worth playing.
+    // Go has no automatic end — the players decide by passing —
+    // so this is advice, never a decision the program makes.
+    手詰まり(局面, 路, 色, コウ点) {
+        <~ (有用手(局面, 路, 色, コウ点))$# == 0
+    }
+}
