@@ -27,8 +27,7 @@
         理由鍵
     }
 
-    // Positive codes: a module constant must be a bare literal,
-    // so `:= -1` is rejected as an expression (E013).
+    // Positive codes, matching 盤.zy's 着手().
     可       := 0
     禁_占有  := 1
     禁_自殺  := 2

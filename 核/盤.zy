@@ -43,9 +43,11 @@
     黒 := 1
     白 := 2
 
-    // 着手() status codes. Codes are positive because a module
-    // constant must be a bare literal — `:= -1` is a unary-minus
-    // expression and is rejected with E013.
+    // 着手() status codes. They stay positive: the API reads better
+    // with a status return and the ko point as an output parameter
+    // than with both multiplexed into one value. (Negative module
+    // constants were also impossible when this was written — that
+    // was HLZ-001, now fixed.)
     // Ko is not here: it is a rule about history, not about the
     // board, so 核/規則.zy owns it.
     可       := 0
@@ -65,15 +67,16 @@
         <~ 写
     }
 
-    // Every computed index goes through 位置(). The ##! truncation
-    // is not arithmetic — it is a type assertion: the semantic
-    // analyzer infers Float for any arithmetic on untyped
-    // parameters, and rejects a Float array index. Casting at the
-    // one place that computes indices keeps that workaround from
-    // spreading through the engine.
-    位置(路, 行, 列) { <~ ##!((行 - 1) * 路 + 列) }
-    行番(路, 点) { <~ ##!((点 - 1) / 路 + 1) }
-    列番(路, 点) { <~ ##!(点 - ((点 - 1) / 路) * 路) }
+    // Every computed index goes through 位置(). The ##! casts that
+    // used to be here were a workaround for HLZ-002 — the analyzer
+    // inferred Float for arithmetic on untyped parameters and then
+    // rejected the result as an array index. Fixed in the
+    // interpreter (ZymbolType::Number), so the arithmetic stands on
+    // its own; routing indices through one function is kept because
+    // it is the right shape, not because it is required.
+    位置(路, 行, 列) { <~ (行 - 1) * 路 + 列 }
+    行番(路, 点) { <~ (点 - 1) / 路 + 1 }
+    列番(路, 点) { <~ 点 - ((点 - 1) / 路) * 路 }
 
     取得(局面, 路, 行, 列) { <~ 局面[位置(路, 行, 列)] }
 

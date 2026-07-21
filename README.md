@@ -422,9 +422,11 @@ fixture.
 3. **Simple ko only by default.** Positional superko is opt-in.
 4. **Emoji width depends on your terminal and font.** If stones straddle their
    cells, switch to the 字 theme with `t`.
-5. **Tree-walker only for now.** `--vm` module support is partial; VM parity is
-   a roadmap item, and the AI turn time under both engines is one of the
-   benchmarks this project is meant to produce.
+5. **Both engines now.** The project shipped tree-walker only because `--vm`
+   silently dropped output parameters of module functions (HLZ-008) and could
+   not slice a String inside one (HLZ-009). Both are fixed in the interpreter,
+   and all six suites — plus the game itself — now run identically under
+   `zymbol run` and `zymbol run --vm`.
 
 ---
 
@@ -506,6 +508,10 @@ Serpiente and Hov veS.
 | HLZ-004 | Bug (LSP) | The documented dot convention for subfolder modules is flagged E001 by the language server, though the interpreter runs it | Open |
 | HLZ-005 | Gap | `<# ./../x` does not parse; `<# ../x` is required, and the error does not say so | Documented |
 | IDEA-001 | Idea | No primitive measures display width; `0d\|c\|` string-parsing is the only Char→Int route | Proposed |
+
+**Seven of the nine are now fixed in the interpreter**, each with a regression
+test, and the parity suite runs them in both engines so they cannot diverge
+again unnoticed. See the interpreter CHANGELOG for v0.0.8.
 
 HLZ-003 is the sharp one: both values print identically, so a failing assertion
 reads `expected 0, got 0`. Go scores are half-integers because of komi, which

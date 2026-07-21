@@ -4,16 +4,24 @@ Bugs, carencias e ideas encontrados al construir 囲碁 sobre Zymbol **v0.0.8**.
 Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 [Hov veS](../klingon_galaxy/hallazgos_es.md).
 
+> **Estado (2026-07-21): siete de los nueve hallazgos están corregidos en el
+> intérprete**, en la rama `v0.0.8`, cada uno con su prueba de regresión.
+> Puertas tras los arreglos: 857 pruebas unitarias (antes 847), 526/526 de
+> paridad tree-walker/VM (antes 519), formateador sin regresiones. Con
+> HLZ-008 y HLZ-009 cerrados, **las seis suites de 囲碁 pasan también bajo
+> `--vm`**, y el juego entero se ejecuta idéntico en ambos motores.
+
 | ID | Tipo | Descripción | Estado |
 |----|------|-------------|--------|
-| [HLZ-001](#hlz-001--las-constantes-de-módulo-no-admiten-valores-negativos) | Gap | `CONST := -1` en un módulo es E013 | Rediseño de API |
-| [HLZ-002](#hlz-002--el-analizador-infiere-float-en-aritmética-sobre-parámetros) | Bug | Índice de array calculado a partir de parámetros → «must be Int, got Float» | Workaround `##!` |
-| [HLZ-003](#hlz-003--la-igualdad-es-estricta-con-tipos-pero-el-orden-no) | Bug | `##.0 == 0` es `#0` mientras `>= 0` y `<= 0` son ambos `#1` | Abierto |
-| [HLZ-004](#hlz-004--check-y-el-lsp-rechazan-la-convención-de-punto-de-subcarpetas) | Bug | `# .核_盤` en `核/盤.zy` se ejecuta bien pero `zymbol check` y el LSP lo marcan E001 | Abierto |
-| [HLZ-005](#hlz-005--ruta-de-import-relativa-al-padre) | Gap menor | `<# ./../x` no parsea; hay que escribir `<# ../x` | Documentar |
-| [HLZ-006](#hlz-006--guidemd-documenta-mal-el-mapeo-de-las-flechas) | Bug (doc) | GUIDE.md §3b dice que las flechas son `'U' 'D' 'L' 'R'`; en realidad son `'↑' '↓' '←' '→'` | Abierto |
-| [HLZ-007](#hlz-007--la-interpolación-solo-admite-identificadores) | Gap | `"{t.campo}"` y `"{arr[i]}"` no interpolan | Documentado |
-| [HLZ-008](#hlz-008--la-vm-ignora-los-parámetros-de-salida-de-un-módulo) | **Bug grave** | En `--vm`, un `<~` de función de módulo no se escribe de vuelta: resultados silenciosamente incorrectos | Abierto |
+| [HLZ-001](#hlz-001--las-constantes-de-módulo-no-admiten-valores-negativos) | Gap | `CONST := -1` en un módulo es E013 | **Corregido** |
+| [HLZ-002](#hlz-002--el-analizador-infiere-float-en-aritmética-sobre-parámetros) | Bug | Índice de array calculado a partir de parámetros → «must be Int, got Float» | **Corregido** |
+| [HLZ-003](#hlz-003--la-igualdad-es-estricta-con-tipos-pero-el-orden-no) | Bug | `##.0 == 0` es `#0` mientras `>= 0` y `<= 0` son ambos `#1` | **Corregido** |
+| [HLZ-004](#hlz-004--check-y-el-lsp-rechazan-la-convención-de-punto-de-subcarpetas) | Bug | `# .核_盤` en `核/盤.zy` se ejecuta bien pero `zymbol check` y el LSP lo marcan E001 | **Corregido** |
+| [HLZ-005](#hlz-005--ruta-de-import-relativa-al-padre) | Gap menor | `<# ./../x` no parsea; hay que escribir `<# ../x` | **Corregido** (el diagnóstico) |
+| [HLZ-006](#hlz-006--guidemd-documenta-mal-el-mapeo-de-las-flechas) | Bug (doc) | GUIDE.md §3b dice que las flechas son `'U' 'D' 'L' 'R'`; en realidad son `'↑' '↓' '←' '→'` | **Corregido** |
+| [HLZ-007](#hlz-007--la-interpolación-solo-admite-identificadores) | Gap | `"{t.campo}"` y `"{arr[i]}"` no interpolan | Pendiente de decidir |
+| [HLZ-008](#hlz-008--la-vm-ignora-los-parámetros-de-salida-de-un-módulo) | **Bug grave** | En `--vm`, un `<~` de función de módulo no se escribe de vuelta: resultados silenciosamente incorrectos | **Corregido** |
+| [HLZ-009](#hlz-009--la-vm-no-puede-cortar-un-string-dentro-de-un-módulo) | Bug | En `--vm`, `s$[3..]` dentro de una función de módulo da «expected Array, Tuple, or NamedTuple» | **Corregido** |
 | [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | Propuesta |
 | [IDEA-002](#idea-002--el-coste-numérico-decide-la-arquitectura-de-la-ia) | Medición | Números que descartan MCTS y redes neuronales en Zymbol actual | Aplicada |
 
@@ -280,6 +288,38 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 - **Relación con MM-10/MM-11:** el v0.0.8 cerró dos bugs de paridad de la VM en
   esta misma zona (mutaciones que cruzan fronteras de módulo). Este parece el
   mismo territorio, aún abierto para `<~`.
+
+---
+
+## HLZ-009 · La VM no puede cortar un String dentro de un módulo
+
+- **Descripción:** Un slice abierto sobre un String dentro de una función de
+  módulo revienta en `--vm`:
+
+  ```zymbol
+  # .w_m {
+      #> { cola }
+      cola(s) { <~ s$[3..] }
+  }
+  ```
+
+  ```
+  zymbol run t.zy        → 0065
+  zymbol run --vm t.zy   → Runtime error: type error:
+                           expected Array, Tuple, or NamedTuple, got String
+  ```
+
+- **Causa:** la instrucción `ArraySlice` de la VM cubría Array, Tuple y
+  NamedTuple pero no String. Solo se llegaba a ella cuando el sujeto era un
+  valor en ejecución en vez de un literal que el compilador pudiera plegar —
+  por eso el hueco aparecía dentro de funciones de módulo y en ningún otro
+  sitio.
+- **Dónde salió:** `表示/文字.zy`, en `符号点()`, que corta el prefijo `"0d"`
+  del literal de base invertido. Es la función de la que depende todo el cálculo
+  de anchos, así que se llevó por delante tres de las seis suites.
+- **Estado:** **corregido**. Regresión en
+  `interpreter/tests/modules_scope/out_param_module.zy`, ejecutada por la suite
+  de paridad en ambos motores.
 
 ---
 

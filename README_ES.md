@@ -433,9 +433,11 @@ real y no a un fixture de pruebas.
 3. **Solo ko simple por defecto.** El superko posicional es opcional.
 4. **El ancho de los emojis depende de tu terminal y tu fuente.** Si las piedras
    se salen de su celda, cambia al tema 字 con `t`.
-5. **Solo tree-walker por ahora.** El soporte de módulos en `--vm` es parcial; la
-   paridad con la VM es un punto de la hoja de ruta, y el tiempo de turno de la
-   IA en ambos motores es uno de los benchmarks que este proyecto debe producir.
+5. **Ya en ambos motores.** El proyecto salió solo con tree-walker porque
+   `--vm` descartaba en silencio los parámetros de salida de funciones de módulo
+   (HLZ-008) y no sabía cortar un String dentro de una (HLZ-009). Ambos están
+   corregidos en el intérprete, y las seis suites —y el juego mismo— corren
+   idénticas bajo `zymbol run` y `zymbol run --vm`.
 
 ---
 
