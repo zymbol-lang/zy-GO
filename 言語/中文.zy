@@ -1,0 +1,109 @@
+// ============================================================
+// 言語/中文.zy — Chinese locale (zh), simplified
+// Interface contract: 語 · 路盤名 · 結果文 · 取石文
+// ============================================================
+
+# .言語_中文 {
+
+    #> { 語, 路盤名, 結果文, 取石文 }
+
+    語(鍵) {
+        <~ ?? 鍵 {
+            "lang.name"        => "中文"
+
+            "menu.title"       => "围棋"
+            "menu.board"       => "棋盘"
+            "menu.level"       => "棋力"
+            "menu.side"        => "执子"
+            "menu.komi"        => "贴目"
+            "menu.theme"       => "主题"
+            "menu.lang"        => "语言"
+            "menu.hint"        => "↑↓ 选择   ←→ 修改   ↵ 开始"
+            "menu.unavailable" => "屏幕太窄"
+
+            "level.1"          => "初级"
+            "level.2"          => "中级"
+            "level.3"          => "高级"
+
+            "theme.stone"      => "棋子"
+            "theme.moon"       => "月亮"
+            "theme.ascii"      => "字符"
+
+            "color.black"      => "黑"
+            "color.white"      => "白"
+            "side.you"         => "你"
+            "side.ai"          => "AI"
+
+            "panel.turn"       => "轮到"
+            "panel.moves"      => "手数"
+            "panel.captures"   => "提子"
+            "panel.komi"       => "贴目"
+            "panel.last"       => "最后一手"
+            "panel.estimate"   => "形势判断"
+
+            "msg.occupied"     => "该点已有棋子"
+            "msg.suicide"      => "不可自杀"
+            "msg.ko"           => "因打劫禁着"
+            "msg.pass_you"     => "你虚手"
+            "msg.pass_ai"      => "AI 虚手"
+            "msg.undo"         => "悔棋"
+            "msg.no_undo"      => "无法再悔棋"
+            "msg.thinking"     => "思考中…"
+            "msg.resigned"     => "认输"
+
+            "end.title"        => "终局"
+            "end.stones"       => "子"
+            "end.territory"    => "目"
+            "end.komi"         => "贴目"
+            "end.total"        => "合计"
+            "end.jigo"         => "和棋"
+            "end.result"       => "结果"
+
+            "help.title"       => "操作说明"
+            "help.move"        => "移动光标"
+            "help.place"       => "落子"
+            "help.pass"        => "虚手"
+            "help.undo"        => "悔棋"
+            "help.estimate"    => "形势判断"
+            "help.theme"       => "切换主题"
+            "help.quit"        => "认输·退出"
+
+            "term.small"       => "终端太小"
+
+            _                  => 鍵
+        }
+    }
+
+    路盤名(路) {
+        <~ ?? 路 {
+            9  => "九路棋盘"
+            13 => "十三路棋盘"
+            19 => "十九路棋盘"
+            _  => "{路}路棋盘"
+        }
+    }
+
+    // 1.5 → "1目半" · 0.5 → "半目" · 3 → "3目"
+    _目数(差) {
+        整 = ##!差
+        残 = 差 - ##.整
+        ? 残 > 0.4 {
+            ? 整 == 0 { <~ "半目" }
+            <~ "{整}目半"
+        }
+        <~ "{整}目"
+    }
+
+    結果文(勝色, 差, 中押) {
+        ? 中押 {
+            ? 勝色 == 1 { <~ "黑中盘胜" }
+            <~ "白中盘胜"
+        }
+        ? 差 == 0 { <~ "和棋" }
+        目 = _目数(差)
+        ? 勝色 == 1 { <~ "黑胜{目}" }
+        <~ "白胜{目}"
+    }
+
+    取石文(数) { <~ "提{数}子" }
+}

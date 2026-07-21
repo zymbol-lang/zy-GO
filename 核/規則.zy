@@ -1,0 +1,81 @@
+// ============================================================
+// 核/規則.zy — legality and end of game
+//
+// 盤.zy knows how stones behave; 規則.zy knows which moves a
+// player is allowed to make. The split matters for ko: a ko ban
+// is a fact about the history of the game, not about the current
+// position, so it cannot live in the board module.
+//
+// 判定() never mutates the caller's board — it plays on a copy.
+// It is the most-called function in the AI loop, so it is also
+// the first place to look when a turn feels slow.
+// ============================================================
+
+# .核_規則 {
+
+    <# ./盤 => 盤
+
+    #> {
+        可
+        禁_占有
+        禁_自殺
+        禁_コウ
+        判定
+        合法
+        着手可能
+        終局
+        理由鍵
+    }
+
+    // Positive codes: a module constant must be a bare literal,
+    // so `:= -1` is rejected as an expression (E013).
+    可       := 0
+    禁_占有  := 1
+    禁_自殺  := 2
+    禁_コウ  := 3
+
+    // 0 when the move is legal, otherwise the reason.
+    判定(局面, 路, 起点, 色, コウ点) {
+        ? 起点 < 1 { <~ 1 }
+        ? 起点 > 路 * 路 { <~ 1 }
+        ? 局面[起点] <> 0 { <~ 1 }
+        ? 起点 == コウ点 { <~ 3 }
+
+        写 = 盤::複製(局面)
+        取 = 0
+        コウ = 0
+        結果 = 盤::着手(写, 路, 起点, 色, 取, コウ)
+        ? 結果 == 2 { <~ 2 }
+        <~ 0
+    }
+
+    合法(局面, 路, 起点, 色, コウ点) {
+        <~ 判定(局面, 路, 起点, 色, コウ点) == 0
+    }
+
+    // Every legal point for 色. Passing is always available and is
+    // never in this list — a pass is not a point on the board.
+    着手可能(局面, 路, 色, コウ点) {
+        結果 = []
+        総 = 路 * 路
+        @ p:1..総 {
+            ? 局面[p] == 0 {
+                ? 判定(局面, 路, p, 色, コウ点) == 0 { 結果 = 結果 $+ p }
+            }
+        }
+        <~ 結果
+    }
+
+    終局(連続パス) { <~ 連続パス >= 2 }
+
+    // Maps a rejection code to an i18n key, so the caller never
+    // hard-codes a message.
+    理由鍵(コード) {
+        <~ ?? コード {
+            1 => "msg.occupied"
+            2 => "msg.suicide"
+            3 => "msg.ko"
+            _  => ""
+        }
+    }
+}

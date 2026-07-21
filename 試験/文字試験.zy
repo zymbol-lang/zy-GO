@@ -1,0 +1,81 @@
+// ============================================================
+// 試験/文字試験.zy — text metric tests
+//
+// Column arithmetic is the foundation of every screen in the
+// game, and it has to hold in five languages at once. If this
+// suite fails, panels and boards drift and nothing above it is
+// worth debugging.
+//
+//   zymbol run 試験/文字試験.zy
+// ============================================================
+
+<# ../表示/文字 => 文
+
+確認(名, 実際, 期待, 失敗<~) {
+    ? 実際 == 期待 {
+        >> "  ok    " 名 ¶
+    } _ {
+        >> "  FAIL  " 名 "   expected " 期待 ", got " 実際 ¶
+        失敗 = 失敗 + 1
+    }
+}
+
+失敗 = 0
+>> "囲碁 — text metric tests" ¶
+>> "" ¶
+
+// ------------------------------------------------------------
+>> "code points — 符号点" ¶
+確認("ASCII", 文::符号点('A'), 65, 失敗)
+確認("hiragana", 文::符号点('あ'), 12354, 失敗)
+確認("hangul", 文::符号点('가'), 44032, 失敗)
+確認("hanzi", 文::符号点('中'), 20013, 失敗)
+確認("black stone", 文::符号点('⚫'), 9899, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "display width — 幅" ¶
+確認("latin is narrow", 文::幅("Turn"), 4, 失敗)
+確認("kanji is wide", 文::幅("手番"), 4, 失敗)
+確認("hangul is wide", 文::幅("차례"), 4, 失敗)
+確認("hanzi is wide", 文::幅("轮到"), 4, 失敗)
+確認("stones are wide", 文::幅("⚫⚪"), 4, 失敗)
+確認("moons are wide", 文::幅("🌑🌕"), 4, 失敗)
+確認("fullwidth plus is wide", 文::幅("＋"), 2, 失敗)
+確認("box drawing is narrow", 文::幅("┌─┬─┐"), 5, 失敗)
+確認("arrows are narrow", 文::幅("↑↓←→"), 4, 失敗)
+確認("mixed script", 文::幅("手番 turn"), 9, 失敗)
+確認("empty string", 文::幅(""), 0, 失敗)
+
+// A 5-road board row is 2×5-1 = 9 columns, and it must measure
+// the same in every theme — that is the two-column invariant the
+// whole rendering layer rests on.
+確認("stone theme row", 文::幅("├─┼─⚫┼─┤"), 9, 失敗)
+確認("moon theme row", 文::幅("├─┼─🌑┼─┤"), 9, 失敗)
+確認("ascii theme row", 文::幅("├─┼─X─┼─┤"), 9, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "padding — 右詰 · 左詰 · 中央" ¶
+確認("pad kanji right", 文::幅(文::右詰("手番", 10)), 10, 失敗)
+確認("pad latin right", 文::幅(文::右詰("Turn", 10)), 10, 失敗)
+確認("pad hangul right", 文::幅(文::右詰("차례", 10)), 10, 失敗)
+確認("pad left", 文::幅(文::左詰("终局", 8)), 8, 失敗)
+確認("centre", 文::幅(文::中央("종국", 10)), 10, 失敗)
+確認("centre puts the spare column right", 文::中央("A", 4), " A  ", 失敗)
+確認("oversized string is returned as is", 文::右詰("形勢判断", 4), "形勢判断", 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "truncation — 切詰" ¶
+確認("never splits a wide glyph", 文::切詰("形势判断です", 7), "形势判", 失敗)
+確認("exact fit is untouched", 文::切詰("手番", 4), "手番", 失敗)
+確認("narrow text cuts cleanly", 文::切詰("abcdef", 3), "abc", 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+? 失敗 == 0 {
+    >> "PASS — column arithmetic holds" ¶
+} _ {
+    >> "FAIL — " 失敗 " case(s) failed" ¶
+}

@@ -1,0 +1,70 @@
+// ============================================================
+// 試験/言語検証.zy — i18n completeness gate
+//
+// Walks the master key catalogue against every registered locale.
+// A locale that lacks a key returns the key itself (the identity
+// fallback in 語), which is exactly what makes the check decidable:
+// keys are neutral ASCII, translations never are.
+//
+//   zymbol run 試験/言語検証.zy
+// ============================================================
+
+<# ../言語/module => 言
+<# ../表示/文字 => 文
+
+鍵 = 言::鍵一覧()
+言語 = 言::言語一覧()
+
+>> "囲碁 — i18n verification" ¶
+>> "keys: " (鍵$#) "   locales: " (言語$#) ¶
+>> "" ¶
+
+欠落合計 = 0
+
+@ コード : 言語 {
+    言::設定(コード)
+    名 = 言::語("lang.name")
+    欠落 = 0
+
+    @ k : 鍵 {
+        訳 = 言::語(k)
+        ? 訳 == k {
+            ? 欠落 == 0 { >> "  [" コード "] " 名 ¶ }
+            >> "      MISSING  " k ¶
+            欠落 = 欠落 + 1
+        }
+    }
+
+    ? 欠落 == 0 {
+        列 = 文::右詰(名, 12)
+        >> "  [" コード "] " 列 "  " (鍵$#) "/" (鍵$#) "  OK" ¶
+    } _ {
+        >> "      → " 欠落 " missing" ¶
+    }
+
+    欠落合計 = 欠落合計 + 欠落
+}
+
+>> "" ¶
+
+// Composed messages: exercised in every locale so that a broken
+// number format or a missing grammar branch shows up here rather
+// than on the end-of-game screen.
+>> "composed messages" ¶
+@ コード : 言語 {
+    言::設定(コード)
+    >> "  [" コード "] " (言::路盤名(9)) " · " (言::路盤名(19)) ¶
+    >> "        " (言::結果文(2, 1.5, #0)) ¶
+    >> "        " (言::結果文(1, 0.5, #0)) ¶
+    >> "        " (言::結果文(1, 7, #0)) ¶
+    >> "        " (言::結果文(2, 0, #1)) ¶
+    >> "        " (言::結果文(1, 0, #0)) ¶
+    >> "        " (言::取石文(1)) " / " (言::取石文(3)) ¶
+}
+
+>> "" ¶
+? 欠落合計 == 0 {
+    >> "PASS — every key resolves in every locale" ¶
+} _ {
+    >> "FAIL — " 欠落合計 " missing translations" ¶
+}

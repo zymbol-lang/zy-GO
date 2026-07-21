@@ -1,0 +1,116 @@
+// ============================================================
+// 言語/日本語.zy — Japanese locale (ja)
+//
+// Every locale module exports exactly the same four functions.
+// 語() is a static key lookup; the other three compose sentences,
+// because grammar and number formatting differ per language and a
+// static table cannot express "White wins by 1.5 points" in five
+// languages. Keys are neutral ASCII identifiers so that a missing
+// translation is detectable: 語() returns the key itself, and
+// 試験/言語検証.zy fails on any key that comes back unchanged.
+// ============================================================
+
+# .言語_日本語 {
+
+    #> { 語, 路盤名, 結果文, 取石文 }
+
+    語(鍵) {
+        <~ ?? 鍵 {
+            "lang.name"        => "日本語"
+
+            "menu.title"       => "囲碁"
+            "menu.board"       => "路盤"
+            "menu.level"       => "棋力"
+            "menu.side"        => "手番"
+            "menu.komi"        => "コミ"
+            "menu.theme"       => "主題"
+            "menu.lang"        => "言語"
+            "menu.hint"        => "↑↓ 選択   ←→ 変更   ↵ 開始"
+            "menu.unavailable" => "画面が狭い"
+
+            "level.1"          => "初級"
+            "level.2"          => "中級"
+            "level.3"          => "上級"
+
+            "theme.stone"      => "石"
+            "theme.moon"       => "月"
+            "theme.ascii"      => "字"
+
+            "color.black"      => "黒"
+            "color.white"      => "白"
+            "side.you"         => "あなた"
+            "side.ai"          => "AI"
+
+            "panel.turn"       => "手番"
+            "panel.moves"      => "手数"
+            "panel.captures"   => "アゲハマ"
+            "panel.komi"       => "コミ"
+            "panel.last"       => "最終手"
+            "panel.estimate"   => "目算"
+
+            "msg.occupied"     => "すでに石がある"
+            "msg.suicide"      => "自殺手は打てない"
+            "msg.ko"           => "コウにより着手禁止"
+            "msg.pass_you"     => "あなたはパスした"
+            "msg.pass_ai"      => "AIはパスした"
+            "msg.undo"         => "待った"
+            "msg.no_undo"      => "これ以上戻れない"
+            "msg.thinking"     => "考慮中…"
+            "msg.resigned"     => "投了"
+
+            "end.title"        => "終局"
+            "end.stones"       => "石"
+            "end.territory"    => "地"
+            "end.komi"         => "コミ"
+            "end.total"        => "合計"
+            "end.jigo"         => "持碁"
+            "end.result"       => "結果"
+
+            "help.title"       => "操作説明"
+            "help.move"        => "カーソル移動"
+            "help.place"       => "着手"
+            "help.pass"        => "パス"
+            "help.undo"        => "待った"
+            "help.estimate"    => "目算"
+            "help.theme"       => "主題切替"
+            "help.quit"        => "投了・終了"
+
+            "term.small"       => "端末が小さすぎます"
+
+            _                  => 鍵
+        }
+    }
+
+    路盤名(路) {
+        <~ ?? 路 {
+            9  => "九路盤"
+            13 => "十三路盤"
+            19 => "十九路盤"
+            _  => "{路}路盤"
+        }
+    }
+
+    // 1.5 → "1目半" · 0.5 → "半目" · 3 → "3目"
+    _目数(差) {
+        整 = ##!差
+        残 = 差 - ##.整
+        ? 残 > 0.4 {
+            ? 整 == 0 { <~ "半目" }
+            <~ "{整}目半"
+        }
+        <~ "{整}目"
+    }
+
+    結果文(勝色, 差, 中押) {
+        ? 中押 {
+            ? 勝色 == 1 { <~ "黒の中押し勝ち" }
+            <~ "白の中押し勝ち"
+        }
+        ? 差 == 0 { <~ "持碁" }
+        目 = _目数(差)
+        ? 勝色 == 1 { <~ "黒の{目}勝ち" }
+        <~ "白の{目}勝ち"
+    }
+
+    取石文(数) { <~ "{数}子を取った" }
+}

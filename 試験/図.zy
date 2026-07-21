@@ -1,0 +1,46 @@
+// ============================================================
+// 試験/図.zy — text diagrams for tests
+//
+// Rule tests are only reviewable if the position is readable, so
+// test boards are written as diagrams and parsed here:
+//   '.' empty · 'X' black · 'O' white
+// Row 1 of the diagram is row 1 of the board (the top).
+// ============================================================
+
+# .試験_図 {
+
+    #> { 読図, 描図 }
+
+    読図(行配列) {
+        局面 = []
+        @ 行 : 行配列 {
+            @ c : 行 {
+                局面 = 局面 $+ ?? c {
+                    'X' => 1
+                    'O' => 2
+                    _   => 0
+                }
+            }
+        }
+        <~ 局面
+    }
+
+    描図(局面, 路) {
+        出力 = ""
+        @ 行:1..路 {
+            線 = ""
+            @ 列:1..路 {
+                v = 局面[##!((行 - 1) * 路 + 列)]
+                字 = ?? v {
+                    1 => "X"
+                    2 => "O"
+                    _ => "."
+                }
+                線 = "{線}{字}"
+            }
+            出力 = "{出力}{線}
+"
+        }
+        <~ 出力
+    }
+}

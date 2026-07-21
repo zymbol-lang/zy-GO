@@ -1,0 +1,225 @@
+// ============================================================
+// 核/盤.zy — board mechanics
+//
+// The board (局面) is a flat array of 路 × 路 points, 1-indexed:
+//   0 = 空 (empty), 1 = 黒 (black), 2 = 白 (white)
+// Point (行, 列) lives at index (行 - 1) × 路 + 列, with 行 1 at
+// the top of the array. The display layer flips rows so that row 1
+// is drawn at the bottom, the way a Go board is read — the engine
+// itself never needs to know.
+//
+// Flat, not nested: neighbour arithmetic is index ± 1 and ± 路,
+// and the flood fill in 連() walks it several hundred times per
+// AI turn. Nested indexing in that loop is the expensive path.
+// ============================================================
+
+# .核_盤 {
+
+    #> {
+        空
+        黒
+        白
+        可
+        禁_占有
+        禁_自殺
+        新規
+        複製
+        位置
+        行番
+        列番
+        取得
+        敵
+        隣
+        連
+        ダメ点
+        ダメ数
+        群ダメ数
+        除去
+        着手
+        石数
+    }
+
+    空 := 0
+    黒 := 1
+    白 := 2
+
+    // 着手() status codes. Codes are positive because a module
+    // constant must be a bare literal — `:= -1` is a unary-minus
+    // expression and is rejected with E013.
+    // Ko is not here: it is a rule about history, not about the
+    // board, so 核/規則.zy owns it.
+    可       := 0
+    禁_占有  := 1
+    禁_自殺  := 2
+
+    新規(路) {
+        局面 = []
+        総 = 路 * 路
+        @ i:1..総 { 局面 = 局面 $+ 0 }
+        <~ 局面
+    }
+
+    複製(局面) {
+        写 = []
+        @ v : 局面 { 写 = 写 $+ v }
+        <~ 写
+    }
+
+    // Every computed index goes through 位置(). The ##! truncation
+    // is not arithmetic — it is a type assertion: the semantic
+    // analyzer infers Float for any arithmetic on untyped
+    // parameters, and rejects a Float array index. Casting at the
+    // one place that computes indices keeps that workaround from
+    // spreading through the engine.
+    位置(路, 行, 列) { <~ ##!((行 - 1) * 路 + 列) }
+    行番(路, 点) { <~ ##!((点 - 1) / 路 + 1) }
+    列番(路, 点) { <~ ##!(点 - ((点 - 1) / 路) * 路) }
+
+    取得(局面, 路, 行, 列) { <~ 局面[位置(路, 行, 列)] }
+
+    敵(色) {
+        ? 色 == 1 { <~ 2 }
+        <~ 1
+    }
+
+    // Orthogonal neighbours of a point, edges clipped.
+    隣(路, 点) {
+        行 = (点 - 1) / 路 + 1
+        列 = 点 - (行 - 1) * 路
+        隣接 = []
+        ? 行 > 1 { 隣接 = 隣接 $+ (点 - 路) }
+        ? 行 < 路 { 隣接 = 隣接 $+ (点 + 路) }
+        ? 列 > 1 { 隣接 = 隣接 $+ (点 - 1) }
+        ? 列 < 路 { 隣接 = 隣接 $+ (点 + 1) }
+        <~ 隣接
+    }
+
+    // Every point of the chain containing 起点, by flood fill.
+    // Depth is bounded by chain size: 361 frames worst case on a
+    // 19-road board.
+    連(局面, 路, 起点) {
+        色 = 局面[起点]
+        ? 色 == 0 { <~ [] }
+        訪問 = 新規(路)
+        結果 = []
+        _探索(局面, 路, 起点, 色, 訪問, 結果)
+        <~ 結果
+    }
+
+    _探索(局面, 路, 点, 色, 訪問<~, 結果<~) {
+        ? 訪問[点] == 1 { <~ 0 }
+        ? 局面[点] <> 色 { <~ 0 }
+        訪問[点] = 1
+        結果 = 結果 $+ 点
+        @ q : 隣(路, 点) { _探索(局面, 路, q, 色, 訪問, 結果) }
+        <~ 0
+    }
+
+    // Distinct liberties (ダメ) of a chain, as points.
+    ダメ点(局面, 路, 群) {
+        印 = 新規(路)
+        結果 = []
+        @ 点 : 群 {
+            @ q : 隣(路, 点) {
+                ? 局面[q] == 0 && 印[q] == 0 {
+                    印[q] = 1
+                    結果 = 結果 $+ q
+                }
+            }
+        }
+        <~ 結果
+    }
+
+    // Liberty count of an already-computed chain.
+    群ダメ数(局面, 路, 群) {
+        印 = 新規(路)
+        数 = 0
+        @ 点 : 群 {
+            @ q : 隣(路, 点) {
+                ? 局面[q] == 0 && 印[q] == 0 {
+                    印[q] = 1
+                    数 = 数 + 1
+                }
+            }
+        }
+        <~ 数
+    }
+
+    // Liberty count of the chain containing 起点.
+    ダメ数(局面, 路, 起点) {
+        群 = 連(局面, 路, 起点)
+        ? (群$#) == 0 { <~ 0 }
+        <~ 群ダメ数(局面, 路, 群)
+    }
+
+    除去(局面<~, 群) {
+        @ 点 : 群 { 局面[点] = 0 }
+    }
+
+    // Plays a stone.
+    //
+    // Returns 可 when the move was made, or 禁_占有 / 禁_自殺 when
+    // it was refused — and on refusal the board is left untouched.
+    // 取数 receives the number of stones captured, and コウ点 the
+    // point banned by ko for the opponent's next move (0 = none).
+    //
+    // Status is the return value and the ko point is an output
+    // parameter, not the other way round: a ko point is a board
+    // index, so returning it would collide with the status codes
+    // for every point on the board.
+    //
+    // Order is the whole of the capture rule: place, then capture
+    // the opponent, and only then test your own liberties. That is
+    // why a move that would be suicide is legal when it captures.
+    着手(局面<~, 路, 起点, 色, 取数<~, コウ点<~) {
+        取数 = 0
+        コウ点 = 0
+        ? 起点 < 1 { <~ 1 }
+        ? 起点 > 路 * 路 { <~ 1 }
+        ? 局面[起点] <> 0 { <~ 1 }
+
+        局面[起点] = 色
+        敵色 = 敵(色)
+        取点 = 0
+
+        @ q : 隣(路, 起点) {
+            ? 局面[q] == 敵色 {
+                群 = 連(局面, 路, q)
+                ? 群ダメ数(局面, 路, 群) == 0 {
+                    取数 = 取数 + (群$#)
+                    取点 = 群[1]
+                    除去(局面, 群)
+                }
+            }
+        }
+
+        ? 取数 == 0 {
+            自群 = 連(局面, 路, 起点)
+            ? 群ダメ数(局面, 路, 自群) == 0 {
+                局面[起点] = 0
+                <~ 2
+            }
+        }
+
+        // Simple ko: exactly one stone captured, by a stone that is
+        // itself alone with exactly one liberty. Anything looser
+        // forbids legal moves; anything tighter allows an endless
+        // recapture.
+        ? 取数 == 1 {
+            自群 = 連(局面, 路, 起点)
+            ? (自群$#) == 1 {
+                ? 群ダメ数(局面, 路, 自群) == 1 { コウ点 = 取点 }
+            }
+        }
+
+        <~ 0
+    }
+
+    石数(局面, 色) {
+        数 = 0
+        @ v : 局面 {
+            ? v == 色 { 数 = 数 + 1 }
+        }
+        <~ 数
+    }
+}

@@ -1,0 +1,102 @@
+// ============================================================
+// 試験/計算試験.zy — area scoring tests
+//   zymbol run 試験/計算試験.zy
+// ============================================================
+
+<# ../核/盤 => 盤
+<# ../核/計算 => 計算
+<# ../言語/module => 言
+<# ./図 => 図
+
+路 := 5
+
+確認(名, 実際, 期待, 失敗<~) {
+    ? 実際 == 期待 {
+        >> "  ok    " 名 ¶
+    } _ {
+        >> "  FAIL  " 名 "   expected " 期待 ", got " 実際 ¶
+        失敗 = 失敗 + 1
+    }
+}
+
+失敗 = 0
+>> "囲碁 — area scoring tests (5×5)" ¶
+>> "" ¶
+
+// ------------------------------------------------------------
+>> "empty board — everything is neutral" ¶
+局面 = 盤::新規(路)
+結果 = 計算::目算(局面, 路, 6.5)
+確認("black scores nothing", 結果.黒合計, 0.0, 失敗)
+確認("white scores komi only", 結果.白合計, 6.5, 失敗)
+確認("white leads", 計算::勝色(結果), 2, 失敗)
+確認("margin is komi", 計算::差分(結果), 6.5, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "board split down the middle" ¶
+局面 = 図::読図([
+    ".X.O.",
+    ".X.O.",
+    ".X.O.",
+    ".X.O.",
+    ".X.O."
+])
+結果 = 計算::目算(局面, 路, 0)
+確認("black stones", 結果.黒石, 5, 失敗)
+確認("white stones", 結果.白石, 5, 失敗)
+確認("column 1 is black territory", 結果.黒地, 5, 失敗)
+確認("column 5 is white territory", 結果.白地, 5, 失敗)
+確認("column 3 borders both — neutral", 結果.黒合計 + 結果.白合計, 20.0, 失敗)
+確認("even game with komi 0 is jigo", 計算::勝色(結果), 0, 失敗)
+
+結果 = 計算::目算(局面, 路, 6.5)
+確認("komi decides it", 計算::勝色(結果), 2, 失敗)
+確認("margin equals komi", 計算::差分(結果), 6.5, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "enclosed corner — 地" ¶
+// The white stone matters: without a single white stone on the
+// board every empty region borders black alone, and black would
+// correctly own all 20 empty points under area scoring.
+局面 = 図::読図([
+    "..X..",
+    "..X..",
+    "XXX..",
+    "....O",
+    "....."
+])
+結果 = 計算::目算(局面, 路, 0)
+確認("black surrounds the corner", 結果.黒地, 4, 失敗)
+確認("the open area borders both — neutral", 結果.白地, 0, 失敗)
+確認("white counts one stone", 結果.白合計, 1.0, 失敗)
+
+図面 = 計算::領域図(局面, 路)
+確認("corner point marked black", 図面[1], 1, 失敗)
+確認("outside area stays neutral", 図面[25], 0, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "result sentences from a real count" ¶
+局面 = 図::読図([
+    ".X.O.",
+    ".X.O.",
+    ".X.O.",
+    ".X.O.",
+    ".X.O."
+])
+結果 = 計算::目算(局面, 路, 6.5)
+勝 = 計算::勝色(結果)
+差 = 計算::差分(結果)
+@ コード : 言::言語一覧() {
+    言::設定(コード)
+    >> "  [" コード "] " (言::結果文(勝, 差, #0)) ¶
+}
+
+>> "" ¶
+? 失敗 == 0 {
+    >> "PASS — scoring behaved" ¶
+} _ {
+    >> "FAIL — " 失敗 " case(s) failed" ¶
+}

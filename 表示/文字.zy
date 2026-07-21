@@ -1,0 +1,143 @@
+// ============================================================
+// 表示/文字.zy — text metrics for a multilingual TUI
+//
+// Terminal layout in 囲碁 is column-exact: the board grid, the
+// side panel, and every framed screen must line up whether the
+// interface language is Japanese, Korean, Chinese, English or
+// Spanish. Grapheme count is NOT column count — CJK text and
+// emoji occupy two columns each — so every width calculation in
+// the program goes through 幅() here, never through $#.
+// ============================================================
+
+# .表示_文字 {
+
+    #> {
+        符号点
+        幅
+        右詰
+        左詰
+        中央
+        切詰
+    }
+
+    // Unicode code point of a character.
+    // 0d|c| yields the string "0dNNNN"; drop the "0d" prefix and
+    // evaluate the digits. This is the only route from Char to Int
+    // in Zymbol v0.0.8 — Char is not comparable and not castable.
+    符号点(c) {
+        s = 0d|c|
+        t = s$[3..]
+        <~ #|t|
+    }
+
+    // Display width of a single code point, in terminal columns.
+    // 0 = zero-width (variation selector), 1 = narrow, 2 = wide.
+    // Covers the East Asian Wide and Fullwidth ranges plus the
+    // emoji blocks; everything else is assumed narrow.
+    _幅点(p) {
+        ? p == 65039 { <~ 0 }                       // VS16
+
+        ? p >= 4352  && p <= 4447  { <~ 2 }          // Hangul Jamo
+        ? p >= 8986  && p <= 8987  { <~ 2 }
+        ? p >= 9001  && p <= 9002  { <~ 2 }
+        ? p >= 9193  && p <= 9196  { <~ 2 }
+        ? p >= 9725  && p <= 9726  { <~ 2 }
+        ? p >= 9748  && p <= 9749  { <~ 2 }
+        ? p >= 9800  && p <= 9811  { <~ 2 }
+        ? p == 9855 || p == 9875   { <~ 2 }
+        ? p == 9889  || p == 9934  { <~ 2 }
+        ? p >= 9898  && p <= 9899  { <~ 2 }          // ⚪ ⚫
+        ? p >= 9917  && p <= 9918  { <~ 2 }
+        ? p >= 9924  && p <= 9925  { <~ 2 }
+        ? p == 9940  || p == 9962  { <~ 2 }
+        ? p >= 9970  && p <= 9971  { <~ 2 }
+        ? p == 9973  || p == 9978  { <~ 2 }
+        ? p == 9981  || p == 9989  { <~ 2 }
+        ? p >= 9994  && p <= 9995  { <~ 2 }
+        ? p == 10024 || p == 10060 { <~ 2 }
+        ? p == 10062 || p == 10071 { <~ 2 }
+        ? p >= 10067 && p <= 10069 { <~ 2 }
+        ? p >= 10133 && p <= 10135 { <~ 2 }
+        ? p == 10160 || p == 10175 { <~ 2 }
+        ? p >= 11035 && p <= 11036 { <~ 2 }
+        ? p == 11088 || p == 11093 { <~ 2 }
+        ? p >= 11904 && p <= 12350 { <~ 2 }          // CJK radicals … CJK punctuation
+        ? p >= 12353 && p <= 12871 { <~ 2 }          // kana, bopomofo, jamo, strokes
+        ? p >= 12880 && p <= 19903 { <~ 2 }          // enclosed CJK, CJK Ext A
+        ? p >= 19968 && p <= 42182 { <~ 2 }          // CJK unified, Yi
+        ? p >= 43360 && p <= 43388 { <~ 2 }
+        ? p >= 44032 && p <= 55203 { <~ 2 }          // Hangul syllables
+        ? p >= 63744 && p <= 64255 { <~ 2 }          // CJK compatibility
+        ? p >= 65040 && p <= 65049 { <~ 2 }
+        ? p >= 65072 && p <= 65131 { <~ 2 }
+        ? p >= 65281 && p <= 65376 { <~ 2 }          // fullwidth forms (＋)
+        ? p >= 65504 && p <= 65510 { <~ 2 }
+        ? p >= 94176 && p <= 100343 { <~ 2 }
+        ? p >= 110592 && p <= 110878 { <~ 2 }
+        ? p >= 127488 && p <= 127569 { <~ 2 }
+        ? p >= 127744 && p <= 128591 { <~ 2 }        // emoji (🌑 🌕)
+        ? p >= 128640 && p <= 128764 { <~ 2 }
+        ? p >= 128992 && p <= 129003 { <~ 2 }
+        ? p >= 129292 && p <= 129535 { <~ 2 }
+        ? p >= 129648 && p <= 129782 { <~ 2 }
+
+        <~ 1
+    }
+
+    // Display width of a string, in terminal columns.
+    幅(文字列) {
+        合計 = 0
+        @ c : 文字列 {
+            s = 0d|c|
+            t = s$[3..]
+            p = #|t|
+            合計 = 合計 + _幅点(p)
+        }
+        <~ 合計
+    }
+
+    // Pad on the right to exactly 欄 columns. Longer strings are
+    // returned untouched — truncation is 切詰's job, and silently
+    // cutting a label is worse than a one-column overflow.
+    右詰(文字列, 欄) {
+        余 = 欄 - 幅(文字列)
+        ? 余 <= 0 { <~ 文字列 }
+        空白 = " " $* 余
+        <~ "{文字列}{空白}"
+    }
+
+    // Pad on the left to exactly 欄 columns.
+    左詰(文字列, 欄) {
+        余 = 欄 - 幅(文字列)
+        ? 余 <= 0 { <~ 文字列 }
+        空白 = " " $* 余
+        <~ "{空白}{文字列}"
+    }
+
+    // Centre within 欄 columns; a spare column goes to the right.
+    中央(文字列, 欄) {
+        余 = 欄 - 幅(文字列)
+        ? 余 <= 0 { <~ 文字列 }
+        左 = 余 / 2
+        右 = 余 - 左
+        前 = " " $* 左
+        後 = " " $* 右
+        <~ "{前}{文字列}{後}"
+    }
+
+    // Truncate to at most 欄 columns, never splitting a wide glyph.
+    切詰(文字列, 欄) {
+        ? 幅(文字列) <= 欄 { <~ 文字列 }
+        結果 = ""
+        使用 = 0
+        @ c : 文字列 {
+            s = 0d|c|
+            t = s$[3..]
+            w = _幅点(#|t|)
+            ? 使用 + w > 欄 { <~ 結果 }
+            結果 = "{結果}{c}"
+            使用 = 使用 + w
+        }
+        <~ 結果
+    }
+}

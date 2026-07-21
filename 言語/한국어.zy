@@ -1,0 +1,102 @@
+// ============================================================
+// 言語/한국어.zy — Korean locale (ko)
+// Interface contract: 語 · 路盤名 · 結果文 · 取石文
+// ============================================================
+
+# .言語_한국어 {
+
+    #> { 語, 路盤名, 結果文, 取石文 }
+
+    語(鍵) {
+        <~ ?? 鍵 {
+            "lang.name"        => "한국어"
+
+            "menu.title"       => "바둑"
+            "menu.board"       => "판 크기"
+            "menu.level"       => "기력"
+            "menu.side"        => "돌 선택"
+            "menu.komi"        => "덤"
+            "menu.theme"       => "테마"
+            "menu.lang"        => "언어"
+            "menu.hint"        => "↑↓ 선택   ←→ 변경   ↵ 시작"
+            "menu.unavailable" => "화면이 좁음"
+
+            "level.1"          => "초급"
+            "level.2"          => "중급"
+            "level.3"          => "고급"
+
+            "theme.stone"      => "돌"
+            "theme.moon"       => "달"
+            "theme.ascii"      => "문자"
+
+            "color.black"      => "흑"
+            "color.white"      => "백"
+            "side.you"         => "당신"
+            "side.ai"          => "AI"
+
+            "panel.turn"       => "차례"
+            "panel.moves"      => "수순"
+            "panel.captures"   => "사석"
+            "panel.komi"       => "덤"
+            "panel.last"       => "마지막 수"
+            "panel.estimate"   => "형세 판단"
+
+            "msg.occupied"     => "이미 돌이 있습니다"
+            "msg.suicide"      => "자살수는 둘 수 없습니다"
+            "msg.ko"           => "패로 인해 착수 금지"
+            "msg.pass_you"     => "당신이 패스했습니다"
+            "msg.pass_ai"      => "AI가 패스했습니다"
+            "msg.undo"         => "무름"
+            "msg.no_undo"      => "더 이상 무를 수 없습니다"
+            "msg.thinking"     => "생각 중…"
+            "msg.resigned"     => "기권"
+
+            "end.title"        => "종국"
+            "end.stones"       => "돌"
+            "end.territory"    => "집"
+            "end.komi"         => "덤"
+            "end.total"        => "합계"
+            "end.jigo"         => "무승부"
+            "end.result"       => "결과"
+
+            "help.title"       => "조작법"
+            "help.move"        => "커서 이동"
+            "help.place"       => "착수"
+            "help.pass"        => "패스"
+            "help.undo"        => "무름"
+            "help.estimate"    => "형세 판단"
+            "help.theme"       => "테마 변경"
+            "help.quit"        => "기권·종료"
+
+            "term.small"       => "터미널이 너무 작습니다"
+
+            _                  => 鍵
+        }
+    }
+
+    路盤名(路) { <~ "{路}줄 바둑판" }
+
+    // 1.5 → "1집반" · 0.5 → "반집" · 3 → "3집"
+    _집수(差) {
+        整 = ##!差
+        残 = 差 - ##.整
+        ? 残 > 0.4 {
+            ? 整 == 0 { <~ "반집" }
+            <~ "{整}집반"
+        }
+        <~ "{整}집"
+    }
+
+    結果文(勝色, 差, 中押) {
+        ? 中押 {
+            ? 勝色 == 1 { <~ "흑 불계승" }
+            <~ "백 불계승"
+        }
+        ? 差 == 0 { <~ "무승부" }
+        집 = _집수(差)
+        ? 勝色 == 1 { <~ "흑 {집}승" }
+        <~ "백 {집}승"
+    }
+
+    取石文(数) { <~ "{数}점을 따냈습니다" }
+}

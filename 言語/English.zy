@@ -1,0 +1,103 @@
+// ============================================================
+// 言語/English.zy — English locale (en)
+// Interface contract: 語 · 路盤名 · 結果文 · 取石文
+// ============================================================
+
+# .言語_English {
+
+    #> { 語, 路盤名, 結果文, 取石文 }
+
+    語(鍵) {
+        <~ ?? 鍵 {
+            "lang.name"        => "English"
+
+            "menu.title"       => "GO"
+            "menu.board"       => "Board"
+            "menu.level"       => "Level"
+            "menu.side"        => "Your side"
+            "menu.komi"        => "Komi"
+            "menu.theme"       => "Theme"
+            "menu.lang"        => "Language"
+            "menu.hint"        => "↑↓ select   ←→ change   ↵ start"
+            "menu.unavailable" => "screen too small"
+
+            "level.1"          => "Beginner"
+            "level.2"          => "Intermediate"
+            "level.3"          => "Advanced"
+
+            "theme.stone"      => "Stone"
+            "theme.moon"       => "Moon"
+            "theme.ascii"      => "ASCII"
+
+            "color.black"      => "Black"
+            "color.white"      => "White"
+            "side.you"         => "you"
+            "side.ai"          => "AI"
+
+            "panel.turn"       => "Turn"
+            "panel.moves"      => "Moves"
+            "panel.captures"   => "Captures"
+            "panel.komi"       => "Komi"
+            "panel.last"       => "Last"
+            "panel.estimate"   => "Estimate"
+
+            "msg.occupied"     => "there is already a stone there"
+            "msg.suicide"      => "suicide is not allowed"
+            "msg.ko"           => "forbidden by ko"
+            "msg.pass_you"     => "you passed"
+            "msg.pass_ai"      => "the AI passed"
+            "msg.undo"         => "undo"
+            "msg.no_undo"      => "nothing left to undo"
+            "msg.thinking"     => "thinking…"
+            "msg.resigned"     => "resigned"
+
+            "end.title"        => "Game over"
+            "end.stones"       => "Stones"
+            "end.territory"    => "Territory"
+            "end.komi"         => "Komi"
+            "end.total"        => "Total"
+            "end.jigo"         => "Draw"
+            "end.result"       => "Result"
+
+            "help.title"       => "Controls"
+            "help.move"        => "move cursor"
+            "help.place"       => "place stone"
+            "help.pass"        => "pass"
+            "help.undo"        => "undo"
+            "help.estimate"    => "score estimate"
+            "help.theme"       => "cycle theme"
+            "help.quit"        => "resign / quit"
+
+            "term.small"       => "terminal too small"
+
+            _                  => 鍵
+        }
+    }
+
+    路盤名(路) { <~ "{路}×{路}" }
+
+    // 1.5 → "1.5 points" · 1 → "1 point"
+    _点数(差) {
+        整 = ##!差
+        残 = 差 - ##.整
+        ? 残 > 0.4 { <~ "{整}.5 points" }
+        ? 整 == 1 { <~ "1 point" }
+        <~ "{整} points"
+    }
+
+    結果文(勝色, 差, 中押) {
+        ? 中押 {
+            ? 勝色 == 1 { <~ "Black wins by resignation" }
+            <~ "White wins by resignation"
+        }
+        ? 差 == 0 { <~ "Draw" }
+        点 = _点数(差)
+        ? 勝色 == 1 { <~ "Black wins by {点}" }
+        <~ "White wins by {点}"
+    }
+
+    取石文(数) {
+        ? 数 == 1 { <~ "captured 1 stone" }
+        <~ "captured {数} stones"
+    }
+}

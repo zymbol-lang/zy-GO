@@ -1,0 +1,108 @@
+// ============================================================
+// 言語/module.zy — i18n dispatcher
+//
+// Single entry point for every user-visible string in the game.
+// Holds the active locale as module state (module state is shared
+// per file path, so every module that imports this one sees the
+// same selection without threading a language parameter through
+// the call graph).
+//
+// Adding a locale is three edits: write 言語/<name>.zy against the
+// four-function contract, import it here, add one arm to each
+// dispatch match. 試験/言語検証.zy then verifies it key by key.
+// ============================================================
+
+# .言語_module {
+
+    <# ./日本語 => ja
+    <# ./한국어 => ko
+    <# ./中文 => zh
+    <# ./English => en
+    <# ./Español => es
+
+    #> {
+        設定
+        現在
+        言語一覧
+        鍵一覧
+        語
+        路盤名
+        結果文
+        取石文
+    }
+
+    現在言語 = "ja"
+
+    // ISO 639-1 codes, in menu order. 日本語 leads because the
+    // program is written in Japanese; the rest follow the game's
+    // path through Asia and then west.
+    言語一覧() { <~ ["ja", "ko", "zh", "en", "es"] }
+
+    設定(コード) { 現在言語 = コード }
+    現在() { <~ 現在言語 }
+
+    語(鍵) {
+        ?? 現在言語 {
+            "ko" => { <~ ko::語(鍵) }
+            "zh" => { <~ zh::語(鍵) }
+            "en" => { <~ en::語(鍵) }
+            "es" => { <~ es::語(鍵) }
+            _    => { <~ ja::語(鍵) }
+        }
+    }
+
+    路盤名(路) {
+        ?? 現在言語 {
+            "ko" => { <~ ko::路盤名(路) }
+            "zh" => { <~ zh::路盤名(路) }
+            "en" => { <~ en::路盤名(路) }
+            "es" => { <~ es::路盤名(路) }
+            _    => { <~ ja::路盤名(路) }
+        }
+    }
+
+    結果文(勝色, 差, 中押) {
+        ?? 現在言語 {
+            "ko" => { <~ ko::結果文(勝色, 差, 中押) }
+            "zh" => { <~ zh::結果文(勝色, 差, 中押) }
+            "en" => { <~ en::結果文(勝色, 差, 中押) }
+            "es" => { <~ es::結果文(勝色, 差, 中押) }
+            _    => { <~ ja::結果文(勝色, 差, 中押) }
+        }
+    }
+
+    取石文(数) {
+        ?? 現在言語 {
+            "ko" => { <~ ko::取石文(数) }
+            "zh" => { <~ zh::取石文(数) }
+            "en" => { <~ en::取石文(数) }
+            "es" => { <~ es::取石文(数) }
+            _    => { <~ ja::取石文(数) }
+        }
+    }
+
+    // The master key catalogue. This is the contract every locale
+    // must satisfy — 試験/言語検証.zy walks it against every locale
+    // and reports any key that falls through to the identity case.
+    鍵一覧() {
+        <~ [
+            "lang.name",
+            "menu.title", "menu.board", "menu.level", "menu.side",
+            "menu.komi", "menu.theme", "menu.lang", "menu.hint",
+            "menu.unavailable",
+            "level.1", "level.2", "level.3",
+            "theme.stone", "theme.moon", "theme.ascii",
+            "color.black", "color.white", "side.you", "side.ai",
+            "panel.turn", "panel.moves", "panel.captures",
+            "panel.komi", "panel.last", "panel.estimate",
+            "msg.occupied", "msg.suicide", "msg.ko",
+            "msg.pass_you", "msg.pass_ai", "msg.undo",
+            "msg.no_undo", "msg.thinking", "msg.resigned",
+            "end.title", "end.stones", "end.territory", "end.komi",
+            "end.total", "end.jigo", "end.result",
+            "help.title", "help.move", "help.place", "help.pass",
+            "help.undo", "help.estimate", "help.theme", "help.quit",
+            "term.small"
+        ]
+    }
+}

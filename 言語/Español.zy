@@ -1,0 +1,104 @@
+// ============================================================
+// 言語/Español.zy — Spanish locale (es)
+// Interface contract: 語 · 路盤名 · 結果文 · 取石文
+// Note: Spanish uses the decimal comma — 1,5 puntos, not 1.5.
+// ============================================================
+
+# .言語_Español {
+
+    #> { 語, 路盤名, 結果文, 取石文 }
+
+    語(鍵) {
+        <~ ?? 鍵 {
+            "lang.name"        => "Español"
+
+            "menu.title"       => "GO"
+            "menu.board"       => "Tablero"
+            "menu.level"       => "Nivel"
+            "menu.side"        => "Tu color"
+            "menu.komi"        => "Komi"
+            "menu.theme"       => "Tema"
+            "menu.lang"        => "Idioma"
+            "menu.hint"        => "↑↓ elegir   ←→ cambiar   ↵ empezar"
+            "menu.unavailable" => "pantalla estrecha"
+
+            "level.1"          => "Principiante"
+            "level.2"          => "Intermedio"
+            "level.3"          => "Avanzado"
+
+            "theme.stone"      => "Piedra"
+            "theme.moon"       => "Luna"
+            "theme.ascii"      => "ASCII"
+
+            "color.black"      => "Negras"
+            "color.white"      => "Blancas"
+            "side.you"         => "tú"
+            "side.ai"          => "IA"
+
+            "panel.turn"       => "Turno"
+            "panel.moves"      => "Jugadas"
+            "panel.captures"   => "Capturas"
+            "panel.komi"       => "Komi"
+            "panel.last"       => "Última"
+            "panel.estimate"   => "Estimación"
+
+            "msg.occupied"     => "ya hay una piedra ahí"
+            "msg.suicide"      => "el suicidio no está permitido"
+            "msg.ko"           => "prohibido por ko"
+            "msg.pass_you"     => "has pasado"
+            "msg.pass_ai"      => "la IA ha pasado"
+            "msg.undo"         => "deshacer"
+            "msg.no_undo"      => "no queda nada por deshacer"
+            "msg.thinking"     => "pensando…"
+            "msg.resigned"     => "abandono"
+
+            "end.title"        => "Fin de la partida"
+            "end.stones"       => "Piedras"
+            "end.territory"    => "Territorio"
+            "end.komi"         => "Komi"
+            "end.total"        => "Total"
+            "end.jigo"         => "Tablas"
+            "end.result"       => "Resultado"
+
+            "help.title"       => "Controles"
+            "help.move"        => "mover el cursor"
+            "help.place"       => "colocar piedra"
+            "help.pass"        => "pasar"
+            "help.undo"        => "deshacer"
+            "help.estimate"    => "estimar puntuación"
+            "help.theme"       => "cambiar de tema"
+            "help.quit"        => "abandonar / salir"
+
+            "term.small"       => "la terminal es demasiado pequeña"
+
+            _                  => 鍵
+        }
+    }
+
+    路盤名(路) { <~ "{路}×{路}" }
+
+    // 1.5 → "1,5 puntos" · 1 → "1 punto"
+    _点数(差) {
+        整 = ##!差
+        残 = 差 - ##.整
+        ? 残 > 0.4 { <~ "{整},5 puntos" }
+        ? 整 == 1 { <~ "1 punto" }
+        <~ "{整} puntos"
+    }
+
+    結果文(勝色, 差, 中押) {
+        ? 中押 {
+            ? 勝色 == 1 { <~ "las negras ganan por abandono" }
+            <~ "las blancas ganan por abandono"
+        }
+        ? 差 == 0 { <~ "tablas" }
+        点 = _点数(差)
+        ? 勝色 == 1 { <~ "las negras ganan por {点}" }
+        <~ "las blancas ganan por {点}"
+    }
+
+    取石文(数) {
+        ? 数 == 1 { <~ "captura 1 piedra" }
+        <~ "captura {数} piedras"
+    }
+}

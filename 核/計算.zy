@@ -1,0 +1,137 @@
+// ============================================================
+// 核/計算.zy — scoring
+//
+// Area scoring (the Chinese method), presented with Japanese
+// vocabulary. A player's score is their stones on the board plus
+// the empty points their stones fully surround; White then adds
+// komi.
+//
+// Area was chosen over Japanese territory scoring because it is
+// decidable by the program alone: territory scoring needs both
+// players to first agree which groups are dead, and a beginner
+// AI cannot negotiate that honestly. Area also handles seki with
+// no special case — a shared liberty borders both colours, so it
+// counts for nobody, which is exactly the right answer.
+// ============================================================
+
+# .核_計算 {
+
+    <# ./盤 => 盤
+
+    #> {
+        目算
+        勝色
+        差分
+        領域図
+    }
+
+    // Flood fill over one connected region of empty points.
+    // 接触 is a two-slot array used as a mutable pair:
+    // 接触[1] = a black stone borders this region,
+    // 接触[2] = a white stone borders it.
+    _空探索(局面, 路, 点, 印<~, 領域<~, 接触<~) {
+        ? 局面[点] <> 0 {
+            ? 局面[点] == 1 { 接触[1] = 1 } _ { 接触[2] = 1 }
+            <~ 0
+        }
+        ? 印[点] == 1 { <~ 0 }
+        印[点] = 1
+        領域 = 領域 $+ 点
+        @ q : 盤::隣(路, 点) { _空探索(局面, 路, q, 印, 領域, 接触) }
+        <~ 0
+    }
+
+    // Full count. Returns a named tuple so the caller reads fields
+    // by name rather than by position:
+    //   黒石 白石 — stones on the board
+    //   黒地 白地 — surrounded empty points
+    //   黒合計 白合計 — totals, komi included on White's side
+    目算(局面, 路, コミ) {
+        黒石 = 盤::石数(局面, 1)
+        白石 = 盤::石数(局面, 2)
+        黒地 = 0
+        白地 = 0
+
+        印 = 盤::新規(路)
+        総 = 路 * 路
+        @ p:1..総 {
+            ? 局面[p] == 0 {
+                ? 印[p] == 0 {
+                    領域 = []
+                    接触 = [0, 0]
+                    _空探索(局面, 路, p, 印, 領域, 接触)
+                    n = 領域$#
+                    ? 接触[1] == 1 {
+                        ? 接触[2] == 0 { 黒地 = 黒地 + n }
+                    }
+                    ? 接触[2] == 1 {
+                        ? 接触[1] == 0 { 白地 = 白地 + n }
+                    }
+                }
+            }
+        }
+
+        // Both totals are forced to Float. Otherwise the type of a
+        // score would depend on the type of the komi the caller
+        // passed — and Int/Float equality is strict in Zymbol, so
+        // `合計 == 0` would silently answer #0 for a Float zero
+        // while `>= 0` and `<= 0` both answer #1.
+        黒合計 = ##.(黒石 + 黒地)
+        白合計 = ##.(白石 + 白地) + ##.コミ
+
+        <~ (
+            黒石: 黒石,
+            白石: 白石,
+            黒地: 黒地,
+            白地: 白地,
+            黒合計: 黒合計,
+            白合計: 白合計
+        )
+    }
+
+    // 1 = black ahead, 2 = white ahead, 0 = 持碁 (jigo).
+    勝色(結果) {
+        ? 結果.黒合計 > 結果.白合計 { <~ 1 }
+        ? 結果.白合計 > 結果.黒合計 { <~ 2 }
+        <~ 0
+    }
+
+    // Absolute margin, for 言語::結果文.
+    差分(結果) {
+        ? 結果.黒合計 > 結果.白合計 { <~ 結果.黒合計 - 結果.白合計 }
+        <~ 結果.白合計 - 結果.黒合計
+    }
+
+    // Per-point ownership, for the live estimate overlay:
+    // 0 neutral · 1 black · 2 white. Stones keep their own colour.
+    領域図(局面, 路) {
+        図 = 盤::新規(路)
+        印 = 盤::新規(路)
+        総 = 路 * 路
+
+        @ p:1..総 {
+            ? 局面[p] <> 0 { 図[p] = 局面[p] }
+        }
+
+        @ p:1..総 {
+            ? 局面[p] == 0 {
+                ? 印[p] == 0 {
+                    領域 = []
+                    接触 = [0, 0]
+                    _空探索(局面, 路, p, 印, 領域, 接触)
+                    主 = 0
+                    ? 接触[1] == 1 {
+                        ? 接触[2] == 0 { 主 = 1 }
+                    }
+                    ? 接触[2] == 1 {
+                        ? 接触[1] == 0 { 主 = 2 }
+                    }
+                    ? 主 <> 0 {
+                        @ q : 領域 { 図[q] = 主 }
+                    }
+                }
+            }
+        }
+        <~ 図
+    }
+}

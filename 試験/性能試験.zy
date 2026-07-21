@@ -1,0 +1,38 @@
+// ============================================================
+// 試験/性能試験.zy — depth and cost on a full-size board
+//
+// Answers the two questions the engine design left open:
+//   1. does the tree-walker sustain a flood fill 360 frames deep?
+//   2. what does a full legality scan of 19×19 actually cost?
+//
+//   zymbol run 試験/性能試験.zy
+// ============================================================
+
+<# ../核/盤 => 盤
+<# ../核/規則 => 規則
+
+路 := 19
+
+>> "囲碁 — engine cost on 19×19" ¶
+>> "" ¶
+
+// One black chain covering the whole board except the last point:
+// 360 stones, so the flood fill recurses up to 360 frames deep.
+局面 = 盤::新規(路)
+総 = 路 * 路
+@ p:1..総 { 局面[p] = 1 }
+局面[総] = 0
+
+群 = 盤::連(局面, 路, 1)
+>> "  chain size            " (群$#) ¶
+>> "  liberties             " (盤::群ダメ数(局面, 路, 群)) ¶
+
+// A realistic midgame scan: legality of every empty point.
+空盤 = 盤::新規(路)
+@ p:1..40 { 空盤[p * 7] = 1 }
+@ p:1..40 { 空盤[p * 5 + 2] = 2 }
+
+候補 = 規則::着手可能(空盤, 路, 1, 0)
+>> "  legal points scanned  " (候補$#) ¶
+>> "" ¶
+>> "done" ¶
