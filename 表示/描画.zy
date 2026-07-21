@@ -319,7 +319,7 @@
         >>~ (行, 左, 0, 色_文) > 側面行(" {名_最終}{座}")
 
         名_目算 = 文::右詰(言::語("panel.estimate"), 10)
-        評 = 目算文(局面, 路, コミ, 主題)
+        評 = 目算文(局面, 路, コミ, 主題, 手数)
         行 = ##!(行 + 1)
         >>~ (行, 左, 0, 色_文) > 側面行(" {名_目算}{評}")
 
@@ -331,13 +331,15 @@
     // even. Computed from the current position, so it swings as
     // the boundaries close — that is the honest behaviour, not a
     // defect.
-    目算文(局面, 路, コミ, 主題) {
-        // Area scoring gives every empty point to the only colour
-        // present, so on move one Black "leads by 74.5". That is
-        // arithmetically right and completely uninformative: the
-        // estimate stays blank until both colours are on the board.
-        ? 盤::石数(局面, 1) == 0 { <~ "—" }
-        ? 盤::石数(局面, 2) == 0 { <~ "—" }
+    // Live estimate. Blank only until both sides have moved once:
+    // after Black's first stone, area scoring hands Black all 81
+    // points and reports "+74.5", which is arithmetically right and
+    // says nothing. Keying this off the move count rather than off
+    // the stones on the board matters — a colour can be wiped from
+    // the board late in a lopsided game, and that is exactly when
+    // the player most needs to see the margin.
+    目算文(局面, 路, コミ, 主題, 手数) {
+        ? 手数 < 2 { <~ "—" }
         結果 = 計算::目算(局面, 路, コミ)
         勝 = 計算::勝色(結果)
         ? 勝 == 0 { <~ "=" }
@@ -363,7 +365,7 @@
         黒 = 主::石字(主題, 1)
         白 = 主::石字(主題, 2)
         座 = 座標名(路, 最終手)
-        評 = 目算文(局面, 路, コミ, 主題)
+        評 = 目算文(局面, 路, コミ, 主題, 手数)
 
         線 = "{手石} {誰}   {手数}   {黒}{黒取} {白}{白取}   {座}   {評}"
         欄 = 主::区画幅(路)
