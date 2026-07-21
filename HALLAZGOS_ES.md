@@ -13,7 +13,9 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 | [HLZ-005](#hlz-005--ruta-de-import-relativa-al-padre) | Gap menor | `<# ./../x` no parsea; hay que escribir `<# ../x` | Documentar |
 | [HLZ-006](#hlz-006--guidemd-documenta-mal-el-mapeo-de-las-flechas) | Bug (doc) | GUIDE.md §3b dice que las flechas son `'U' 'D' 'L' 'R'`; en realidad son `'↑' '↓' '←' '→'` | Abierto |
 | [HLZ-007](#hlz-007--la-interpolación-solo-admite-identificadores) | Gap | `"{t.campo}"` y `"{arr[i]}"` no interpolan | Documentado |
+| [HLZ-008](#hlz-008--la-vm-ignora-los-parámetros-de-salida-de-un-módulo) | **Bug grave** | En `--vm`, un `<~` de función de módulo no se escribe de vuelta: resultados silenciosamente incorrectos | Abierto |
 | [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | Propuesta |
+| [IDEA-002](#idea-002--el-coste-numérico-decide-la-arquitectura-de-la-ia) | Medición | Números que descartan MCTS y redes neuronales en Zymbol actual | Aplicada |
 
 ---
 
@@ -229,6 +231,58 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 
 ---
 
+## HLZ-008 · La VM ignora los parámetros de salida de un módulo
+
+- **Descripción:** Una función de módulo con parámetro de salida `<~` no escribe
+  de vuelta en la variable de quien llama cuando se ejecuta con `--vm`. No hay
+  error: la ejecución continúa con los valores originales.
+
+  ```zymbol
+  // m.zy
+  # m {
+      #> { lleno, poner }
+      lleno(n) {
+          a = []
+          @ i:1..n { a = a $+ 0 }
+          <~ a
+      }
+      poner(a<~, i, v, cuenta<~) {
+          cuenta = 0
+          a[i] = v
+          cuenta = 1
+          <~ 0
+      }
+  }
+  ```
+
+  ```zymbol
+  // t.zy
+  <# ./m => m
+  a = m::lleno(5)
+  c = 0
+  m::poner(a, 2, 7, c)
+  >> "a[2]=" (a[2]) "  c=" c ¶
+  ```
+
+  ```
+  zymbol run t.zy        → a[2]=7  c=1     ✓
+  zymbol run --vm t.zy   → a[2]=0  c=0     ✗ sin error
+  ```
+
+- **Por qué es grave:** falla **en silencio**. Un programa que use este patrón da
+  resultados distintos según el motor y no hay nada que lo delate. En 囲碁 el
+  síntoma aguas abajo fue `array index out of bounds` en un punto muy alejado de
+  la causa, porque el tablero nunca se modificaba y la lógica seguía adelante
+  con una posición vacía.
+- **Alcance en el proyecto:** el motor entero descansa en este patrón —
+  `盤::着手(局面<~, …, 取数<~, コウ点<~)` es la operación central. Con `--vm`
+  ninguna suite pasa. Es la razón por la que 囲碁 es tree-walker only.
+- **Relación con MM-10/MM-11:** el v0.0.8 cerró dos bugs de paridad de la VM en
+  esta misma zona (mutaciones que cruzan fronteras de módulo). Este parece el
+  mismo territorio, aún abierto para `<~`.
+
+---
+
 ## IDEA-001 · Ancho de visualización como primitiva
 
 - **Descripción:** Un TUI multilingüe necesita **columnas de terminal**, no
@@ -273,3 +327,35 @@ Vale la pena registrarlo, porque eran los riesgos declarados en
 | Estado de módulo para el idioma activo | Persiste por ruta de archivo; ningún módulo necesita recibir el idioma como parámetro |
 | `>>\|` dentro de una función de módulo | Funciona: `対局::開始()` entra en pantalla alterna y modo raw desde dentro del módulo |
 | Arrays anidados como pila de deshacer | `履歴 $+ 盤::複製(局面)` guarda y recupera posiciones completas sin problema |
+
+---
+
+## IDEA-002 · El coste numérico decide la arquitectura de la IA
+
+No es un bug: es la medición que eligió el diseño del motor de juego. Todo en
+tree-walker, tablero 9×9, misma máquina.
+
+| Operación | Medido | Consecuencia |
+|-----------|--------|--------------|
+| Una jugada heurística (enumerar candidatos + evaluar) | **~0,04 s** | instantánea |
+| Una simulación aleatoria completa (playout ligero) | **0,24 s** | — |
+| MCTS a 1.000 playouts por jugada | **~4 min/jugada** | inviable |
+| MCTS a 10.000 playouts por jugada | **~40 min/jugada** | inviable |
+| Pasada adelante de una red 81→64→81 (tensores de Zofía) | **~4 s** | inviable |
+| Las mismas 5.184 multiplicaciones con array plano | **~0,3 s** | 6-7× más rápido |
+| `--vm` como escape | falla (HLZ-008) | no disponible |
+
+Dos conclusiones:
+
+1. **MCTS necesita unas 6.000 veces más presupuesto del que hay.** Con 2 s por
+   jugada caben ~8 playouts, y ocho partidas aleatorias no informan de nada.
+2. **La brecha entre tensores anidados y arrays planos es de 6-7×**, lo que
+   confirma desde fuera el diagnóstico del propio `ROADMAP_IA.md` de Zofía: los
+   tensores como listas de listas son el cuello de botella, y un tipo tensor
+   nativo es el cambio que desbloquea todo lo demás. Aun con esa mejora, una
+   pasada adelante seguiría costando ~0,6 s — suficiente para evaluar una
+   posición, insuficiente para buscar sobre ella.
+
+Por eso 核/思考.zy es **determinista y metódico**, no estadístico. La única
+simulación que se paga sola es la dirigida y corta: leer una escalera
+(シチョウ) son decenas de pasos deterministas, no miles de partidas.

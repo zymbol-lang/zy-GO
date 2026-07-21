@@ -212,10 +212,51 @@ neutral, which is why the estimate moves as the boundaries close.
 
 ## 6. 思考.zy — the AI
 
+### Why it is deterministic and not statistical
+
+The obvious modern answer to "write a Go AI" is Monte Carlo tree search, or a
+policy network trained by self-play. Both were measured before being ruled out,
+on 9 × 9, tree-walker, same machine:
+
+| Operation | Measured |
+|-----------|----------|
+| One heuristic move — enumerate candidates and evaluate | **~0.04 s** |
+| One light random playout to the end of the game | **0.24 s** |
+| MCTS at 1,000 playouts per move | **~4 min per move** |
+| MCTS at 10,000 playouts per move | **~40 min per move** |
+| One forward pass of an 81→64→81 net, nested tensors | **~4 s** |
+| The same 5,184 multiply-accumulates on a flat array | **~0.3 s** |
+| `--vm` as an escape hatch | fails — HLZ-008 |
+
+MCTS needs roughly **6,000×** the budget available. Within a two-second move
+that buys about eight playouts, and eight random games are noise, not
+knowledge. A trained network is further still: self-play needs millions of
+positions, and one forward pass costs more than a whole heuristic move.
+
+The flat-array measurement is worth keeping for a different reason — it is a
+6-7× gap against nested tensors, which independently confirms the diagnosis in
+Zofía's own `ROADMAP_IA.md`: representation, not the language, is what blocks
+numeric work. Even with a native tensor type, a forward pass at ~0.6 s would be
+enough to *evaluate* a position and nowhere near enough to *search* over it.
+
+So the engine reads the board with rules, the way a human beginner is taught to.
+The only simulation that pays for itself is short and directed: reading a ladder
+(シチョウ) is tens of deterministic steps, not thousands of random games.
+
+### Shipped
+
 ```zymbol
-着手選択(盤, 路, 色, 級, コウ点, 最終手, 手数)  → chosen point, or 0 to pass
-評価(盤, 路, 起点, 色, 級, 最終手, 手数)        → an integer score
-候補(盤, 路, 色, コウ点)                        → pruned candidate array
+眼(局面, 路, 点, 色)             → is this empty point an eye of 色?
+有用手(局面, 路, 色, コウ点)     → legal moves that are not a self-filled eye
+手詰まり(局面, 路, 色, コウ点)   → #1 when nothing useful is left
+```
+
+### Planned
+
+```zymbol
+着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数)  → chosen point, or 0 to pass
+評価(局面, 路, 起点, 色, 級, 最終手, 手数)        → an integer score
+候補(局面, 路, 色, コウ点)                        → pruned candidate array
 ```
 
 ### Candidate pruning
