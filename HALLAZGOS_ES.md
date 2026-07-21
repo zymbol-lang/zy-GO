@@ -9,8 +9,10 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 | [HLZ-001](#hlz-001--las-constantes-de-módulo-no-admiten-valores-negativos) | Gap | `CONST := -1` en un módulo es E013 | Rediseño de API |
 | [HLZ-002](#hlz-002--el-analizador-infiere-float-en-aritmética-sobre-parámetros) | Bug | Índice de array calculado a partir de parámetros → «must be Int, got Float» | Workaround `##!` |
 | [HLZ-003](#hlz-003--la-igualdad-es-estricta-con-tipos-pero-el-orden-no) | Bug | `##.0 == 0` es `#0` mientras `>= 0` y `<= 0` son ambos `#1` | Abierto |
-| [HLZ-004](#hlz-004--el-lsp-rechaza-la-convención-de-punto-de-subcarpetas) | Bug (LSP) | `# .核_盤` en `核/盤.zy` ejecuta bien pero el LSP marca E001 | Abierto |
+| [HLZ-004](#hlz-004--check-y-el-lsp-rechazan-la-convención-de-punto-de-subcarpetas) | Bug | `# .核_盤` en `核/盤.zy` se ejecuta bien pero `zymbol check` y el LSP lo marcan E001 | Abierto |
 | [HLZ-005](#hlz-005--ruta-de-import-relativa-al-padre) | Gap menor | `<# ./../x` no parsea; hay que escribir `<# ../x` | Documentar |
+| [HLZ-006](#hlz-006--guidemd-documenta-mal-el-mapeo-de-las-flechas) | Bug (doc) | GUIDE.md §3b dice que las flechas son `'U' 'D' 'L' 'R'`; en realidad son `'↑' '↓' '←' '→'` | Abierto |
+| [HLZ-007](#hlz-007--la-interpolación-solo-admite-identificadores) | Gap | `"{t.campo}"` y `"{arr[i]}"` no interpolan | Documentado |
 | [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | Propuesta |
 
 ---
@@ -120,7 +122,7 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 
 ---
 
-## HLZ-004 · El LSP rechaza la convención de punto de subcarpetas
+## HLZ-004 · `check` y el LSP rechazan la convención de punto de subcarpetas
 
 - **Descripción:** `DOT_CONVENTION.md` establece que un módulo en subcarpeta se
   declara `# .carpeta_archivo`. El intérprete lo ejecuta correctamente, pero el
@@ -132,11 +134,17 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
   ```
 
 - **Condición exacta de fallo:** cualquier módulo en subcarpeta con la
-  convención documentada. En 囲碁 son 10 de los 11 módulos.
-- **Impacto:** ruido permanente en el editor; enmascara errores reales.
-- **Nota:** el `checker` de CLI (`zymbol check`) **no** reproduce el error, así
-  que la divergencia está en `zymbol-analyzer`/`zymbol-lsp`, no en el análisis
-  semántico compartido.
+  convención documentada. En 囲碁 son 11 de los 13 módulos.
+- **Impacto:** ruido permanente en el editor; enmascara errores reales. Y algo
+  peor: `zymbol check <archivo>` es inutilizable sobre esos módulos, porque el
+  E001 sale como **error**, no como aviso.
+- **Divergencia real:** `zymbol run` importa y ejecuta esos módulos sin
+  problema; `zymbol check` y el LSP los rechazan. Los tres deberían coincidir.
+
+  ```bash
+  zymbol check 核/盤.zy      # error: E001 …
+  zymbol run 試験/盤試験.zy  # PASS — importa 核/盤.zy y funciona
+  ```
 
 ---
 
@@ -154,6 +162,70 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 - **Relacionado:** importar la carpeta `言語/` requiere la ruta explícita
   `<# ./言語/module => 言`; `<# ./言語` da «module not found: 言語.zy». Es
   coherente con la convención documentada, pero merecería un `help:` que lo diga.
+
+---
+
+## HLZ-006 · GUIDE.md documenta mal el mapeo de las flechas
+
+- **Descripción:** La tabla «Special keys are mapped to single-character
+  symbols» de GUIDE.md §3b afirma que `<<|` devuelve `'U'`, `'D'`, `'L'`, `'R'`
+  para las cuatro flechas. No es cierto: devuelve **los propios glifos de
+  flecha**.
+
+  ```zymbol
+  >>| {
+      @ i:1..4 {
+          <<| k
+          >>~ (i, 1) > "[" k "]  cp=" 0d|k|
+      }
+  }
+  ```
+
+  ```
+  [↑]  cp=0d8593      // U+2191, no 'U'
+  [↓]  cp=0d8595      // U+2193
+  [←]  cp=0d8592      // U+2190
+  [→]  cp=0d8594      // U+2192
+  ```
+
+- **Confirmación cruzada:** `serpiente/logica.zy:59-62` compara contra
+  `'↑' '↓' '←' '→'` desde la v0.0.5. El código que funciona lleva razón; la
+  documentación no.
+- **Coste real:** el primer controlador de 囲碁 comparaba contra `'U'/'D'/'L'/'R'`
+  siguiendo la guía. Compilaba, arrancaba y dibujaba bien — pero el cursor no se
+  movía, y como la tecla caía en el caso `_` no había ningún error que leer. Solo
+  apareció al ejecutar el juego bajo una pseudo-terminal e imprimir los códigos.
+- **Efecto secundario en el diseño:** se documentó en el README que todos los
+  comandos eran minúsculas «porque las mayúsculas U/D/L/R colisionarían con las
+  flechas». Esa justificación era falsa y ya está corregida — no hay colisión
+  posible, las flechas no son letras.
+- **Propuesta:** corregir la tabla de GUIDE.md §3b. Es un bug de una sola tabla,
+  pero manda a cualquiera que la lea a escribir un TUI que no responde.
+
+---
+
+## HLZ-007 · La interpolación solo admite identificadores
+
+- **Descripción:** `"{x}"` interpola una variable, pero cualquier expresión
+  dentro de las llaves es un error de lexer, no de tipos:
+
+  ```zymbol
+  >> "total: {結果.黒合計}" ¶   // ✗ invalid character in string interpolation
+  >> "komi: {一覧[i]}" ¶        // ✗ ídem
+  ```
+
+  ```
+  help: interpolation must be {identifier} — use \{ for a literal brace
+  ```
+
+- **Impacto:** cualquier valor compuesto hay que ligarlo a una variable local
+  antes de poder convertirlo en texto. En `表示/描画.zy` eso son seis variables
+  que solo existen para eso.
+- **Nota:** el mensaje de error es claro y el `help:` dice exactamente qué se
+  admite, así que el coste es verbosidad, no depuración. Se combina con el
+  caveat ya conocido de que la yuxtaposición tampoco concatena dentro de los
+  argumentos de una llamada — entre ambos, construir una cadena a partir de un
+  campo obliga siempre a un paso intermedio.
 
 ---
 
@@ -199,3 +271,5 @@ Vale la pena registrarlo, porque eran los riesgos declarados en
 | Coste de un barrido completo de legalidad | 287 puntos evaluados en **0,38 s** totales, copia de tablero incluida en cada uno |
 | Parámetros de salida a través de módulos | `局面<~` se muta correctamente cruzando fronteras de módulo, en recursión y en llamadas anidadas |
 | Estado de módulo para el idioma activo | Persiste por ruta de archivo; ningún módulo necesita recibir el idioma como parámetro |
+| `>>\|` dentro de una función de módulo | Funciona: `対局::開始()` entra en pantalla alterna y modo raw desde dentro del módulo |
+| Arrays anidados como pila de deshacer | `履歴 $+ 盤::複製(局面)` guarda y recupera posiciones completas sin problema |

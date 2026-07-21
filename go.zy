@@ -1,0 +1,13 @@
+// ============================================================
+// go.zy — entry point, English — for terminals where typing CJK is inconvenient
+//
+// The four entry points differ only in the locale they preselect.
+// Every one of them can switch language from the setup screen —
+// this just decides which language the setup screen itself is in.
+//
+//   zymbol run go.zy
+// ============================================================
+
+<# ./対局 => 対局
+
+対局::開始("en")

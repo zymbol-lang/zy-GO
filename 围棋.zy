@@ -1,0 +1,13 @@
+// ============================================================
+// 围棋.zy — entry point, Mandarin
+//
+// The four entry points differ only in the locale they preselect.
+// Every one of them can switch language from the setup screen —
+// this just decides which language the setup screen itself is in.
+//
+//   zymbol run 围棋.zy
+// ============================================================
+
+<# ./対局 => 対局
+
+対局::開始("zh")

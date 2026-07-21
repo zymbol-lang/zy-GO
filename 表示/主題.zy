@@ -1,0 +1,184 @@
+// ============================================================
+// 表示/主題.zy — stone themes and layout arithmetic
+//
+// THE TWO-COLUMN INVARIANT
+// Every board cell occupies exactly two terminal columns, in
+// every theme, including the last column of a row:
+//
+//   empty point      grid glyph + connector      1 + 1
+//   empty, last col  grid glyph + space          1 + 1
+//   stone, emoji     ⚫ ⚪ 🌑 🌕 (already wide)     2
+//   stone, ASCII     X / O + connector           1 + 1
+//
+// The last column matters more than it looks. If the trailing
+// connector were dropped, a row ending in a grid glyph would be
+// one column narrower than a row ending in a stone, and the
+// right-hand row label would jitter as stones are played there.
+// So the grid is 2 × 路 columns wide, always, whatever is on it.
+// ============================================================
+
+# .表示_主題 {
+
+    #> {
+        主題一覧
+        主題鍵
+        石字
+        升文字
+        星点
+        列名
+        盤幅
+        区画幅
+        区画高
+        側幅
+        最小幅
+        最小高_横
+        最小高_下
+        側面最小幅
+        配置
+        配置_不可
+        配置_下
+        配置_横
+    }
+
+    // Layout modes. Positive values only — a module constant must
+    // be a bare literal (HLZ-001).
+    配置_不可 := 0
+    配置_下   := 1
+    配置_横   := 2
+
+    側幅 := 24
+
+    主題一覧() { <~ ["石", "月", "字"] }
+
+    主題鍵(主題) {
+        <~ ?? 主題 {
+            "月" => "theme.moon"
+            "字" => "theme.ascii"
+            _    => "theme.stone"
+        }
+    }
+
+    石字(主題, 色) {
+        ?? 主題 {
+            "月" => {
+                ? 色 == 1 { <~ "🌑" }
+                <~ "🌕"
+            }
+            "字" => {
+                ? 色 == 1 { <~ "X" }
+                <~ "O"
+            }
+            _ => {
+                ? 色 == 1 { <~ "⚫" }
+                <~ "⚪"
+            }
+        }
+    }
+
+    // Grid glyph for an empty point, by position on the board.
+    // 行 is the engine row (1 = bottom of the drawn board).
+    _枠(路, 行, 列) {
+        ? 行 == 路 {
+            ? 列 == 1 { <~ "┌" }
+            ? 列 == 路 { <~ "┐" }
+            <~ "┬"
+        }
+        ? 行 == 1 {
+            ? 列 == 1 { <~ "└" }
+            ? 列 == 路 { <~ "┘" }
+            <~ "┴"
+        }
+        ? 列 == 1 { <~ "├" }
+        ? 列 == 路 { <~ "┤" }
+        ? 星点(路, 行, 列) { <~ "╋" }
+        <~ "┼"
+    }
+
+    // The horizontal line to the next intersection — a space in
+    // the last column, where there is no next intersection.
+    _継(路, 列) {
+        ? 列 == 路 { <~ " " }
+        <~ "─"
+    }
+
+    // One cell: exactly two columns, whatever it holds.
+    升文字(主題, 値, 路, 行, 列) {
+        継 = _継(路, 列)
+        ? 値 == 0 {
+            枠 = _枠(路, 行, 列)
+            <~ "{枠}{継}"
+        }
+        石 = 石字(主題, 値)
+        ? 主題 == "字" { <~ "{石}{継}" }
+        <~ 石
+    }
+
+    // 星 (hoshi) star points, by board size.
+    星点(路, 行, 列) {
+        ? 路 == 9 {
+            ? 行 == 5 {
+                ? 列 == 5 { <~ #1 }
+            }
+            ? 行 == 3 || 行 == 7 {
+                ? 列 == 3 || 列 == 7 { <~ #1 }
+            }
+            <~ #0
+        }
+        ? 路 == 13 {
+            ? 行 == 7 {
+                ? 列 == 7 { <~ #1 }
+            }
+            ? 行 == 4 || 行 == 10 {
+                ? 列 == 4 || 列 == 10 { <~ #1 }
+            }
+            <~ #0
+        }
+        ? 路 == 19 {
+            ? 行 == 4 || 行 == 10 || 行 == 16 {
+                ? 列 == 4 || 列 == 10 || 列 == 16 { <~ #1 }
+            }
+            <~ #0
+        }
+        <~ #0
+    }
+
+    // Column letters, the international convention: I is skipped
+    // so it cannot be misread as 1 or J.
+    列名(列) {
+        表 = "ABCDEFGHJKLMNOPQRST"
+        <~ 表$[列..列]
+    }
+
+    // ---- geometry -------------------------------------------
+    // gutter  5  ("  19 ")
+    // grid    2 × 路
+    // label   2  (space + row number)
+    盤幅(路)   { <~ 2 * 路 }
+    区画幅(路) { <~ 2 * 路 + 7 }
+    区画高(路) { <~ 路 + 2 }
+
+    最小幅(路) { <~ 2 * 路 + 9 }
+
+    // Side-by-side needs the block, a gap and the boxed panel;
+    // the panel itself is 10 rows, so short boards are bounded by
+    // the panel rather than by the grid.
+    側面最小幅(路) { <~ 2 * 路 + 33 }
+    最小高_横(路) {
+        ? 路 < 9 { <~ 13 }
+        <~ 路 + 4
+    }
+
+    // Stacked, the panel collapses to a single dense line — a tall
+    // narrow terminal cannot afford ten rows of framed box.
+    最小高_下(路) { <~ 路 + 6 }
+
+    配置(路, 幅, 高) {
+        ? 幅 >= 側面最小幅(路) {
+            ? 高 >= 最小高_横(路) { <~ 2 }
+        }
+        ? 幅 >= 最小幅(路) {
+            ? 高 >= 最小高_下(路) { <~ 1 }
+        }
+        <~ 0
+    }
+}

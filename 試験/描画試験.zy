@@ -1,0 +1,133 @@
+// ============================================================
+// 試験/描画試験.zy — layout and line-composition tests
+//
+// >>| refuses to run without a TTY, so the drawing itself cannot
+// be tested by piping. Every line the renderer emits is composed
+// by a pure function first, and those are tested here: if a row
+// is not exactly 2 × 路 columns the grid comes apart, and no
+// amount of looking at the screen will tell you which row it was.
+//
+//   zymbol run 試験/描画試験.zy
+// ============================================================
+
+<# ../核/盤 => 盤
+<# ../表示/主題 => 主
+<# ../表示/描画 => 描
+<# ../表示/文字 => 文
+<# ../言語/module => 言
+<# ./図 => 図
+
+確認(名, 実際, 期待, 失敗<~) {
+    ? 実際 == 期待 {
+        >> "  ok    " 名 ¶
+    } _ {
+        >> "  FAIL  " 名 "   expected " 期待 ", got " 実際 ¶
+        失敗 = 失敗 + 1
+    }
+}
+
+失敗 = 0
+>> "囲碁 — layout tests" ¶
+>> "" ¶
+
+// ------------------------------------------------------------
+>> "geometry — 主題" ¶
+確認("9-road grid is 18 columns", 主::盤幅(9), 18, 失敗)
+確認("19-road grid is 38 columns", 主::盤幅(19), 38, 失敗)
+確認("9-road block width", 主::区画幅(9), 25, 失敗)
+確認("19-road block width", 主::区画幅(19), 45, 失敗)
+確認("block height is 路 + 2", 主::区画高(13), 15, 失敗)
+
+確認("too short — no layout", 主::配置(9, 200, 8), 0, 失敗)
+確認("too narrow — no layout", 主::配置(9, 20, 40), 0, 失敗)
+確認("narrow — panel below", 主::配置(9, 30, 20), 1, 失敗)
+確認("wide — panel beside", 主::配置(9, 60, 20), 2, 失敗)
+確認("19 needs more width for the panel", 主::配置(19, 60, 30), 1, 失敗)
+確認("19 gets the panel at 71", 主::配置(19, 71, 30), 2, 失敗)
+// 19×19 side by side has to fit the classic 80×24 terminal
+確認("19×19 fits 80×24", 主::配置(19, 80, 24), 2, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "star points — 星" ¶
+確認("9×9 tengen", 主::星点(9, 5, 5), #1, 失敗)
+確認("9×9 corner star", 主::星点(9, 3, 7), #1, 失敗)
+確認("9×9 plain point", 主::星点(9, 4, 4), #0, 失敗)
+確認("19×19 star", 主::星点(19, 16, 4), #1, 失敗)
+確認("19×19 tengen", 主::星点(19, 10, 10), #1, 失敗)
+確認("13×13 tengen", 主::星点(13, 7, 7), #1, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "column letters — 列名" ¶
+確認("first column", 主::列名(1), "A", 失敗)
+確認("I is skipped", 主::列名(9), "J", 失敗)
+確認("nineteenth column", 主::列名(19), "T", 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "row width holds in every theme — the two-column invariant" ¶
+
+// A position with stones in both the first and the LAST column:
+// the last column is where a dropped connector would show up as
+// a one-column drift, and only when a stone happens to be there.
+局面 = 図::読図([
+    "X...O",
+    ".....",
+    "..X..",
+    ".....",
+    "O...X"
+])
+
+@ 主題 : 主::主題一覧() {
+    @ 行:1..5 {
+        線 = 描::行文字(局面, 5, 主題, 行)
+        名 = "row {行} in theme {主題}"
+        確認(名, 文::幅(線), 10, 失敗)
+    }
+}
+
+空盤 = 盤::新規(5)
+確認("empty row is 10 too", 文::幅(描::行文字(空盤, 5, "石", 3)), 10, 失敗)
+確認("column header matches the grid", 文::幅(描::列見出(5)), 10, 失敗)
+確認("19-road header is 38", 文::幅(描::列見出(19)), 38, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "panel lines — 側面行" ¶
+@ コード : 言::言語一覧() {
+    言::設定(コード)
+    // Juxtaposition does not concatenate inside call arguments —
+    // the string has to be built first.
+    名札 = 言::語("panel.captures")
+    線 = 描::側面行(" {名札}")
+    確認("panel line in {コード}", 文::幅(線), 24, 失敗)
+}
+言::設定("ja")
+// Overlong content is truncated rather than allowed to break the
+// frame: a panel line can never be wider than its box.
+確認("overlong content is truncated to the frame", 文::幅(描::側面行("形勢判断形勢判断形勢判断形勢判断")), 24, 失敗)
+確認("frame pieces agree on width", 文::幅(描::枠上(30)), 文::幅(描::枠行("x", 30)), 失敗)
+確認("bottom matches top", 文::幅(描::枠下(30)), 32, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "coordinates — 座標名" ¶
+確認("point 1 on a 9-road board", 描::座標名(9, 1), "A1", 失敗)
+確認("point 9 is the first row's end", 描::座標名(9, 9), "J1", 失敗)
+確認("point 41 is the centre", 描::座標名(9, 41), "E5", 失敗)
+確認("no last move", 描::座標名(9, 0), "—", 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "row labels — 行札" ¶
+確認("single digit is right-aligned", 描::行札(9), " 9", 失敗)
+確認("double digit fills the field", 描::行札(19), "19", 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+? 失敗 == 0 {
+    >> "PASS — the grid holds together" ¶
+} _ {
+    >> "FAIL — " 失敗 " case(s) failed" ¶
+}

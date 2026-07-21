@@ -20,7 +20,8 @@ statements at module top level. Each of those shapes the design below.
 | Module bodies allow only literal initializers — no calls, no control flow | GUIDE §17 | String tables cannot be built at module load. They are `??` matches inside functions. |
 | Module private state persists across calls and is shared per file path | GUIDE §17 | Language selection and position history live as module state, reached through setters. |
 | Named tuples have no dynamic string-key access | v0.0.7 finding | Every keyed lookup is a `??` match, never `tbl[key]`. |
-| Arrow keys arrive from `<<\|` as `'U' 'D' 'L' 'R'` | GUIDE §3b | All command keys are lowercase. |
+| Arrow keys arrive from `<<\|` as the glyphs `'↑' '↓' '←' '→'` | measured — GUIDE §3b says `'U' 'D' 'L' 'R'` and is wrong (HLZ-006) | The controller matches on the glyphs. Commands are lowercase by convention, not by necessity. |
+| String interpolation takes `{identifier}` only | HLZ-007 | Field access and indexing are bound to a local before they can be printed. |
 | `>>\|` errors when stdout is not a TTY | GUIDE §3b | The game refuses to run under redirection; tests drive the engine modules directly. |
 | A module constant must be a bare literal — `:= -1` is an expression | HLZ-001 | Status codes are positive, and `着手` returns status while the ko point leaves through an output parameter. |
 | An array index computed from parameters is inferred Float and rejected | HLZ-002 | Every computed index goes through `位置()`, whose return is `##!`-cast. |
@@ -286,7 +287,15 @@ lets emoji stones coexist with box-drawing grid lines:
 | Empty star point | `╋` + `─` | 1 + 1 |
 | Stone, emoji theme | `⚫` or `⚪` (the glyph is itself double-width) | 2 |
 | Stone, ASCII theme | `X` or `O` + `─` connector | 1 + 1 |
-| Rightmost column | glyph only, no connector | 1 or 2 |
+| Rightmost column | glyph + **space** | 1 + 1 |
+
+The rightmost column is the one that nearly got away. An earlier draft dropped
+the trailing connector there, making the grid `2 × 路 - 1` columns wide — right
+for an empty board, and one column short the moment a stone was played in the
+last column, which would have jittered the row label. The connector becomes a
+space instead, so the grid is `2 × 路` columns wide whatever is on it, and
+`試験/描画試験.zy` asserts exactly that with stones in the first and last
+columns of every theme.
 
 Grid glyphs are chosen per position: `┌ ┬ ┐` on the top row, `├ ┼ ┤` in the
 middle, `└ ┴ ┘` on the bottom, `╋` at star points.
@@ -295,9 +304,9 @@ middle, `└ ┴ ┘` on the bottom, `╋` at star points.
 
 ```
 gutter          = 5 columns   ("  19 " — 2 spaces, right-aligned label, space)
-board width     = 2 × 路 - 1  (路 cells of 2 columns, minus the last connector)
+board width     = 2 × 路      (路 cells of exactly 2 columns)
 right label     = 2 columns   (space + label)
-block width     = 2 × 路 + 6
+block width     = 2 × 路 + 7
 block height    = 路 + 2      (column labels above and below)
 ```
 
@@ -305,12 +314,20 @@ Layout selection, from `[高, 幅] = >>?`:
 
 | Condition | Layout |
 |-----------|--------|
-| `幅 >= block width + 26` | Panel to the right of the board |
-| `幅 >= block width + 2` and `高 >= 路 + 9` | Panel below the board |
+| `幅 >= 2 × 路 + 33` and `高 >= 路 + 4` | Boxed panel to the right |
+| `幅 >= 2 × 路 + 9` and `高 >= 路 + 6` | One-line panel below |
 | otherwise | That board size is unavailable |
 
-Minimums per size follow from that arithmetic: 30 × 18 (9 × 9), 36 × 22
-(13 × 13), 46 × 28 (19 × 19); side-panel layouts need 50, 58, and 70 columns.
+| Board | Stacked | Side by side |
+|-------|---------|--------------|
+| 9 × 9 | 27 × 15 | 51 × 13 |
+| 13 × 13 | 35 × 19 | 59 × 17 |
+| 19 × 19 | 47 × 25 | 71 × 23 |
+
+Side by side costs columns and saves rows, which is why the widest board is the
+one that fits a classic 80 × 24 terminal — the stacked layout would need 25
+rows for it. The panel earns its two forms here: a ten-row framed box beside
+the board, or a single dense line under it.
 
 ### Redraw strategy
 
@@ -503,11 +520,12 @@ Measured by `試験/性能試験.zy` on the real engine:
 3. **Array copy cost — folded into 2.** The 361-element copy per legality test
    is included in the number above, so play-then-undo on a single board is not
    worth its mutation-correctness risk yet.
-4. **Emoji width in practice — open.** The two-column invariant is asserted in
-   `試験/文字試験.zy`: a board row measures identically in all three themes.
-   Whether a given terminal *renders* `⚫`, `⚪`, `🌑`, `🌕` at the width Unicode
-   declares is empirical and belongs in HALLAZGOS.
-5. **CJK panel alignment — mitigated, not closed.** `表示/文字.zy` measures
-   display width, so panel padding is computed rather than guessed, and the
-   i18n gate prints five locales in aligned columns as a live demonstration.
-   The remaining risk is per-terminal rendering, same as 4.
+4. **Emoji width in practice — answered for one terminal.** The game was run
+   under a pseudo-terminal and the output stream replayed through a width-aware
+   reconstruction: the grid, the panel and the frames line up in all three
+   themes, on 9 × 9 and 19 × 19, in Japanese, Korean and Mandarin. That is one
+   terminal emulator, not all of them, so the risk is reduced rather than
+   closed — but it is no longer theoretical.
+5. **CJK panel alignment — answered.** `表示/文字.zy` measures display width, so
+   padding is computed rather than guessed. The panel measures 24 columns in
+   all five locales, verified by assertion and confirmed on screen.

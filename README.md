@@ -63,13 +63,16 @@ zymbol run 囲碁.zy
 
 The game reads the real terminal size with `>>?` at startup and offers only the
 board sizes that fit. Every board cell is exactly **two columns** wide, so the
-board block measures `2N + 6` columns by `N + 2` rows.
+board block measures `2N + 7` columns by `N + 2` rows.
 
 | Board | Japanese | Minimum terminal | With side panel |
 |-------|----------|------------------|-----------------|
-| 9 × 9 | 九路盤 | 30 × 18 | 50 × 18 |
-| 13 × 13 | 十三路盤 | 36 × 22 | 58 × 22 |
-| 19 × 19 | 十九路盤 | 46 × 28 | 70 × 28 |
+| 9 × 9 | 九路盤 | 27 × 15 | 51 × 13 |
+| 13 × 13 | 十三路盤 | 35 × 19 | 59 × 17 |
+| 19 × 19 | 十九路盤 | 47 × 25 | 71 × 23 |
+
+The side-by-side layout needs more columns but fewer rows, so a 19 × 19 board
+fits a classic 80 × 24 terminal with the panel beside it.
 
 Below the side-panel width the status panel is drawn under the board instead of
 beside it. Below the minimum, that board size is greyed out in the setup screen
@@ -91,11 +94,10 @@ the game exits with a message rather than drawing a broken board.
 | `?` | Help overlay | ヘルプ |
 | `q` | Resign / quit | 投了 |
 
-> **Why lowercase command keys.** `<<|` reports arrow keys as the characters
-> `'U'`, `'D'`, `'L'`, `'R'`. Any uppercase command key on those four letters
-> would be indistinguishable from an arrow press, so every command in 囲碁 is
-> a lowercase letter. This is a Zymbol input-layer constraint, not a design
-> preference.
+> **On the arrow keys.** `<<|` returns the arrow glyphs themselves — `'↑'`,
+> `'↓'`, `'←'`, `'→'` — not the letters `'U'`, `'D'`, `'L'`, `'R'` that
+> GUIDE.md §3b documents. The guide is wrong; Serpiente has been matching on
+> the glyphs since v0.0.5. See [HALLAZGOS_ES.md](HALLAZGOS_ES.md) HLZ-006.
 
 ---
 
@@ -108,17 +110,15 @@ value, `↵` starts the game.
 
 ```
      ╭──────────────────────────────────────╮
-     │              囲    碁                │
-     │           Zymbol v0.0.8              │
+     │                 囲碁                 │
+     │            Zymbol v0.0.8             │
      ├──────────────────────────────────────┤
-     │  ► 路盤      ‹  九路盤  ›            │
-     │    棋力      ‹  中級    ›            │
-     │    手番      ‹  黒 (先) ›            │
-     │    コミ      ‹  6.5     ›            │
-     │    主題      ‹  石      ›            │
-     │    言語      ‹  日本語  ›            │
+     │ ► 路盤        ‹    九路盤    ›       │
+     │   コミ        ‹     6.5      ›       │
+     │   主題        ‹      石      ›       │
+     │   言語        ‹    日本語    ›       │
      ├──────────────────────────────────────┤
-     │        ↑↓ 選択   ←→ 変更   ↵ 開始     │
+     │      ↑↓ 選択   ←→ 変更   ↵ 開始      │
      ╰──────────────────────────────────────╯
 ```
 
@@ -129,19 +129,19 @@ the default 6.5 makes it impossible.
 ### Board — 対局
 
 ```
-     A B C D E F G H J        ╭──────────────────────╮
-   9 ┌─┬─┬─┬─┬─┬─┬─┬─┐ 9      │ 囲碁 · 九路盤 · 中級 │
-   8 ├─┼─┼─┼─┼─┼─┼─┼─┤ 8      ├──────────────────────┤
-   7 ├─┼─⚫┼─┼─⚪⚪┼─┤ 7      │ 手番      ⚫ あなた   │
-   6 ├─┼─┼─┼─┼─┼─┼─┼─┤ 6      │ 手数      24         │
-   5 ├─┼─┼─┼─⚫⚪┼─┼─┤ 5      │ アゲハマ  ⚫3   ⚪1   │
-   4 ├─┼─┼─┼─┼─＋┼─┼─┤ 4      │ コミ      6.5        │
-   3 ├─┼─⚪⚫⚫┼─╋─┼─┤ 3      │ 最終手    F5 ⚪      │
-   2 ├─┼─┼─┼─┼─┼─┼─┼─┤ 2      │ 目算      ⚫ +2.5    │
-   1 └─┴─┴─┴─┴─┴─┴─┴─┘ 1      ╰──────────────────────╯
-     A B C D E F G H J
+      A B C D E F G H J     ╭──────────────────────╮
+    9 ┌─┬─┬─┬─┬─┬─┬─┬─┐  9  │ 九路盤               │
+    8 ├─┼─┼─┼─┼─┼─┼─┼─┤  8  ├──────────────────────┤
+    7 ├─┼─╋─┼─┼─┼─╋─┼─┤  7  │ 手番      ⚫ 黒      │
+    6 ├─┼─┼─⚫┼─⚪┼─┼─┤  6  │ 手数      6          │
+    5 ├─┼─┼─┼─⚫⚫┼─┼─┤  5  │ アゲハマ  ⚫0  ⚪0   │
+    4 ├─┼─┼─⚪┼─┼─┼─┼─┤  4  │ コミ      6.5        │
+    3 ├─┼─╋─┼─⚪┼─╋─┼─┤  3  │ 最終手    E3         │
+    2 ├─┼─┼─┼─┼─┼─┼─┼─┤  2  │ 目算      ⚪ +6.5    │
+    1 └─┴─┴─┴─┴─┴─┴─┴─┘  1  ╰──────────────────────╯
+      A B C D E F G H J
 
-   コウにより着手禁止
+ 1子を取った
 ```
 
 Columns are lettered `A`–`T` skipping `I`, the international convention; rows
@@ -155,22 +155,63 @@ captures, and pass announcements.
 Two consecutive passes end the game and scoring runs automatically:
 
 ```
-     ╭──────────────────────────────────────╮
-     │                終局                  │
-     ├──────────────────────────────────────┤
-     │                ⚫ 黒       ⚪ 白      │
-     │  石            31          28        │
-     │  地            12          10        │
-     │  コミ           —          6.5       │
-     │  ────────────────────────────────    │
-     │  合計          43          44.5      │
-     ├──────────────────────────────────────┤
-     │        白の 1目半勝ち                │
-     ╰──────────────────────────────────────╯
+     ╭──────────────────────╮
+     │         終局         │
+     ├──────────────────────┤
+     │           ⚫    ⚪   │
+     │ 石        2     0    │
+     │ 地        79    0    │
+     │ コミ      —     6.5  │
+     ├──────────────────────┤
+     │ 合計      81    6.5  │
+     ├──────────────────────┤
+     │    黒の74目半勝ち    │
+     ╰──────────────────────╯
 ```
 
 Resignation reports 中押し勝ち (a win by resignation, no point count). An exact
 tie reports 持碁 (jigo).
+
+### The same game in another language
+
+`围棋.zy` on a classic 80 × 24 terminal — 19 × 19 fits side by side with the
+panel, and every label comes from the Mandarin locale:
+
+```
+      A B C D E F G H J K L M N O P Q R S T     ╭──────────────────────╮
+   19 ┌─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┐ 19  │ 十九路棋盘           │
+   18 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤ 18  ├──────────────────────┤
+   17 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤ 17  │ 轮到      ⚫ 黑      │
+   16 ├─┼─┼─╋─┼─┼─┼─┼─┼─╋─┼─┼─┼─┼─┼─╋─┼─┼─┤ 16  │ 手数      2          │
+   15 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤ 15  │ 提子      ⚫0  ⚪0   │
+   14 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤ 14  │ 贴目      6.5        │
+   13 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤ 13  │ 最后一手  L11        │
+   12 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤ 12  │ 形势判断  ⚪ +6.5    │
+   11 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─⚪┼─┼─┼─┼─┼─┼─┼─┤ 11  ╰──────────────────────╯
+   10 ├─┼─┼─╋─┼─┼─┼─┼─┼─⚫┼─┼─┼─┼─┼─╋─┼─┼─┤ 10
+      ⋮                                    ⋮
+    1 └─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┘  1
+      A B C D E F G H J K L M N O P Q R S T
+```
+
+`바둑.zy` on a narrow terminal, with the 月 theme. Below the side-panel width
+the panel collapses to one dense line rather than a framed box, because a tall
+narrow terminal cannot afford ten rows of frame:
+
+```
+      A B C D E F G H J
+    9 ┌─┬─┬─┬─┬─┬─┬─┬─┐  9
+    8 ├─┼─┼─┼─┼─┼─┼─┼─┤  8
+    7 ├─┼─╋─┼─┼─┼─╋─┼─┤  7
+    6 ├─┼─┼─┼─┼─┼─┼─┼─┤  6
+    5 ├─┼─┼─┼─🌑🌕┼─┼─┤  5
+    4 ├─┼─┼─┼─┼─┼─┼─┼─┤  4
+    3 ├─┼─╋─┼─┼─┼─╋─┼─┤  3
+    2 ├─┼─┼─┼─┼─┼─┼─┼─┤  2
+    1 └─┴─┴─┴─┴─┴─┴─┴─┘  1
+      A B C D E F G H J
+ 🌑 흑   2   🌑0 🌕0   F5
+```
 
 ---
 
@@ -378,8 +419,8 @@ fixture.
 | 2 | 表示/文字: display-width metrics for CJK, emoji and fullwidth glyphs | **done** |
 | 3 | 核/盤 + 核/規則: chains, liberties, capture, suicide, ko, legality | **done** |
 | 4 | 核/計算: area scoring, komi, 持碁, ownership map | **done** |
-| 5 | 表示/描画 + 表示/主題: board, themes, cursor, panel, `>>?` gating | pending |
-| 6 | 対局 + entry points: turn loop, history, 待った, the four launchers | pending |
+| 5 | 表示/描画 + 表示/主題: board, themes, cursor, panel, `>>?` gating | **done** |
+| 6 | 対局 + entry points: turn loop, history, 待った, the four launchers | **done** — hot-seat |
 | 7 | 核/思考: the AI and its three levels | pending |
 | 8 | api/: identifier-level API translation layers | pending |
 | 9 | 棋譜 (SGF export), 置き碁 (handicap), positional superko, TW vs VM benchmark | pending |
@@ -395,8 +436,12 @@ bash 試験/全試験.sh
 ─── 試験/言語検証.zy    PASS — every key resolves in every locale
 ─── 試験/盤試験.zy      PASS — every rule case behaved
 ─── 試験/計算試験.zy    PASS — scoring behaved
+─── 試験/描画試験.zy    PASS — the grid holds together
 全試験 PASS
 ```
+
+The game is playable now, two humans at one keyboard. Phase 7 replaces one of
+them with 核/思考.zy.
 
 Rule cases are written as text diagrams so they can be checked by eye:
 

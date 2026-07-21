@@ -64,13 +64,16 @@ zymbol run 囲碁.zy
 
 El juego lee el tamaño real de la terminal con `>>?` al arrancar y ofrece solo
 los tableros que caben. Cada celda del tablero mide exactamente **dos columnas**,
-así que el bloque del tablero ocupa `2N + 6` columnas por `N + 2` filas.
+así que el bloque del tablero ocupa `2N + 7` columnas por `N + 2` filas.
 
 | Tablero | Japonés | Terminal mínima | Con panel lateral |
 |---------|---------|-----------------|-------------------|
-| 9 × 9 | 九路盤 | 30 × 18 | 50 × 18 |
-| 13 × 13 | 十三路盤 | 36 × 22 | 58 × 22 |
-| 19 × 19 | 十九路盤 | 46 × 28 | 70 × 28 |
+| 9 × 9 | 九路盤 | 27 × 15 | 51 × 13 |
+| 13 × 13 | 十三路盤 | 35 × 19 | 59 × 17 |
+| 19 × 19 | 十九路盤 | 47 × 25 | 71 × 23 |
+
+La maquetación lateral necesita más columnas pero menos filas, así que un
+tablero de 19 × 19 cabe en una terminal clásica de 80 × 24 con el panel al lado.
 
 Por debajo del ancho con panel lateral, el panel de estado se dibuja debajo del
 tablero en vez de al lado. Por debajo del mínimo, ese tamaño aparece atenuado en
@@ -93,11 +96,10 @@ un tablero roto.
 | `?` | Ayuda | ヘルプ |
 | `q` | Abandonar / salir | 投了 |
 
-> **Por qué los comandos son minúsculas.** `<<|` devuelve las flechas como los
-> caracteres `'U'`, `'D'`, `'L'`, `'R'`. Cualquier comando en mayúscula sobre
-> esas cuatro letras sería indistinguible de una flecha, así que todos los
-> comandos de 囲碁 son letras minúsculas. Es una restricción de la capa de
-> entrada de Zymbol, no una preferencia de diseño.
+> **Sobre las flechas.** `<<|` devuelve los propios glifos de flecha — `'↑'`,
+> `'↓'`, `'←'`, `'→'` — y no las letras `'U'`, `'D'`, `'L'`, `'R'` que documenta
+> GUIDE.md §3b. La guía está equivocada; Serpiente compara contra los glifos
+> desde la v0.0.5. Ver [HALLAZGOS_ES.md](HALLAZGOS_ES.md) HLZ-006.
 
 ---
 
@@ -110,17 +112,15 @@ cambian el valor, `↵` empieza la partida.
 
 ```
      ╭──────────────────────────────────────╮
-     │              囲    碁                │
-     │           Zymbol v0.0.8              │
+     │                 囲碁                 │
+     │            Zymbol v0.0.8             │
      ├──────────────────────────────────────┤
-     │  ► 路盤      ‹  九路盤  ›            │
-     │    棋力      ‹  中級    ›            │
-     │    手番      ‹  黒 (先) ›            │
-     │    コミ      ‹  6.5     ›            │
-     │    主題      ‹  石      ›            │
-     │    言語      ‹  日本語  ›            │
+     │ ► 路盤        ‹    九路盤    ›       │
+     │   コミ        ‹     6.5      ›       │
+     │   主題        ‹      石      ›       │
+     │   言語        ‹    日本語    ›       │
      ├──────────────────────────────────────┤
-     │        ↑↓ 選択   ←→ 変更   ↵ 開始     │
+     │      ↑↓ 選択   ←→ 変更   ↵ 開始      │
      ╰──────────────────────────────────────╯
 ```
 
@@ -131,19 +131,19 @@ empate técnico —; el 6.5 por defecto lo hace imposible.
 ### Tablero — 対局
 
 ```
-     A B C D E F G H J        ╭──────────────────────╮
-   9 ┌─┬─┬─┬─┬─┬─┬─┬─┐ 9      │ 囲碁 · 九路盤 · 中級 │
-   8 ├─┼─┼─┼─┼─┼─┼─┼─┤ 8      ├──────────────────────┤
-   7 ├─┼─⚫┼─┼─⚪⚪┼─┤ 7      │ 手番      ⚫ あなた   │
-   6 ├─┼─┼─┼─┼─┼─┼─┼─┤ 6      │ 手数      24         │
-   5 ├─┼─┼─┼─⚫⚪┼─┼─┤ 5      │ アゲハマ  ⚫3   ⚪1   │
-   4 ├─┼─┼─┼─┼─＋┼─┼─┤ 4      │ コミ      6.5        │
-   3 ├─┼─⚪⚫⚫┼─╋─┼─┤ 3      │ 最終手    F5 ⚪      │
-   2 ├─┼─┼─┼─┼─┼─┼─┼─┤ 2      │ 目算      ⚫ +2.5    │
-   1 └─┴─┴─┴─┴─┴─┴─┴─┘ 1      ╰──────────────────────╯
-     A B C D E F G H J
+      A B C D E F G H J     ╭──────────────────────╮
+    9 ┌─┬─┬─┬─┬─┬─┬─┬─┐  9  │ 九路盤               │
+    8 ├─┼─┼─┼─┼─┼─┼─┼─┤  8  ├──────────────────────┤
+    7 ├─┼─╋─┼─┼─┼─╋─┼─┤  7  │ 手番      ⚫ 黒      │
+    6 ├─┼─┼─⚫┼─⚪┼─┼─┤  6  │ 手数      6          │
+    5 ├─┼─┼─┼─⚫⚫┼─┼─┤  5  │ アゲハマ  ⚫0  ⚪0   │
+    4 ├─┼─┼─⚪┼─┼─┼─┼─┤  4  │ コミ      6.5        │
+    3 ├─┼─╋─┼─⚪┼─╋─┼─┤  3  │ 最終手    E3         │
+    2 ├─┼─┼─┼─┼─┼─┼─┼─┤  2  │ 目算      ⚪ +6.5    │
+    1 └─┴─┴─┴─┴─┴─┴─┴─┘  1  ╰──────────────────────╯
+      A B C D E F G H J
 
-   コウにより着手禁止
+ 1子を取った
 ```
 
 Las columnas se etiquetan `A`–`T` saltando la `I`, la convención internacional;
@@ -157,22 +157,63 @@ rechazadas, capturas y pases.
 Dos pases consecutivos terminan la partida y el recuento se ejecuta solo:
 
 ```
-     ╭──────────────────────────────────────╮
-     │                終局                  │
-     ├──────────────────────────────────────┤
-     │                ⚫ 黒       ⚪ 白      │
-     │  石            31          28        │
-     │  地            12          10        │
-     │  コミ           —          6.5       │
-     │  ────────────────────────────────    │
-     │  合計          43          44.5      │
-     ├──────────────────────────────────────┤
-     │        白の 1目半勝ち                │
-     ╰──────────────────────────────────────╯
+     ╭──────────────────────╮
+     │         終局         │
+     ├──────────────────────┤
+     │           ⚫    ⚪   │
+     │ 石        2     0    │
+     │ 地        79    0    │
+     │ コミ      —     6.5  │
+     ├──────────────────────┤
+     │ 合計      81    6.5  │
+     ├──────────────────────┤
+     │    黒の74目半勝ち    │
+     ╰──────────────────────╯
 ```
 
 El abandono reporta 中押し勝ち (victoria por abandono, sin recuento de puntos).
 Un empate exacto reporta 持碁 (jigo).
+
+### La misma partida en otro idioma
+
+`围棋.zy` en una terminal clásica de 80 × 24 — el 19 × 19 cabe con el panel al
+lado, y todas las etiquetas salen del idioma mandarín:
+
+```
+      A B C D E F G H J K L M N O P Q R S T     ╭──────────────────────╮
+   19 ┌─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┬─┐ 19  │ 十九路棋盘           │
+   18 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤ 18  ├──────────────────────┤
+   17 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤ 17  │ 轮到      ⚫ 黑      │
+   16 ├─┼─┼─╋─┼─┼─┼─┼─┼─╋─┼─┼─┼─┼─┼─╋─┼─┼─┤ 16  │ 手数      2          │
+   15 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤ 15  │ 提子      ⚫0  ⚪0   │
+   14 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤ 14  │ 贴目      6.5        │
+   13 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤ 13  │ 最后一手  L11        │
+   12 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤ 12  │ 形势判断  ⚪ +6.5    │
+   11 ├─┼─┼─┼─┼─┼─┼─┼─┼─┼─⚪┼─┼─┼─┼─┼─┼─┼─┤ 11  ╰──────────────────────╯
+   10 ├─┼─┼─╋─┼─┼─┼─┼─┼─⚫┼─┼─┼─┼─┼─╋─┼─┼─┤ 10
+      ⋮                                    ⋮
+    1 └─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┘  1
+      A B C D E F G H J K L M N O P Q R S T
+```
+
+`바둑.zy` en una terminal estrecha, con el tema 月. Por debajo del ancho con
+panel lateral, el panel se reduce a una sola línea densa en vez de una caja: una
+terminal alta y estrecha no puede permitirse diez filas de marco:
+
+```
+      A B C D E F G H J
+    9 ┌─┬─┬─┬─┬─┬─┬─┬─┐  9
+    8 ├─┼─┼─┼─┼─┼─┼─┼─┤  8
+    7 ├─┼─╋─┼─┼─┼─╋─┼─┤  7
+    6 ├─┼─┼─┼─┼─┼─┼─┼─┤  6
+    5 ├─┼─┼─┼─🌑🌕┼─┼─┤  5
+    4 ├─┼─┼─┼─┼─┼─┼─┼─┤  4
+    3 ├─┼─╋─┼─┼─┼─╋─┼─┤  3
+    2 ├─┼─┼─┼─┼─┼─┼─┼─┤  2
+    1 └─┴─┴─┴─┴─┴─┴─┴─┘  1
+      A B C D E F G H J
+ 🌑 흑   2   🌑0 🌕0   F5
+```
 
 ---
 
@@ -389,8 +430,8 @@ real y no a un fixture de pruebas.
 | 2 | 表示/文字: métricas de ancho para CJK, emoji y formas de ancho completo | **hecho** |
 | 3 | 核/盤 + 核/規則: cadenas, libertades, captura, suicidio, ko, legalidad | **hecho** |
 | 4 | 核/計算: puntuación por área, komi, 持碁, mapa de propiedad | **hecho** |
-| 5 | 表示/描画 + 表示/主題: tablero, temas, cursor, panel, control con `>>?` | pendiente |
-| 6 | 対局 + puntos de entrada: bucle de turnos, historial, 待った, los cuatro lanzadores | pendiente |
+| 5 | 表示/描画 + 表示/主題: tablero, temas, cursor, panel, control con `>>?` | **hecho** |
+| 6 | 対局 + puntos de entrada: bucle de turnos, historial, 待った, los cuatro lanzadores | **hecho** — por turnos |
 | 7 | 核/思考: la IA y sus tres niveles | pendiente |
 | 8 | api/: capas de traducción de la API a nivel de identificadores | pendiente |
 | 9 | 棋譜 (exportación SGF), 置き碁 (handicap), superko posicional, benchmark TW contra VM | pendiente |
@@ -406,8 +447,12 @@ bash 試験/全試験.sh
 ─── 試験/言語検証.zy    PASS — every key resolves in every locale
 ─── 試験/盤試験.zy      PASS — every rule case behaved
 ─── 試験/計算試験.zy    PASS — scoring behaved
+─── 試験/描画試験.zy    PASS — the grid holds together
 全試験 PASS
 ```
+
+El juego ya es jugable, dos personas en un mismo teclado. La fase 7 sustituye a
+una de ellas por 核/思考.zy.
 
 Los casos de reglas se escriben como diagramas de texto, para poder comprobarlos
 a ojo:
