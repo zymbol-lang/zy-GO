@@ -86,6 +86,16 @@
 
 ミリ(ナノ) { <~ ナノ / 1000000 }
 
+// Every report line goes through here: printed when the screen is
+// free to show it, and always appended to the run's own copy. The
+// summary a person reads and the summary that scrolled past have to
+// be the same text, or one of them is a lie.
+記す(線, 表示, 報告<~) {
+    ? 表示 { >> 線 ¶ }
+    報告 = "{報告}{線}
+"
+}
+
 // Zero-padded, so 棋譜/ sorts in playing order and no filename
 // carries a space. 文::左詰 pads with spaces and `$-` removes only
 // the first occurrence — two ways to get this subtly wrong.
@@ -431,23 +441,24 @@ io::mkdir(記録場所)
 
 // Two parenthesised expressions side by side parse as a call, so
 // every line here is assembled before it is printed.
-_t = 訳("title")
->> "═══ {_t} ═══" ¶
-_l = 文::右詰(訳("games"), 20)
->> "  {_l}{対局数}" ¶
-_l = 文::右詰(訳("board"), 20)
->> "  {_l}{路}×{路}" ¶
-_l = 文::右詰(訳("seed"), 20)
->> "  {_l}{親種}" ¶
-_l = 文::右詰(訳("clock"), 20)
-_v = 較正値 / 1000
-_u = 訳("subtr")
->> "  {_l}{_v} {_u}" ¶
-_l = 文::右詰(訳("stamp"), 20)
->> "  {_l}{実行印}" ¶
-_l = 文::右詰(訳("records"), 20)
->> "  {_l}{記録場所}/NNNN.kifu" ¶
->> "" ¶
+報告 = ""
+題 = 訳("title")
+記す("═══ {題} ═══", #1, 報告)
+札 = 文::右詰(訳("games"), 20)
+記す("  {札}{対局数}", #1, 報告)
+札 = 文::右詰(訳("board"), 20)
+記す("  {札}{路}×{路}", #1, 報告)
+札 = 文::右詰(訳("seed"), 20)
+記す("  {札}{親種}", #1, 報告)
+札 = 文::右詰(訳("clock"), 20)
+値 = 較正値 / 1000
+単 = 訳("subtr")
+記す("  {札}{値} {単}", #1, 報告)
+札 = 文::右詰(訳("stamp"), 20)
+記す("  {札}{実行印}", #1, 報告)
+札 = 文::右詰(訳("records"), 20)
+記す("  {札}{記録場所}/NNNN.kifu", #1, 報告)
+記す("", #1, 報告)
 
 黒勝 = 0
 白勝 = 0
@@ -512,19 +523,19 @@ _l = 文::右詰(訳("records"), 20)
 
     記憶表 = 記憶表 $+ 記憶()
 
-    ? 模式 == 2 {
-        勝名 = 色名(勝)
-        黒札 = 文::右詰(級名(黒級), 13)
-        白札 = 文::右詰(級名(白級), 13)
-        黒性札 = 性格記号(黒性)
-        白性札 = 性格記号(白性)
-        手 = 結果[2]
-        差 = 結果[3]
-        ms = ミリ(結果[7])
-        _n = 文::左詰("{n}", 4)
-        _mv = 訳("moves")
-        >> "  {_n}  ⚫{黒札}{黒性札} vs ⚪{白札}{白性札}   {勝名}+{差}   {手} {_mv}   {ms} ms" ¶
-    }
+    // Recorded in every mode; printed only when the screen is not
+    // busy drawing a board.
+    勝名 = 色名(勝)
+    黒札 = 文::右詰(級名(黒級), 13)
+    白札 = 文::右詰(級名(白級), 13)
+    黒性札 = 性格記号(黒性)
+    白性札 = 性格記号(白性)
+    手 = 結果[2]
+    差 = 結果[3]
+    ms = ミリ(結果[7])
+    番 = 文::左詰("{n}", 4)
+    語手 = 訳("moves")
+    記す("  {番}  ⚫{黒札}{黒性札} vs ⚪{白札}{白性札}   {勝名}+{差}   {手} {語手}   {ms} ms", 模式 == 2, 報告)
 }
 
 記憶終 = 記憶()
@@ -532,35 +543,35 @@ _l = 文::右詰(訳("records"), 20)
 // ── report ────────────────────────────────────────────────────
 
 ? 模式 <> 2 { >>! }
->> "" ¶
-_t = 訳("results")
->> "═══ {_t} — {対局数} · {路}×{路} ═══" ¶
->> "" ¶
-_l = 文::右詰(訳("bwins"), 20)
->> "  {_l}{黒勝}" ¶
-_l = 文::右詰(訳("wwins"), 20)
->> "  {_l}{白勝}" ¶
-_l = 文::右詰(訳("jigo"), 20)
->> "  {_l}{持碁}" ¶
-_l = 文::右詰(訳("avgmov"), 20)
-_v = 総手数 / 対局数
->> "  {_l}{_v}" ¶
->> "" ¶
+記す("", #1, 報告)
+題 = 訳("results")
+記す("═══ {題} — {対局数} · {路}×{路} ═══", #1, 報告)
+記す("", #1, 報告)
+札 = 文::右詰(訳("bwins"), 20)
+記す("  {札}{黒勝}", #1, 報告)
+札 = 文::右詰(訳("wwins"), 20)
+記す("  {札}{白勝}", #1, 報告)
+札 = 文::右詰(訳("jigo"), 20)
+記す("  {札}{持碁}", #1, 報告)
+札 = 文::右詰(訳("avgmov"), 20)
+値 = 総手数 / 対局数
+記す("  {札}{値}", #1, 報告)
+記す("", #1, 報告)
 
->> (訳("timehdr")) ¶
-_l = 文::右詰(訳("first10"), 26)
-_v = ミリ(総初 / (対局数 * 10))
->> "  {_l}{_v} ms" ¶
-_l = 文::右詰(訳("last10"), 26)
-_v = ミリ(総終 / (対局数 * 10))
->> "  {_l}{_v} ms" ¶
-_l = 文::右詰(訳("slowest"), 26)
-_v = ミリ(最遅 / 10)
->> "  {_l}{_v} ms" ¶
-_l = 文::右詰(訳("run"), 26)
-_v = ミリ(総時間) / 1000
-_u = 訳("thinking")
->> "  {_l}{_v} {_u}" ¶
+記す(訳("timehdr"), #1, 報告)
+札 = 文::右詰(訳("first10"), 26)
+値 = ミリ(総初 / (対局数 * 10))
+記す("  {札}{値} ms", #1, 報告)
+札 = 文::右詰(訳("last10"), 26)
+値 = ミリ(総終 / (対局数 * 10))
+記す("  {札}{値} ms", #1, 報告)
+札 = 文::右詰(訳("slowest"), 26)
+値 = ミリ(最遅 / 10)
+記す("  {札}{値} ms", #1, 報告)
+札 = 文::右詰(訳("run"), 26)
+値 = ミリ(総時間) / 1000
+単 = 訳("thinking")
+記す("  {札}{値} {単}", #1, 報告)
 
 ? 総初 > 0 {
     // Integer division would round a 1.7x growth down to 1x and
@@ -569,7 +580,7 @@ _u = 訳("thinking")
     entero = 比 / 10
     decimal = 比 % 10
     札 = 文::右詰(訳("growth"), 26)
-    >> "  {札}×{entero}.{decimal}" ¶
+    記す("  {札}×{entero}.{decimal}", #1, 報告)
 }
 
 // An instrument that does not know its own limits reports nonsense
@@ -579,44 +590,45 @@ _u = 訳("thinking")
 // saying it has run out of resolution.
 一手平均 = 総初 / (対局数 * 10)
 ? 一手平均 < 較正値 * 3 {
-    >> "" ¶
-    >> "  " (訳("noise")) ¶
-    >> (訳("noisehow")) ¶
+    記す("", #1, 報告)
+    警1 = 訳("noise")
+    記す("  {警1}", #1, 報告)
+    記す(訳("noisehow"), #1, 報告)
 }
->> "" ¶
-
->> (訳("memhdr")) ¶
-_l = 文::右詰(訳("before"), 26)
->> "  {_l}{記憶初} KB" ¶
-_l = 文::右詰(訳("after"), 26)
->> "  {_l}{記憶終} KB" ¶
-_l = 文::右詰(訳("memgrow"), 26)
-_v = 記憶終 - 記憶初
-_u = 訳("over")
->> "  {_l}{_v} {_u} {対局数}" ¶
+記す("", #1, 報告)
+記す(訳("memhdr"), #1, 報告)
+札 = 文::右詰(訳("before"), 26)
+記す("  {札}{記憶初} KB", #1, 報告)
+札 = 文::右詰(訳("after"), 26)
+記す("  {札}{記憶終} KB", #1, 報告)
+札 = 文::右詰(訳("memgrow"), 26)
+値 = 記憶終 - 記憶初
+単 = 訳("over")
+記す("  {札}{値} {単} {対局数}", #1, 報告)
 ? (記憶表$#) > 0 {
     最大記憶 = 0
     @ v : 記憶表 {
         ? v > 最大記憶 { 最大記憶 = v }
     }
-    _lp = 文::右詰(訳("peak"), 26)
-    >> "  {_lp}{最大記憶} KB" ¶
+    札p = 文::右詰(訳("peak"), 26)
+    記す("  {札p}{最大記憶} KB", #1, 報告)
 }
->> "" ¶
+記す("", #1, 報告)
 
->> (訳("lvlhdr")) ¶
-_h3 = 訳("lvlhint")
->> "  {_h3}" ¶
->> "" ¶
+記す("", #1, 報告)
+記す(訳("lvlhdr"), #1, 報告)
+案内 = 訳("lvlhint")
+記す("  {案内}", #1, 報告)
+記す("", #1, 報告)
 // Juxtaposing two parenthesised calls parses as a call, so the
 // header is assembled before it is printed.
-_h = 文::右詰("", 8)
+_h = 文::右詰("", 14)
 _a = 文::中央(級名(1), 14)
 _b = 文::中央(級名(2), 14)
 _c = 文::中央(級名(3), 14)
->> "  {_h}{_a}{_b}{_c}" ¶
+記す("  {_h}{_a}{_b}{_c}", #1, 報告)
 @ a:1..3 {
-    線 = 文::右詰(級名(a), 8)
+    線 = 文::右詰(級名(a), 14)
     @ b:1..3 {
         i = (a - 1) * 3 + b
         欄 = "—"
@@ -626,21 +638,22 @@ _c = 文::中央(級名(3), 14)
             欄 = "{pct}% /{n}"
         }
         線 = "{線}{欄}"
-        線 = 文::右詰(線, 8 + b * 14)
+        線 = 文::右詰(線, 14 + b * 14)
     }
-    >> "  " 線 ¶
+    記す("  {線}", #1, 報告)
 }
->> "" ¶
+記す("", #1, 報告)
 
->> (訳("perhdr")) ¶
->> "" ¶
-_h2 = 文::右詰("", 8)
+記す("", #1, 報告)
+記す(訳("perhdr"), #1, 報告)
+記す("", #1, 報告)
+_h2 = 文::右詰("", 14)
 _p1 = 文::中央(性格名(0), 14)
 _p2 = 文::中央(性格名(1), 14)
 _p3 = 文::中央(性格名(2), 14)
->> "  {_h2}{_p1}{_p2}{_p3}" ¶
+記す("  {_h2}{_p1}{_p2}{_p3}", #1, 報告)
 @ a:0..2 {
-    線 = 文::右詰(性格名(a), 8)
+    線 = 文::右詰(性格名(a), 14)
     @ b:0..2 {
         i = a * 3 + b + 1
         欄 = "—"
@@ -650,11 +663,11 @@ _p3 = 文::中央(性格名(2), 14)
             欄 = "{pct}% /{n}"
         }
         線 = "{線}{欄}"
-        線 = 文::右詰(線, 8 + (b + 1) * 14)
+        線 = 文::右詰(線, 14 + (b + 1) * 14)
     }
-    >> "  " 線 ¶
+    記す("  {線}", #1, 報告)
 }
->> "" ¶
+記す("", #1, 報告)
 // ── the run's own record ──────────────────────────────────────
 // Everything the report just printed, in the same line-based form
 // as the games themselves. Always in the machine form, whatever the
@@ -726,10 +739,18 @@ mem_peak_kb {要mp}
 "
     }
 }
-io::write("{記録場所}/summary.txt", 要約)
+記す("", #1, 報告)
+語書 = 訳("written")
+記す("  {対局数} {語書} {記録場所}/", #1, 報告)
+語種 = 訳("seed")
+語再 = 訳("replay")
+記す("  {語種} {親種} {語再}", #1, 報告)
 
-_w = 訳("written")
->> "  {対局数} {_w} {記録場所}/" ¶
-_s1 = 訳("seed")
-_s2 = 訳("replay")
->> "  {_s1} {親種} {_s2}" ¶
+// Two files, because they answer different questions.
+// summary.txt is what a person reads: the report exactly as it
+// scrolled past, in whatever language it was run in.
+// stats.txt is what a program reads: always the same keys in the
+// same order in English, so runs made months and languages apart
+// can still be summed.
+io::write("{記録場所}/summary.txt", 報告)
+io::write("{記録場所}/stats.txt", 要約)
