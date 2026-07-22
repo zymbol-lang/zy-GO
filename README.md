@@ -340,6 +340,7 @@ zy-GO/
 ├── go.zy                entry point, language menu     ┘ language
 ├── 対局.zy              match controller — turn loop, history, undo
 ├── 棋戦.zy              AI vs AI, instrumented — see 棋戦.md
+├── 集計.zy              sums every run into one set of matrices
 │                       records go to zy-GO-kifu (ZYGO_KIFU to redirect)
 ├── 核/                  engine
 │   ├── 盤.zy            board state, chains, liberties, placement, capture
@@ -455,7 +456,7 @@ fixture.
 | 7 | 核/思考: eye detection (眼) and useful-move enumeration (有用手) | **done** |
 | 8 | 核/思考: the AI and its three levels | **done** |
 | 9 | 棋戦: AI vs AI harness — timing, memory, level and personality statistics, replayable game records | **done** |
-|   | *200 games measured: Advanced beats Beginner 97%, but Advanced against Intermediate is a coin flip — and 200 games moved memory by 96 KB* | |
+|   | *400 games: Beginner loses 90% to both other levels, but Intermediate against Advanced is a coin flip. Memory moved 96 KB over 200 games.* | |
 |   | *and the register VM turns out to be 8–14× faster than the tree-walker on this workload, not the ~4× the docs claim* | |
 | 10 | api/: identifier-level API translation layers | pending |
 | 11 | 棋譜 (SGF export), 置き碁 (handicap), positional superko, TW vs VM benchmark | pending |

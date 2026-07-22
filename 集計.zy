@@ -1,0 +1,250 @@
+// ============================================================
+// 集計.zy — aggregate every run into one answer
+//
+//   zymbol run 集計.zy [directory] [es|en]
+//
+// A single run is a sample. The interesting numbers only appear
+// once runs are summed, and they must be summed as counts — wins
+// and games — never as averaged percentages. That is why summary.txt
+// stores the matrices raw, and why this reads the records rather
+// than the reports: a run interrupted before it wrote its summary
+// still has its games, and they still count.
+//
+// It also means a claim made from one run can be checked against
+// every run ever recorded, which is the only defence against
+// reading a pattern into forty games.
+// ============================================================
+
+<# ./表示/文字 => 文
+<# std/io => io
+
+既定 := "games"
+
+訳(鍵, 西) {
+    ? 西 {
+        <~ ?? 鍵 {
+            "title"   => "集計 — todas las tandas juntas"
+            "dir"     => "directorio"
+            "runs"    => "tandas"
+            "games"   => "partidas"
+            "skipped" => "sin terminar (sin summary)"
+            "lvlhdr"  => "── nivel: victorias de la fila contra la columna ──"
+            "perhdr"  => "── personalidad ──"
+            "none"    => "no hay partidas que agregar"
+            "beg"     => "Principiante"
+            "int"     => "Intermedio"
+            "adv"     => "Avanzado"
+            "bal"     => "equilibrada"
+            "off"     => "ofensiva"
+            "def"     => "defensiva"
+            "warn"    => "las celdas con menos de 30 partidas no dicen nada"
+            _         => 鍵
+        }
+    }
+    <~ ?? 鍵 {
+        "title"   => "集計 — every run together"
+        "dir"     => "directory"
+        "runs"    => "runs"
+        "games"   => "games"
+        "skipped" => "unfinished (no summary)"
+        "lvlhdr"  => "── level: row's wins against column ──"
+        "perhdr"  => "── personality ──"
+        "none"    => "no games to aggregate"
+        "beg"     => "Beginner"
+        "int"     => "Intermediate"
+        "adv"     => "Advanced"
+        "bal"     => "balanced"
+        "off"     => "offensive"
+        "def"     => "defensive"
+        "warn"    => "cells under 30 games say nothing"
+        _         => 鍵
+    }
+}
+
+// Pull "black level=2 personality=1" out of a record. Returns the
+// digit that follows 印 within the line starting with 色.
+_値(本文, 行頭, 印) {
+    行 = ""
+    @ l : (本文 $/ '\n') {
+        ? 行 == "" {
+            ? (l $? 行頭) { 行 = l }
+        }
+    }
+    ? 行 == "" { <~ 0 - 1 }
+    部 = 行 $/ 印
+    ? (部$#) < 2 { <~ 0 - 1 }
+    尾 = 部[2]
+    // Char is not comparable in Zymbol, so digits are recognised by
+    // code point — the same route 表示/文字.zy takes to measure width.
+    数 = ""
+    @ c : 尾 {
+        p = 文::符号点(c)
+        ? p >= 48 && p <= 57 {
+            数 = "{数}{c}"
+        } _ {
+            ? (数$#) > 0 { <~ #|数| }
+        }
+    }
+    ? (数$#) > 0 { <~ #|数| }
+    <~ 0 - 1
+}
+
+_勝者(本文) {
+    @ l : (本文 $/ '\n') {
+        ? (l $? "result ") {
+            ? (l $? "B+") { <~ 1 }
+            ? (l $? "W+") { <~ 2 }
+            <~ 0
+        }
+    }
+    <~ 0 - 1
+}
+
+// ── main ─────────────────────────────────────────────────────
+
+>< 引数
+場所 = 既定
+西 = #0
+// `@ i:1..n` counts DOWN when n < 1 — `1..0` walks [1, 0], because
+// descending ranges are a documented feature. So a count loop over
+// a possibly-empty collection needs a guard, or it indexes element
+// 1 of an empty array on the way past.
+総引数 = 引数$#
+? 総引数 > 0 {
+    @ i:1..総引数 {
+        t = 引数[i]
+        ? t == "es" { 西 = #1 }
+        _ {
+            ? t <> "en" { 場所 = t }
+        }
+    }
+}
+
+勝表 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+戦表 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+性勝 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+性戦 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+総局 = 0
+総走 = 0
+未了 = 0
+
+一覧 = io::list(場所)
+? 一覧$! {
+    >> "cannot read " 場所 ¶
+} _ {
+    @ 走 : 一覧 {
+        道 = "{場所}/{走}"
+        中身 = io::list(道)
+        ? 中身$! { @> }
+
+        // io::list on a plain file does not fail, so a stray README
+        // would otherwise be tallied as an empty run. A run is a
+        // directory that actually contains games.
+        完了 = #0
+        棋数 = 0
+        @ f : 中身 {
+            ? f == "summary.txt" { 完了 = #1 }
+            ? (f $? ".kifu") { 棋数 = 棋数 + 1 }
+        }
+        ? 棋数 == 0 { @> }
+        ? 完了 == #0 { 未了 = 未了 + 1 }
+        総走 = 総走 + 1
+
+        @ f : 中身 {
+            ? (f $? ".kifu") {
+                本文 = io::read("{道}/{f}")
+                ? 本文$! { @> }
+
+                黒級 = _値(本文, "black level", "level=")
+                黒性 = _値(本文, "black level", "personality=")
+                白級 = _値(本文, "white level", "level=")
+                白性 = _値(本文, "white level", "personality=")
+                勝 = _勝者(本文)
+
+                ? 黒級 > 0 && 白級 > 0 && 勝 >= 0 {
+                    総局 = 総局 + 1
+                    i = (黒級 - 1) * 3 + 白級
+                    j = (白級 - 1) * 3 + 黒級
+                    戦表[i] = 戦表[i] + 1
+                    戦表[j] = 戦表[j] + 1
+                    ? 勝 == 1 { 勝表[i] = 勝表[i] + 1 }
+                    ? 勝 == 2 { 勝表[j] = 勝表[j] + 1 }
+
+                    p = 黒性 * 3 + 白性 + 1
+                    q = 白性 * 3 + 黒性 + 1
+                    性戦[p] = 性戦[p] + 1
+                    性戦[q] = 性戦[q] + 1
+                    ? 勝 == 1 { 性勝[p] = 性勝[p] + 1 }
+                    ? 勝 == 2 { 性勝[q] = 性勝[q] + 1 }
+                }
+            }
+        }
+    }
+}
+
+題 = 訳("title", 西)
+>> "═══ {題} ═══" ¶
+札 = 文::右詰(訳("dir", 西), 26)
+>> "  {札}{場所}" ¶
+札 = 文::右詰(訳("runs", 西), 26)
+>> "  {札}{総走}" ¶
+札 = 文::右詰(訳("games", 西), 26)
+>> "  {札}{総局}" ¶
+? 未了 > 0 {
+    札 = 文::右詰(訳("skipped", 西), 26)
+    >> "  {札}{未了}" ¶
+}
+>> "" ¶
+
+? 総局 == 0 {
+    >> "  " (訳("none", 西)) ¶
+} _ {
+    級札 = [訳("beg", 西), 訳("int", 西), 訳("adv", 西)]
+    性札 = [訳("bal", 西), 訳("off", 西), 訳("def", 西)]
+
+    >> (訳("lvlhdr", 西)) ¶
+    c1 = 文::中央(級札[1], 14)
+    c2 = 文::中央(級札[2], 14)
+    c3 = 文::中央(級札[3], 14)
+    詰 = 文::右詰("", 14)
+    >> "  {詰}{c1}{c2}{c3}" ¶
+    @ a:1..3 {
+        線 = 文::右詰(級札[a], 14)
+        @ b:1..3 {
+            i = (a - 1) * 3 + b
+            欄 = "—"
+            ? 戦表[i] > 0 {
+                pct = 勝表[i] * 100 / 戦表[i]
+                n = 戦表[i]
+                欄 = "{pct}% /{n}"
+            }
+            線 = "{線}{欄}"
+            線 = 文::右詰(線, 14 + b * 14)
+        }
+        >> "  " 線 ¶
+    }
+    >> "" ¶
+
+    >> (訳("perhdr", 西)) ¶
+    d1 = 文::中央(性札[1], 14)
+    d2 = 文::中央(性札[2], 14)
+    d3 = 文::中央(性札[3], 14)
+    >> "  {詰}{d1}{d2}{d3}" ¶
+    @ a:0..2 {
+        線 = 文::右詰(性札[a + 1], 14)
+        @ b:0..2 {
+            i = a * 3 + b + 1
+            欄 = "—"
+            ? 性戦[i] > 0 {
+                pct = 性勝[i] * 100 / 性戦[i]
+                n = 性戦[i]
+                欄 = "{pct}% /{n}"
+            }
+            線 = "{線}{欄}"
+            線 = 文::右詰(線, 14 + (b + 1) * 14)
+        }
+        >> "  " 線 ¶
+    }
+    >> "" ¶
+    >> "  " (訳("warn", 西)) ¶
+}
