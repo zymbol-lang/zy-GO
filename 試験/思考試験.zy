@@ -10,6 +10,7 @@
 // ============================================================
 
 <# ../核/盤 => 盤
+<# ../核/規則 => 規則
 <# ../核/思考 => 思
 <# ./図 => 図
 
@@ -151,6 +152,101 @@
 確認("White has no useful move", (思::有用手(局面, 9, 2, 0))$#, 0, 失敗)
 確認("White is at a dead end", 思::手詰まり(局面, 9, 2, 0), #1, 失敗)
 確認("Black still has moves", (思::有用手(局面, 9, 1, 0))$#, 4, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "move selection — 着手選択" ¶
+
+// A capture that is there for the taking must be taken. This is
+// layer 2, and it is the one a beginner engine cannot get wrong.
+局面 = 図::読図([
+    ".X...",
+    "XOX..",
+    ".....",
+    ".....",
+    "....."
+])
+確認("takes the free capture", 思::着手選択(局面, 5, 1, 2, 0, 0, 10), 12, 失敗)
+
+// A chain with one liberty must run, and there is only one way out.
+局面 = 図::読図([
+    ".....",
+    "OXO..",
+    ".O...",
+    ".....",
+    "....."
+])
+確認("the chain really is in atari", 盤::ダメ数(局面, 5, 7), 1, 失敗)
+確認("escapes through its only liberty", 思::着手選択(局面, 5, 1, 2, 0, 0, 10), 2, 失敗)
+
+// Two eyes and nothing else to do: passing is the only sane move,
+// and filling either eye would kill a living group.
+局面 = 図::読図([
+    ".X.XX",
+    "XXXXX",
+    "XXXXX",
+    "XXXXX",
+    "XXXXX"
+])
+確認("passes rather than fill its own eyes", 思::着手選択(局面, 5, 1, 3, 0, 0, 40), 0, 失敗)
+
+// On an empty board the opening book confines the choice to the
+// corners — the one strategic idea the engine holds.
+空 = 盤::新規(9)
+角 = #1
+@ t:1..6 {
+    p = 思::着手選択(空, 9, 1, 2, 0, 0, 0)
+    ? 思::布石点(9, p) == #0 { 角 = #0 }
+}
+確認("opens in a corner, every time", 角, #1, 失敗)
+
+// Whatever it picks must be legal — checked over a whole self-play
+// game below, but asserted here on a crowded position too.
+局面 = 図::読図([
+    "XXOO.",
+    "XOXO.",
+    ".XOX.",
+    "XXOOX",
+    "OOXX."
+])
+p = 思::着手選択(局面, 5, 1, 2, 0, 0, 20)
+確認("its move on a crowded board is legal", 規則::判定(局面, 5, p, 1, 0), 0, 失敗)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "self-play — the engine against itself" ¶
+
+局面 = 盤::新規(9)
+手番 = 1
+コウ = 0
+パス = 0
+手数 = 0
+最終 = 0
+不正 = 0
+
+@ 手数 < 40 {
+    ? パス >= 2 { @! }
+    p = 思::着手選択(局面, 9, 手番, 2, コウ, 最終, 手数)
+    ? p == 0 {
+        パス = パス + 1
+        コウ = 0
+        最終 = 0
+    } _ {
+        取 = 0
+        k = 0
+        状 = 盤::着手(局面, 9, p, 手番, 取, k)
+        ? 状 <> 0 { 不正 = 不正 + 1 }
+        コウ = k
+        最終 = p
+        パス = 0
+    }
+    手番 = 盤::敵(手番)
+    手数 = 手数 + 1
+}
+
+確認("never proposes an illegal move", 不正, 0, 失敗)
+確認("the game actually progressed", 手数, 40, 失敗)
+確認("and put stones on the board", (盤::石数(局面, 1)) > 5, #1, 失敗)
 
 // ------------------------------------------------------------
 >> "" ¶

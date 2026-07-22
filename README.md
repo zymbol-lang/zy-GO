@@ -313,10 +313,19 @@ the best one — with an amount of randomness that depends on the level:
 | Advanced | 上級 | All layers, wider candidate scan, near-deterministic |
 
 **Honest strength estimate:** a weak beginner, somewhere around 25 kyu. It will
-capture what you leave hanging, save its own stones from atari, and not fill its
-own eyes. It will not read a ladder to its conclusion or judge a life-and-death
+capture what you leave hanging, save its own stones from atari, refuse to fill
+its own eyes, open in a corner and avoid the first two lines while the board is
+open. It will not read a ladder to its conclusion or judge a life-and-death
 problem. That is the point — the AI exists to prove the language can express a
 non-trivial decision engine, not to beat you.
+
+One term is not in the table above and earns its place: **self-atari**. Without
+a penalty for leaving your own chain on one liberty while capturing nothing, the
+engine walks into capture cheerfully and every other layer is wasted.
+
+The level is a single number — how far below the best a move may score and still
+be picked (60 / 25 / 5 points). A beginner is not a program that plays badly on
+purpose; it is one that cannot tell a good move from a nearly-good one.
 
 ---
 
@@ -441,7 +450,7 @@ fixture.
 | 5 | 表示/描画 + 表示/主題: board, themes, cursor, panel, `>>?` gating | **done** |
 | 6 | 対局 + entry points: turn loop, history, 待った, the four launchers | **done** — hot-seat |
 | 7 | 核/思考: eye detection (眼) and useful-move enumeration (有用手) | **done** |
-| 8 | 核/思考: the AI itself and its three levels | pending |
+| 8 | 核/思考: the AI and its three levels | **done** |
 | 9 | api/: identifier-level API translation layers | pending |
 | 10 | 棋譜 (SGF export), 置き碁 (handicap), positional superko, TW vs VM benchmark | pending |
 
@@ -460,8 +469,9 @@ bash 試験/全試験.sh
 全試験 PASS
 ```
 
-The game is playable now, two humans at one keyboard. Phase 7 replaces one of
-them with 核/思考.zy.
+There is an opponent now. Measured on the machine that built it: **0.18 s per
+move on 9 × 9**, 0.62 s on 19 × 19 — a full self-play game of 93 moves ran in
+16 seconds and proposed **zero illegal moves**.
 
 Rule cases are written as text diagrams so they can be checked by eye:
 

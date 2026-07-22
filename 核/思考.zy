@@ -19,12 +19,39 @@
 
     <# ./盤 => 盤
     <# ./規則 => 規則
+    <# std/random => 乱
 
     #> {
         眼
         有用手
         手詰まり
+        影響図
+        布石点
+        候補
+        評価
+        着手選択
     }
+
+    // Evaluation weights. Constants so they can be tuned without
+    // touching the logic that applies them.
+    重_取り   := 100
+    重_逃げ   := 80
+    重_自殺   := 70
+    重_アタリ := 40
+    重_接続   := 25
+    重_切断   := 20
+    重_接触   := 15
+    重_勢力   := 20
+    重_布石   := 50
+    重_辺     := 30
+
+    // How far below the best a move may score and still be picked.
+    // This is the whole of "level": a wider margin plays worse, not
+    // by choosing bad moves on purpose but by being less sure the
+    // best one is best.
+    幅_初級 := 60
+    幅_中級 := 25
+    幅_上級 := 5
 
     // Diagonal neighbours that are on the board.
     _斜(路, 点) {
@@ -98,5 +125,284 @@
     // so this is advice, never a decision the program makes.
     手詰まり(局面, 路, 色, コウ点) {
         <~ (有用手(局面, 路, 色, コウ点))$# == 0
+    }
+
+    // ── influence ─────────────────────────────────────────────
+    // Each stone radiates 4 - distance over distances 0..3, black
+    // positive and white negative. A point whose sum is near zero
+    // is on the contested boundary, which is where a game is
+    // decided — so the map is used to prefer the frontier, not the
+    // safe interior. Computed once per turn, never per candidate.
+    影響図(局面, 路) {
+        図 = 盤::新規(路)
+        総 = 路 * 路
+        @ p:1..総 {
+            色 = 局面[p]
+            ? 色 <> 0 {
+                行 = 盤::行番(路, p)
+                列 = 盤::列番(路, p)
+                符 = 1
+                ? 色 == 2 { 符 = 0 - 1 }
+                下行 = 行 - 3
+                上行 = 行 + 3
+                ? 下行 < 1 { 下行 = 1 }
+                ? 上行 > 路 { 上行 = 路 }
+                @ r:下行..上行 {
+                    下列 = 列 - 3
+                    上列 = 列 + 3
+                    ? 下列 < 1 { 下列 = 1 }
+                    ? 上列 > 路 { 上列 = 路 }
+                    @ c:下列..上列 {
+                        d = _距離(行, 列, r, c)
+                        ? d <= 3 {
+                            q = 盤::位置(路, r, c)
+                            図[q] = 図[q] + 符 * (4 - d)
+                        }
+                    }
+                }
+            }
+        }
+        <~ 図
+    }
+
+    _距離(r1, c1, r2, c2) {
+        a = r1 - r2
+        ? a < 0 { a = 0 - a }
+        b = c1 - c2
+        ? b < 0 { b = 0 - b }
+        <~ a + b
+    }
+
+    _絶対(n) {
+        ? n < 0 { <~ 0 - n }
+        <~ n
+    }
+
+    // ── opening book ──────────────────────────────────────────
+    // Star points and 3-4 points: the corners are worth more than
+    // the centre at the start, which is the one strategic idea a
+    // beginner engine can afford to hold.
+    布石点(路, 点) {
+        行 = 盤::行番(路, 点)
+        列 = 盤::列番(路, 点)
+        端 = 4
+        ? 路 == 9 { 端 = 3 }
+        逆 = 路 - 端 + 1
+        近行 = 行 == 端 || 行 == 逆
+        近列 = 列 == 端 || 列 == 逆
+        ? 近行 {
+            ? 近列 { <~ #1 }
+        }
+        // 3-4 points: one line further out on either axis
+        ? 近行 {
+            ? 列 == 端 - 1 || 列 == 逆 + 1 { <~ #1 }
+        }
+        ? 近列 {
+            ? 行 == 端 - 1 || 行 == 逆 + 1 { <~ #1 }
+        }
+        <~ #0
+    }
+
+    _線(路, 点) {
+        行 = 盤::行番(路, 点)
+        列 = 盤::列番(路, 点)
+        a = 行
+        ? 路 - 行 + 1 < a { a = 路 - 行 + 1 }
+        b = 列
+        ? 路 - 列 + 1 < b { b = 路 - 列 + 1 }
+        ? b < a { <~ b }
+        <~ a
+    }
+
+    // ── candidates ────────────────────────────────────────────
+    // Legality is affordable to scan in full (measured: 287 points
+    // on 19x19 in well under a second), so the pruning here is
+    // about evaluation cost, not legality. On an empty board the
+    // candidate set is the opening book alone.
+    候補(局面, 路, 色, コウ点, 手数, 級) {
+        全 = 有用手(局面, 路, 色, コウ点)
+        ? (全$#) == 0 { <~ [] }
+
+        石数 = 盤::石数(局面, 1) + 盤::石数(局面, 2)
+        ? 石数 == 0 {
+            開 = []
+            @ p : 全 {
+                ? 布石点(路, p) { 開 = 開 $+ p }
+            }
+            ? (開$#) > 0 { <~ 開 }
+            <~ 全
+        }
+
+        // Advanced looks one line further out than the others.
+        半径 = 2
+        ? 級 >= 3 { 半径 = 3 }
+
+        近 = []
+        @ p : 全 {
+            ? _近い(局面, 路, p, 半径) { 近 = 近 $+ p }
+            _ {
+                ? 手数 < 12 {
+                    ? 布石点(路, p) { 近 = 近 $+ p }
+                }
+            }
+        }
+        ? (近$#) == 0 { <~ 全 }
+        <~ 近
+    }
+
+    _近い(局面, 路, 点, 半径) {
+        行 = 盤::行番(路, 点)
+        列 = 盤::列番(路, 点)
+        下行 = 行 - 半径
+        上行 = 行 + 半径
+        ? 下行 < 1 { 下行 = 1 }
+        ? 上行 > 路 { 上行 = 路 }
+        @ r:下行..上行 {
+            下列 = 列 - 半径
+            上列 = 列 + 半径
+            ? 下列 < 1 { 下列 = 1 }
+            ? 上列 > 路 { 上列 = 路 }
+            @ c:下列..上列 {
+                ? _距離(行, 列, r, c) <= 半径 {
+                    ? 局面[盤::位置(路, r, c)] <> 0 { <~ #1 }
+                }
+            }
+        }
+        <~ #0
+    }
+
+    // ── evaluation ────────────────────────────────────────────
+    // Every term is applied to a copy of the board with the move
+    // already played, so "what does this move achieve" is answered
+    // by looking at the position it produces, not by guessing.
+    評価(局面, 路, 点, 色, 級, 最終手, 手数, 影響) {
+        敵色 = 盤::敵(色)
+        写 = 盤::複製(局面)
+        取 = 0
+        コ = 0
+        状 = 盤::着手(写, 路, 点, 色, 取, コ)
+        ? 状 <> 0 { <~ 0 - 100000 }
+
+        点数 = 0
+
+        // Layer 2 — capture.
+        点数 = 点数 + 重_取り * 取
+
+        // Layer 3 — escaping atari, but only when it works: the
+        // chain must come out with more than one liberty, or the
+        // move is just feeding a second stone to the same capture.
+        自群 = 盤::連(写, 路, 点)
+        自ダメ = 盤::群ダメ数(写, 路, 自群)
+        @ q : 盤::隣(路, 点) {
+            ? 局面[q] == 色 {
+                旧 = 盤::連(局面, 路, q)
+                ? 盤::群ダメ数(局面, 路, 旧) == 1 {
+                    ? 自ダメ >= 2 { 点数 = 点数 + 重_逃げ * (旧$#) }
+                }
+            }
+        }
+
+        // Self-atari. Not in the design table, but without it the
+        // engine happily walks into capture; a move that leaves its
+        // own chain on one liberty and takes nothing is almost
+        // always wrong.
+        ? 自ダメ == 1 {
+            ? 取 == 0 { 点数 = 点数 - 重_自殺 * (自群$#) }
+        }
+
+        // Layer 4 — atari against the opponent.
+        @ q : 盤::隣(路, 点) {
+            ? 写[q] == 敵色 {
+                敵群 = 盤::連(写, 路, q)
+                ? 盤::群ダメ数(写, 路, 敵群) == 1 {
+                    点数 = 点数 + 重_アタリ
+                }
+            }
+        }
+
+        // Beginner stops here: capture, escape, atari, and nothing
+        // about shape or territory.
+        ? 級 <= 1 { <~ 点数 }
+
+        // Layer 5 — shape. Connecting two of your own chains and
+        // cutting two of the opponent's are the two 3x3 patterns
+        // that matter most; contact with the opponent's last move
+        // is the third.
+        自数 = 0
+        敵数 = 0
+        @ q : 盤::隣(路, 点) {
+            ? 局面[q] == 色 { 自数 = 自数 + 1 }
+            ? 局面[q] == 敵色 { 敵数 = 敵数 + 1 }
+        }
+        ? 自数 >= 2 { 点数 = 点数 + 重_接続 }
+        ? 敵数 >= 2 { 点数 = 点数 + 重_切断 }
+        ? 最終手 > 0 {
+            行 = 盤::行番(路, 点)
+            列 = 盤::列番(路, 点)
+            r = 盤::行番(路, 最終手)
+            c = 盤::列番(路, 最終手)
+            d = _距離(行, 列, r, c)
+            ? d <= 2 { 点数 = 点数 + 重_接触 }
+        }
+
+        // Layer 6 — influence: prefer the boundary between the two
+        // spheres over the safe middle of your own.
+        差 = _絶対(影響[点])
+        ? 差 < 重_勢力 { 点数 = 点数 + (重_勢力 - 差) }
+
+        // Layer 7 — opening book, and the edge penalty that keeps
+        // the engine off the first two lines while there is still
+        // open board.
+        ? 手数 < 8 {
+            ? 布石点(路, 点) { 点数 = 点数 + 重_布石 }
+        }
+        ? 手数 < 30 {
+            ? _線(路, 点) <= 2 { 点数 = 点数 - 重_辺 }
+        }
+
+        <~ 点数
+    }
+
+    // ── move selection ────────────────────────────────────────
+    // Returns the chosen point, or 0 to pass.
+    //
+    // The level is one number: how far below the best a move may
+    // score and still be picked. A beginner is not a program that
+    // plays badly on purpose — it is one that cannot tell a good
+    // move from a nearly-good one.
+    着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数) {
+        一覧 = 候補(局面, 路, 色, コウ点, 手数, 級)
+        ? (一覧$#) == 0 { <~ 0 }
+
+        影響 = 影響図(局面, 路)
+
+        // Score once, keep the scores. Evaluating twice — once for
+        // the maximum and once to collect the near-misses — is the
+        // kind of doubling that goes unnoticed until a turn takes
+        // twice as long as it needs to.
+        点数表 = []
+        最高 = 0 - 1000000
+        @ p : 一覧 {
+            v = 評価(局面, 路, p, 色, 級, 最終手, 手数, 影響)
+            点数表 = 点数表 $+ v
+            ? v > 最高 { 最高 = v }
+        }
+
+        // Every remaining move hurts: pass rather than fill in.
+        ? 最高 < 0 { <~ 0 }
+
+        幅 = 幅_中級
+        ? 級 <= 1 { 幅 = 幅_初級 }
+        ? 級 >= 3 { 幅 = 幅_上級 }
+
+        候 = []
+        総 = 一覧$#
+        @ i:1..総 {
+            ? 点数表[i] >= 最高 - 幅 { 候 = 候 $+ 一覧[i] }
+        }
+
+        n = 候$#
+        ? n == 1 { <~ 候[1] }
+        <~ 候[乱::entero(1, n)]
     }
 }

@@ -319,10 +319,21 @@ del nivel:
 | Avanzado | 上級 | Todas las capas, barrido de candidatas más amplio, casi determinista |
 
 **Estimación honesta de fuerza:** un principiante flojo, en torno a 25 kyu.
-Capturará lo que dejes colgando, salvará sus piedras del atari y no rellenará
-sus propios ojos. No leerá una escalera hasta el final ni resolverá un problema
-de vida y muerte. Y ese es el objetivo — la IA existe para demostrar que el
-lenguaje puede expresar un motor de decisión no trivial, no para ganarte.
+Capturará lo que dejes colgando, salvará sus piedras del atari, se negará a
+rellenar sus propios ojos, abrirá en una esquina y evitará las dos primeras
+líneas mientras haya tablero abierto. No leerá una escalera hasta el final ni
+resolverá un problema de vida y muerte. Y ese es el objetivo — la IA existe para
+demostrar que el lenguaje puede expresar un motor de decisión no trivial, no
+para ganarte.
+
+Hay un término que no está en la tabla y se ganó su sitio: el **auto-atari**. Sin
+penalizar dejar la cadena propia con una sola libertad sin capturar nada, el
+motor se mete solo en la captura y todas las demás capas dan igual.
+
+El nivel es un solo número — cuánto por debajo de la mejor puede puntuar una
+jugada y aun así elegirse (60 / 25 / 5 puntos). Un principiante no es un programa
+que juega mal a propósito: es uno que no distingue la mejor jugada de una casi
+buena.
 
 ---
 
@@ -452,7 +463,7 @@ real y no a un fixture de pruebas.
 | 5 | 表示/描画 + 表示/主題: tablero, temas, cursor, panel, control con `>>?` | **hecho** |
 | 6 | 対局 + puntos de entrada: bucle de turnos, historial, 待った, los cuatro lanzadores | **hecho** — por turnos |
 | 7 | 核/思考: detección de ojos (眼) y jugadas útiles (有用手) | **hecho** |
-| 8 | 核/思考: la IA propiamente dicha y sus tres niveles | pendiente |
+| 8 | 核/思考: la IA y sus tres niveles | **hecho** |
 | 9 | api/: capas de traducción de la API a nivel de identificadores | pendiente |
 | 10 | 棋譜 (exportación SGF), 置き碁 (handicap), superko posicional, benchmark TW contra VM | pendiente |
 
@@ -471,8 +482,9 @@ bash 試験/全試験.sh
 全試験 PASS
 ```
 
-El juego ya es jugable, dos personas en un mismo teclado. La fase 7 sustituye a
-una de ellas por 核/思考.zy.
+Ya hay rival. Medido en la máquina que lo construyó: **0,18 s por jugada en
+9 × 9**, 0,62 s en 19 × 19 — una partida completa de la IA contra sí misma, 93
+jugadas, tardó 16 segundos y propuso **cero jugadas ilegales**.
 
 Los casos de reglas se escriben como diagramas de texto, para poder comprobarlos
 a ojo:
