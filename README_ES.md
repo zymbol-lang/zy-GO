@@ -348,6 +348,7 @@ zy-GO/
 ├── go.zy                punto de entrada, menú         ┘ preseleccionado
 ├── 対局.zy              controlador de partida — turnos, historial, deshacer
 ├── 棋戦.zy              IA contra IA, instrumentado — ver 棋戦.md
+│                       los registros van a zy-GO-kifu (ZYGO_KIFU para redirigir)
 ├── 核/                  motor
 │   ├── 盤.zy            estado del tablero, cadenas, libertades, colocación, captura
 │   ├── 規則.zy          legalidad, ko, detección de fin de partida
@@ -467,7 +468,7 @@ real y no a un fixture de pruebas.
 | 7 | 核/思考: detección de ojos (眼) y jugadas útiles (有用手) | **hecho** |
 | 8 | 核/思考: la IA y sus tres niveles | **hecho** |
 | 9 | 棋戦: banco IA contra IA — tiempos, memoria, estadísticas de nivel y personalidad, partidas reproducibles | **hecho** |
-|   | *30 partidas medidas: 上級 ganó 12 de 12 a 初級, y la memoria se estabiliza en 12–13 MB tanto con 3 partidas como con 30* | |
+|   | *200 partidas medidas: Avanzado gana el 97% a Principiante, pero Avanzado contra Intermedio es cara o cruz — y 200 partidas movieron la memoria 96 KB* | |
 |   | *y la VM de registros resulta 8–14× más rápida que el tree-walker en esta carga, no el ~4× que dice la documentación* | |
 | 10 | api/: capas de traducción de la API a nivel de identificadores | pendiente |
 | 11 | 棋譜 (exportación SGF), 置き碁 (handicap), superko posicional, benchmark TW contra VM | pendiente |

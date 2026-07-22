@@ -7,7 +7,8 @@
 # Zymbol standalone build output
 *.out
 
-# Game records produced by 棋戦.zy — regenerate with
-#   zymbol run 棋戦.zy 200 9 静
-# The format is documented in 棋戦.md; a run of 200 games is ~20 MB.
+# Game records produced by 棋戦.zy. A 200-game run is about 630 KB,
+# so this is ignored by size convention rather than necessity — see
+# 棋戦.md on where a growing dataset should actually live, and set
+# ZYGO_KIFU to put it somewhere durable.
 棋譜/
