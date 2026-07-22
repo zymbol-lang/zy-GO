@@ -467,6 +467,7 @@ real y no a un fixture de pruebas.
 | 7 | 核/思考: detección de ojos (眼) y jugadas útiles (有用手) | **hecho** |
 | 8 | 核/思考: la IA y sus tres niveles | **hecho** |
 | 9 | 棋戦: banco IA contra IA — tiempos, memoria, estadísticas de nivel y personalidad, partidas reproducibles | **hecho** |
+|   | *30 partidas medidas: 上級 ganó 12 de 12 a 初級, y la memoria se estabiliza en 12–13 MB tanto con 3 partidas como con 30* | |
 | 10 | api/: capas de traducción de la API a nivel de identificadores | pendiente |
 | 11 | 棋譜 (exportación SGF), 置き碁 (handicap), superko posicional, benchmark TW contra VM | pendiente |
 

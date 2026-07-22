@@ -111,7 +111,7 @@
 // 結果[2] moves             [5] white total     [8] first-10 ns
 // 結果[3] margin            [6] captures total  [9] last-10 ns
 
-一局(番号, 路, 種初, 黒級, 黒性, 白級, 白性, 模式, 較正値, 結果<~) {
+一局(番号, 路, 種初, 黒級, 黒性, 白級, 白性, 模式, 較正値, 実行印, 結果<~) {
     局面 = 盤::新規(路)
     種 = 種初
     手番 = 1
@@ -128,6 +128,7 @@
     最近 = []
 
     記録 = "# zy-GO kifu v1
+run {実行印}
 board {路}
 komi 6.5
 seed {種初}
@@ -234,9 +235,13 @@ time_first10_ms {初ms}
 time_last10_ms {終ms}
 "
 
+    // Board, run timestamp, game number. Nothing is ever
+    // overwritten: two runs a second apart still land in different
+    // files, and records accumulate across months into the dataset
+    // a learning system would need.
     番札 = 零詰(番号, 4)
     路札 = "{路}"
-    io::write("{記録場所}/{路札}路_{番札}.kifu", 記録)
+    io::write("{記録場所}/{路札}路_{実行印}_{番札}.kifu", 記録)
 }
 
 _状況描画(番号, 路, 手数, 色, 座, ms, 黒級, 黒性, 白級, 白性, 黒取, 白取) {
@@ -285,12 +290,18 @@ _rnd = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
 io::mkdir(記録場所)
 較正値 = 較正()
 
+// One stamp per run, not per game: files of the same run stay
+// together when the directory is sorted, and no run can collide
+// with another.
+実行印 = <\ "date +%Y%m%d_%H%M%S" \>
+
 >> "═══ 棋戦 — zy-GO stress and behaviour test ═══" ¶
 >> "  games        " 対局数 ¶
 >> "  board        " 路 "×" 路 ¶
 >> "  master seed  " 親種 ¶
 >> "  clock cost   " (較正値 / 1000) " µs per timestamp (subtracted)" ¶
->> "  records      " 記録場所 "/" ¶
+>> "  run stamp    " 実行印 ¶
+>> "  records      " 記録場所 "/" 路 "路_" 実行印 "_NNNN.kifu" ¶
 >> "" ¶
 
 黒勝 = 0
@@ -326,7 +337,7 @@ io::mkdir(記録場所)
     局種 = 種
 
     結果 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-    一局(n, 路, 局種, 黒級, 黒性, 白級, 白性, 模式, 較正値, 結果)
+    一局(n, 路, 局種, 黒級, 黒性, 白級, 白性, 模式, 較正値, 実行印, 結果)
 
     勝 = 結果[1]
     ? 勝 == 1 { 黒勝 = 黒勝 + 1 }
@@ -461,5 +472,5 @@ _p3 = 文::中央("守", 10)
     >> "  " 線 ¶
 }
 >> "" ¶
->> "  " 対局数 " records written to " 記録場所 "/" ¶
+>> "  " 対局数 " records written to " 記録場所 "/" 路 "路_" 実行印 "_*.kifu" ¶
 >> "  master seed " 親種 " — the whole run replays from it" ¶
