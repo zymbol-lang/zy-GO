@@ -7,8 +7,8 @@
 # Zymbol standalone build output
 *.out
 
-# Game records produced by 棋戦.zy. A 200-game run is about 630 KB,
-# so this is ignored by size convention rather than necessity — see
-# 棋戦.md on where a growing dataset should actually live, and set
-# ZYGO_KIFU to put it somewhere durable.
-棋譜/
+# Game records produced by 棋戦.zy — one directory per run, so a bad
+# run is one `rm -rf` away. They live in their own repository:
+#   https://github.com/zymbol-lang/zy-GO-kifu
+# Set ZYGO_KIFU to write straight into a clone of it.
+games/

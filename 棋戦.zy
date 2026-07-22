@@ -48,10 +48,15 @@
 
 上限手数 := 400
 
-// Where records go. Override with ZYGO_KIFU to keep a growing
+// Where records go. One directory per run:
+//
+//   games/20260722_003241_GO9x9/0001.kifu
+//
+// A run that goes wrong is one `rm -rf` away, and every other run
+// survives it. Override the base with ZYGO_KIFU to keep a growing
 // dataset outside the repository:
 //   ZYGO_KIFU=~/datos/go zymbol run 棋戦.zy 200 9 静
-既定場所 := "棋譜"
+既定場所 := "games"
 
 // ── instrumentation ───────────────────────────────────────────
 
@@ -351,13 +356,9 @@ time_first10_ms {初ms}
 time_last10_ms {終ms}
 "
 
-    // Board, run timestamp, game number. Nothing is ever
-    // overwritten: two runs a second apart still land in different
-    // files, and records accumulate across months into the dataset
-    // a learning system would need.
+    // The run owns the directory, so the file is just its number.
     番札 = 零詰(番号, 4)
-    路札 = "{路}"
-    io::write("{場所}/{路札}路_{実行印}_{番札}.kifu", 記録)
+    io::write("{場所}/{番札}.kifu", 記録)
 }
 
 _状況描画(番号, 路, 手数, 色, 座, ms, 黒級, 黒性, 白級, 白性, 黒取, 白取) {
@@ -414,16 +415,19 @@ _pid = <\ "echo $$" \>
 _rnd = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
 親種 = (#|_ns| + #|_pid| * 31337 + #|_rnd| * 65537) % 2147483647
 
-記録場所 = <\ "printenv ZYGO_KIFU" \>
-? (記録場所$#) == 0 { 記録場所 = 既定場所 }
+基底 = <\ "printenv ZYGO_KIFU" \>
+? (基底$#) == 0 { 基底 = 既定場所 }
 
-io::mkdir(記録場所)
 較正値 = 較正()
 
 // One stamp per run, not per game: files of the same run stay
 // together when the directory is sorted, and no run can collide
 // with another.
 実行印 = <\ "date +%Y%m%d_%H%M%S" \>
+
+// One directory per run. io::mkdir creates the whole path.
+記録場所 = "{基底}/{実行印}_GO{路}x{路}"
+io::mkdir(記録場所)
 
 // Two parenthesised expressions side by side parse as a call, so
 // every line here is assembled before it is printed.
@@ -442,7 +446,7 @@ _u = 訳("subtr")
 _l = 文::右詰(訳("stamp"), 20)
 >> "  {_l}{実行印}" ¶
 _l = 文::右詰(訳("records"), 20)
->> "  {_l}{記録場所}/{路}路_{実行印}_NNNN.kifu" ¶
+>> "  {_l}{記録場所}/NNNN.kifu" ¶
 >> "" ¶
 
 黒勝 = 0
@@ -651,8 +655,81 @@ _p3 = 文::中央(性格名(2), 14)
     >> "  " 線 ¶
 }
 >> "" ¶
+// ── the run's own record ──────────────────────────────────────
+// Everything the report just printed, in the same line-based form
+// as the games themselves. Always in the machine form, whatever the
+// display language: a summary that changes shape with a flag cannot
+// be aggregated across runs.
+
+要約 = "# zy-GO run summary v1
+run {実行印}
+board {路}
+games {対局数}
+master_seed {親種}
+clock_cost_ns {較正値}
+---
+"
+要bw = 黒勝
+要ww = 白勝
+要jg = 持碁
+要am = 総手数 / 対局数
+要約 = "{要約}black_wins {要bw}
+white_wins {要ww}
+jigo {要jg}
+avg_moves {要am}
+---
+"
+要f10 = ミリ(総初 / (対局数 * 10))
+要l10 = ミリ(総終 / (対局数 * 10))
+要s10 = ミリ(最遅 / 10)
+要tot = ミリ(総時間)
+要gr = 0
+? 総初 > 0 { 要gr = 総終 * 10 / 総初 }
+要noisy = 0
+? 一手平均 < 較正値 * 3 { 要noisy = 1 }
+要約 = "{要約}time_first10_avg_ms {要f10}
+time_last10_avg_ms {要l10}
+time_slowest10_avg_ms {要s10}
+time_total_ms {要tot}
+time_growth_tenths {要gr}
+time_below_clock_resolution {要noisy}
+---
+"
+要mp = 0
+@ v : 記憶表 {
+    ? v > 要mp { 要mp = v }
+}
+要約 = "{要約}mem_before_kb {記憶初}
+mem_after_kb {記憶終}
+mem_peak_kb {要mp}
+---
+# level <row> <col> <wins> <games> — 1 beginner, 2 intermediate, 3 advanced
+"
+@ a:1..3 {
+    @ b:1..3 {
+        i = (a - 1) * 3 + b
+        要w1 = 勝表[i]
+        要g1 = 戦表[i]
+        要約 = "{要約}level {a} {b} {要w1} {要g1}
+"
+    }
+}
+要約 = "{要約}---
+# personality <row> <col> <wins> <games> — 0 balanced, 1 offensive, 2 defensive
+"
+@ a:0..2 {
+    @ b:0..2 {
+        i = a * 3 + b + 1
+        要w2 = 性勝[i]
+        要g2 = 性戦[i]
+        要約 = "{要約}personality {a} {b} {要w2} {要g2}
+"
+    }
+}
+io::write("{記録場所}/summary.txt", 要約)
+
 _w = 訳("written")
->> "  {対局数} {_w} {記録場所}/{路}路_{実行印}_*.kifu" ¶
+>> "  {対局数} {_w} {記録場所}/" ¶
 _s1 = 訳("seed")
 _s2 = 訳("replay")
 >> "  {_s1} {親種} {_s2}" ¶
