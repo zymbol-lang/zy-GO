@@ -21,6 +21,7 @@ terminal columns.
 > and identifier-level API translation).
 
 > **Español:** [README_ES.md](README_ES.md) · **Technical spec:** [DESIGN.md](DESIGN.md)
+> · **Complexity test:** [棋戦.md](棋戦.md)
 
 ---
 
@@ -338,6 +339,7 @@ zy-GO/
 ├── 围棋.zy              entry point, Mandarin          │ preselected
 ├── go.zy                entry point, language menu     ┘ language
 ├── 対局.zy              match controller — turn loop, history, undo
+├── 棋戦.zy              AI vs AI, instrumented — see 棋戦.md
 ├── 核/                  engine
 │   ├── 盤.zy            board state, chains, liberties, placement, capture
 │   ├── 規則.zy          legality, ko, end-of-game detection
@@ -451,8 +453,9 @@ fixture.
 | 6 | 対局 + entry points: turn loop, history, 待った, the four launchers | **done** — hot-seat |
 | 7 | 核/思考: eye detection (眼) and useful-move enumeration (有用手) | **done** |
 | 8 | 核/思考: the AI and its three levels | **done** |
-| 9 | api/: identifier-level API translation layers | pending |
-| 10 | 棋譜 (SGF export), 置き碁 (handicap), positional superko, TW vs VM benchmark | pending |
+| 9 | 棋戦: AI vs AI harness — timing, memory, level and personality statistics, replayable game records | **done** |
+| 10 | api/: identifier-level API translation layers | pending |
+| 11 | 棋譜 (SGF export), 置き碁 (handicap), positional superko, TW vs VM benchmark | pending |
 
 Everything marked done is covered by `試験/全試験.sh`:
 

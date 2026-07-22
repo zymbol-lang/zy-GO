@@ -22,6 +22,7 @@ ocupa exactamente dos columnas de terminal.
 > API a nivel de identificadores).
 
 > **English:** [README.md](README.md) · **Especificación técnica:** [DESIGN.md](DESIGN.md)
+> · **Prueba de complejidad:** [棋戦.md](棋戦.md)
 
 ---
 
@@ -346,6 +347,7 @@ zy-GO/
 ├── 围棋.zy              punto de entrada, mandarín     │ con el idioma
 ├── go.zy                punto de entrada, menú         ┘ preseleccionado
 ├── 対局.zy              controlador de partida — turnos, historial, deshacer
+├── 棋戦.zy              IA contra IA, instrumentado — ver 棋戦.md
 ├── 核/                  motor
 │   ├── 盤.zy            estado del tablero, cadenas, libertades, colocación, captura
 │   ├── 規則.zy          legalidad, ko, detección de fin de partida
@@ -464,8 +466,9 @@ real y no a un fixture de pruebas.
 | 6 | 対局 + puntos de entrada: bucle de turnos, historial, 待った, los cuatro lanzadores | **hecho** — por turnos |
 | 7 | 核/思考: detección de ojos (眼) y jugadas útiles (有用手) | **hecho** |
 | 8 | 核/思考: la IA y sus tres niveles | **hecho** |
-| 9 | api/: capas de traducción de la API a nivel de identificadores | pendiente |
-| 10 | 棋譜 (exportación SGF), 置き碁 (handicap), superko posicional, benchmark TW contra VM | pendiente |
+| 9 | 棋戦: banco IA contra IA — tiempos, memoria, estadísticas de nivel y personalidad, partidas reproducibles | **hecho** |
+| 10 | api/: capas de traducción de la API a nivel de identificadores | pendiente |
+| 11 | 棋譜 (exportación SGF), 置き碁 (handicap), superko posicional, benchmark TW contra VM | pendiente |
 
 Todo lo marcado como hecho está cubierto por `試験/全試験.sh`:
 

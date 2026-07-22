@@ -1,0 +1,465 @@
+// ============================================================
+// 棋戦.zy — AI versus AI, instrumented
+//
+//   zymbol run 棋戦.zy [games] [board] [mode]
+//
+//   games   how many to play          default 10
+//   board   9 · 13 · 19               default 9
+//   mode    pausa | continua | 静     default continua
+//
+//   pausa    draws every move and waits for ↵ — study mode
+//   continua draws every move and keeps going
+//   静       draws nothing, prints one line per game — batch mode
+//
+// Every game gets a random level and a random personality per side,
+// a seed of its own, and a file in 棋譜/. The seed is in the file:
+// a recorded game replays move for move, which is the difference
+// between a log and a dataset.
+//
+// What this measures, beyond who wins:
+//
+//   · per-move time — the first moves land in milliseconds and the
+//     last ones take far longer, because the candidate set grows
+//     with the board and every candidate is scored on a copy
+//   · resident memory before and after each game, which is the
+//     question v0.0.8 exists to answer
+//   · whether a stronger level actually beats a weaker one, which
+//     is the only honest way to know the levels mean anything
+//
+// All of it in Zymbol, including the clock: there is no time
+// primitive, so timestamps come from BashExec, and the cost of
+// asking is calibrated at startup and subtracted.
+// ============================================================
+
+<# ./核/盤 => 盤
+<# ./核/規則 => 規則
+<# ./核/計算 => 計算
+<# ./核/思考 => 思
+<# ./表示/主題 => 主
+<# ./表示/描画 => 描
+<# ./表示/文字 => 文
+<# std/io => io
+
+上限手数 := 400
+記録場所 := "棋譜"
+
+// ── instrumentation ───────────────────────────────────────────
+
+時刻() {
+    t = <\ "date +%s%N" \>
+    <~ #|t|
+}
+
+記憶() {
+    m = <\ "ps -o rss= -p $PPID | tr -d ' '" \>
+    <~ #|m|
+}
+
+// One BashExec round trip sits inside every interval we measure.
+// Measure it now, subtract it later, and say so in the report
+// rather than pretending the number is clean.
+較正() {
+    合計 = 0
+    a = 時刻()
+    @ i:1..8 {
+        b = 時刻()
+        合計 = 合計 + (b - a)
+        a = b
+    }
+    <~ 合計 / 8
+}
+
+ミリ(ナノ) { <~ ナノ / 1000000 }
+
+// Zero-padded, so 棋譜/ sorts in playing order and no filename
+// carries a space. 文::左詰 pads with spaces and `$-` removes only
+// the first occurrence — two ways to get this subtly wrong.
+零詰(n, 桁) {
+    s = "{n}"
+    @ (s$#) < 桁 {
+        s = "0{s}"
+    }
+    <~ s
+}
+
+// ── naming ────────────────────────────────────────────────────
+
+級名(n) {
+    <~ ?? n {
+        1 => "初級"
+        3 => "上級"
+        _ => "中級"
+    }
+}
+
+性格名(n) {
+    <~ ?? n {
+        1 => "攻"
+        2 => "守"
+        _ => "均"
+    }
+}
+
+色名(c) {
+    ? c == 1 { <~ "B" }
+    ? c == 2 { <~ "W" }
+    <~ "-"
+}
+
+// ── one game ──────────────────────────────────────────────────
+// 結果[1] winner (0 jigo)   [4] black total     [7] total ns
+// 結果[2] moves             [5] white total     [8] first-10 ns
+// 結果[3] margin            [6] captures total  [9] last-10 ns
+
+一局(番号, 路, 種初, 黒級, 黒性, 白級, 白性, 模式, 較正値, 結果<~) {
+    局面 = 盤::新規(路)
+    種 = 種初
+    手番 = 1
+    コウ = 0
+    最終 = 0
+    パス = 0
+    手数 = 0
+    黒取 = 0
+    白取 = 0
+
+    総時 = 0
+    初10 = 0
+    終10 = 0
+    最近 = []
+
+    記録 = "# zy-GO kifu v1
+board {路}
+komi 6.5
+seed {種初}
+black level={黒級} personality={黒性}
+white level={白級} personality={白性}
+---
+"
+
+    ? 模式 <> 2 {
+        >>!
+        描::盤描画(局面, 路, "石", 2, 2)
+    }
+
+    @ 手数 < 上限手数 {
+        ? パス >= 2 { @! }
+
+        級 = 黒級
+        性 = 黒性
+        ? 手番 == 2 {
+            級 = 白級
+            性 = 白性
+        }
+
+        t0 = 時刻()
+        点 = 思::選択(局面, 路, 手番, 級, 性, コウ, 最終, 手数, 種)
+        t1 = 時刻()
+        経過 = t1 - t0 - 較正値
+        ? 経過 < 0 { 経過 = 0 }
+        総時 = 総時 + 経過
+
+        手数 = 手数 + 1
+        ? 手数 <= 10 { 初10 = 初10 + 経過 }
+        最近 = 最近 $+ 経過
+        ? (最近$#) > 10 { 最近 = 最近$[2..] }
+
+        取 = 0
+        座 = "pass"
+        ? 点 == 0 {
+            パス = パス + 1
+            コウ = 0
+            最終 = 0
+        } _ {
+            k = 0
+            盤::着手(局面, 路, 点, 手番, 取, k)
+            ? 手番 == 1 {
+                黒取 = 黒取 + 取
+            } _ {
+                白取 = 白取 + 取
+            }
+            コウ = k
+            最終 = 点
+            パス = 0
+            座 = 描::座標名(路, 点)
+        }
+
+        色 = 色名(手番)
+        ms = ミリ(経過)
+        記録 = "{記録}{手数} {色} {座} ms={ms} caps={取}
+"
+
+        ? 模式 <> 2 {
+            描::盤描画(局面, 路, "石", 2, 2)
+            _状況描画(番号, 路, 手数, 色, 座, ms, 黒級, 黒性, 白級, 白性, 黒取, 白取)
+            ? 模式 == 0 {
+                << _espera
+            }
+        }
+
+        手番 = 盤::敵(手番)
+    }
+
+    @ v : 最近 { 終10 = 終10 + v }
+
+    計 = 計算::目算(局面, 路, 6.5)
+    勝 = 計算::勝色(計)
+    差 = 計算::差分(計)
+
+    結果[1] = 勝
+    結果[2] = 手数
+    結果[3] = 差
+    結果[4] = 計.黒合計
+    結果[5] = 計.白合計
+    結果[6] = 黒取 + 白取
+    結果[7] = 総時
+    結果[8] = 初10
+    結果[9] = 終10
+
+    黒合 = 計.黒合計
+    白合 = 計.白合計
+    黒石 = 計.黒石
+    白石 = 計.白石
+    勝名 = 色名(勝)
+    合ms = ミリ(総時)
+    初ms = ミリ(初10)
+    終ms = ミリ(終10)
+    記録 = "{記録}---
+result {勝名}+{差}
+moves {手数}
+score black={黒合} white={白合}
+stones black={黒石} white={白石}
+captures black={黒取} white={白取}
+time_total_ms {合ms}
+time_first10_ms {初ms}
+time_last10_ms {終ms}
+"
+
+    番札 = 零詰(番号, 4)
+    路札 = "{路}"
+    io::write("{記録場所}/{路札}路_{番札}.kifu", 記録)
+}
+
+_状況描画(番号, 路, 手数, 色, 座, ms, 黒級, 黒性, 白級, 白性, 黒取, 白取) {
+    左 = ##!(主::区画幅(路) + 6)
+    黒札 = 級名(黒級)
+    黒性札 = 性格名(黒性)
+    白札 = 級名(白級)
+    白性札 = 性格名(白性)
+
+    >>~ (2, 左, 1, 255) > 描::枠上(26)
+    >>~ (3, 左, 0, 252) > 描::枠行(" 棋戦  第{番号}局", 26)
+    >>~ (4, 左, 0, 240) > 描::枠中(26)
+    >>~ (5, 左, 0, 252) > 描::枠行(" ⚫ {黒札} {黒性札}   取{黒取}", 26)
+    >>~ (6, 左, 0, 252) > 描::枠行(" ⚪ {白札} {白性札}   取{白取}", 26)
+    >>~ (7, 左, 0, 240) > 描::枠中(26)
+    >>~ (8, 左, 0, 252) > 描::枠行(" 手数   {手数}", 26)
+    >>~ (9, 左, 0, 252) > 描::枠行(" 最終   {色} {座}", 26)
+    >>~ (10, 左, 1, 214) > 描::枠行(" 思考   {ms} ms", 26)
+    >>~ (11, 左, 0, 240) > 描::枠下(26)
+}
+
+// ── main ──────────────────────────────────────────────────────
+
+>< 引数
+
+対局数 = 10
+路 = 9
+模式 = 1
+
+? (引数$#) >= 1 { 対局数 = #|引数[1]| }
+? (引数$#) >= 2 { 路 = #|引数[2]| }
+? (引数$#) >= 3 {
+    m = 引数[3]
+    ? m == "pausa" { 模式 = 0 }
+    ? m == "静" { 模式 = 2 }
+    ? m == "silencio" { 模式 = 2 }
+}
+
+// Master seed from three independent sources, the way serpiente
+// does it. Printed, so the whole run replays.
+_ns = <\ "date +%N" \>
+_pid = <\ "echo $$" \>
+_rnd = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
+親種 = (#|_ns| + #|_pid| * 31337 + #|_rnd| * 65537) % 2147483647
+
+io::mkdir(記録場所)
+較正値 = 較正()
+
+>> "═══ 棋戦 — zy-GO stress and behaviour test ═══" ¶
+>> "  games        " 対局数 ¶
+>> "  board        " 路 "×" 路 ¶
+>> "  master seed  " 親種 ¶
+>> "  clock cost   " (較正値 / 1000) " µs per timestamp (subtracted)" ¶
+>> "  records      " 記録場所 "/" ¶
+>> "" ¶
+
+黒勝 = 0
+白勝 = 0
+持碁 = 0
+総手数 = 0
+総時間 = 0
+総初 = 0
+総終 = 0
+最遅 = 0
+
+// 勝表[(a-1)*3 + b] — games in which a level-a engine beat a level-b one
+勝表 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+戦表 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+// 性勝[(a+1)*3 ... ] — same idea for personalities 0..2
+性勝 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+性戦 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+記憶初 = 記憶()
+記憶表 = []
+
+種 = 親種
+@ n:1..対局数 {
+    種 = 思::乱数(種)
+    黒級 = 種 % 3 + 1
+    種 = 思::乱数(種)
+    黒性 = 種 % 3
+    種 = 思::乱数(種)
+    白級 = 種 % 3 + 1
+    種 = 思::乱数(種)
+    白性 = 種 % 3
+    種 = 思::乱数(種)
+    局種 = 種
+
+    結果 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    一局(n, 路, 局種, 黒級, 黒性, 白級, 白性, 模式, 較正値, 結果)
+
+    勝 = 結果[1]
+    ? 勝 == 1 { 黒勝 = 黒勝 + 1 }
+    ? 勝 == 2 { 白勝 = 白勝 + 1 }
+    ? 勝 == 0 { 持碁 = 持碁 + 1 }
+
+    総手数 = 総手数 + 結果[2]
+    総時間 = 総時間 + 結果[7]
+    総初 = 総初 + 結果[8]
+    総終 = 総終 + 結果[9]
+    ? 結果[9] > 最遅 { 最遅 = 結果[9] }
+
+    // level and personality tallies
+    i = (黒級 - 1) * 3 + 白級
+    j = (白級 - 1) * 3 + 黒級
+    戦表[i] = 戦表[i] + 1
+    戦表[j] = 戦表[j] + 1
+    ? 勝 == 1 { 勝表[i] = 勝表[i] + 1 }
+    ? 勝 == 2 { 勝表[j] = 勝表[j] + 1 }
+
+    p = 黒性 * 3 + 白性 + 1
+    q = 白性 * 3 + 黒性 + 1
+    性戦[p] = 性戦[p] + 1
+    性戦[q] = 性戦[q] + 1
+    ? 勝 == 1 { 性勝[p] = 性勝[p] + 1 }
+    ? 勝 == 2 { 性勝[q] = 性勝[q] + 1 }
+
+    記憶表 = 記憶表 $+ 記憶()
+
+    ? 模式 == 2 {
+        勝名 = 色名(勝)
+        黒札 = 級名(黒級)
+        白札 = 級名(白級)
+        黒性札 = 性格名(黒性)
+        白性札 = 性格名(白性)
+        手 = 結果[2]
+        差 = 結果[3]
+        ms = ミリ(結果[7])
+        >> "  " (文::左詰("{n}", 4)) "  ⚫{黒札}{黒性札} vs ⚪{白札}{白性札}   {勝名}+{差}   {手} moves   {ms} ms" ¶
+    }
+}
+
+記憶終 = 記憶()
+
+// ── report ────────────────────────────────────────────────────
+
+? 模式 <> 2 { >>! }
+>> "" ¶
+>> "═══ results — " 対局数 " games on " 路 "×" 路 " ═══" ¶
+>> "" ¶
+>> "  black wins   " 黒勝 ¶
+>> "  white wins   " 白勝 ¶
+>> "  jigo         " 持碁 ¶
+>> "  avg moves    " (総手数 / 対局数) ¶
+>> "" ¶
+
+>> "── time per move ──" ¶
+>> "  first 10 moves, avg   " (ミリ(総初 / (対局数 * 10))) " ms" ¶
+>> "  last 10 moves, avg    " (ミリ(総終 / (対局数 * 10))) " ms" ¶
+>> "  slowest final stretch " (ミリ(最遅 / 10)) " ms per move" ¶
+>> "  whole run             " (ミリ(総時間) / 1000) " s of thinking" ¶
+? 総初 > 0 {
+    // Integer division would round a 1.7x growth down to 1x and
+    // hide the very thing this test exists to show.
+    比 = 総終 * 10 / 総初
+    entero = 比 / 10
+    decimal = 比 % 10
+    >> "  growth first→last     ×{entero}.{decimal}" ¶
+}
+>> "" ¶
+
+>> "── memory (RSS) ──" ¶
+>> "  before first game  " 記憶初 " KB" ¶
+>> "  after last game    " 記憶終 " KB" ¶
+>> "  growth             " (記憶終 - 記憶初) " KB over " 対局数 " games" ¶
+? (記憶表$#) > 0 {
+    最大記憶 = 0
+    @ v : 記憶表 {
+        ? v > 最大記憶 { 最大記憶 = v }
+    }
+    >> "  peak               " 最大記憶 " KB" ¶
+}
+>> "" ¶
+
+>> "── does a stronger level win? ──" ¶
+>> "  (rows: engine's level · columns: opponent's)" ¶
+>> "" ¶
+// Juxtaposing two parenthesised calls parses as a call, so the
+// header is assembled before it is printed.
+_h = 文::右詰("", 8)
+_a = 文::中央("初級", 10)
+_b = 文::中央("中級", 10)
+_c = 文::中央("上級", 10)
+>> "  {_h}{_a}{_b}{_c}" ¶
+@ a:1..3 {
+    線 = 文::右詰(級名(a), 8)
+    @ b:1..3 {
+        i = (a - 1) * 3 + b
+        欄 = "—"
+        ? 戦表[i] > 0 {
+            pct = 勝表[i] * 100 / 戦表[i]
+            n = 戦表[i]
+            欄 = "{pct}% /{n}"
+        }
+        線 = "{線}{欄}"
+        線 = 文::右詰(線, 8 + b * 10)
+    }
+    >> "  " 線 ¶
+}
+>> "" ¶
+
+>> "── does personality matter? ──" ¶
+>> "" ¶
+_h2 = 文::右詰("", 8)
+_p1 = 文::中央("均衡", 10)
+_p2 = 文::中央("攻", 10)
+_p3 = 文::中央("守", 10)
+>> "  {_h2}{_p1}{_p2}{_p3}" ¶
+@ a:0..2 {
+    線 = 文::右詰(性格名(a), 8)
+    @ b:0..2 {
+        i = a * 3 + b + 1
+        欄 = "—"
+        ? 性戦[i] > 0 {
+            pct = 性勝[i] * 100 / 性戦[i]
+            n = 性戦[i]
+            欄 = "{pct}% /{n}"
+        }
+        線 = "{線}{欄}"
+        線 = 文::右詰(線, 8 + (b + 1) * 10)
+    }
+    >> "  " 線 ¶
+}
+>> "" ¶
+>> "  " 対局数 " records written to " 記録場所 "/" ¶
+>> "  master seed " 親種 " — the whole run replays from it" ¶

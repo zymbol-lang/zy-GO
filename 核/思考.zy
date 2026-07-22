@@ -30,7 +30,24 @@
         候補
         評価
         着手選択
+        選択
+        乱数
+        性格_均衡
+        性格_攻
+        性格_守
     }
+
+    // Playing personality. Not a difficulty setting — a preference
+    // about which of two correct moves to prefer when both score
+    // near the top.
+    性格_均衡 := 0
+    性格_攻   := 1
+    性格_守   := 2
+
+    // Multipliers, in percent, applied to the attacking and
+    // defending halves of the score.
+    倍_強 := 150
+    倍_弱 := 70
 
     // Evaluation weights. Constants so they can be tuned without
     // touching the logic that applies them.
@@ -271,11 +288,21 @@
         <~ #0
     }
 
+    // ── reproducible randomness ───────────────────────────────
+    // An explicit LCG whose seed is threaded by the caller, the way
+    // serpiente does it. std/random keeps its state hidden, which is
+    // fine for a game and useless for a study: a logged game has to
+    // be replayable from its seed alone, or the log records what
+    // happened without recording why.
+    乱数(種) { <~ (1664525 * 種 + 1013904223) % 2147483647 }
+
+    _範囲(種, 最小, 最大) { <~ 種 % (最大 - 最小 + 1) + 最小 }
+
     // ── evaluation ────────────────────────────────────────────
     // Every term is applied to a copy of the board with the move
     // already played, so "what does this move achieve" is answered
     // by looking at the position it produces, not by guessing.
-    評価(局面, 路, 点, 色, 級, 最終手, 手数, 影響) {
+    評価(局面, 路, 点, 色, 級, 最終手, 手数, 影響, 性格) {
         敵色 = 盤::敵(色)
         写 = 盤::複製(局面)
         取 = 0
@@ -283,10 +310,15 @@
         状 = 盤::着手(写, 路, 点, 色, 取, コ)
         ? 状 <> 0 { <~ 0 - 100000 }
 
-        点数 = 0
+        // Three buckets, so personality can weigh the attacking and
+        // defending halves against each other without the layers
+        // having to know personality exists.
+        攻点 = 0
+        守点 = 0
+        他点 = 0
 
         // Layer 2 — capture.
-        点数 = 点数 + 重_取り * 取
+        攻点 = 攻点 + 重_取り * 取
 
         // Layer 3 — escaping atari, but only when it works: the
         // chain must come out with more than one liberty, or the
@@ -297,17 +329,16 @@
             ? 局面[q] == 色 {
                 旧 = 盤::連(局面, 路, q)
                 ? 盤::群ダメ数(局面, 路, 旧) == 1 {
-                    ? 自ダメ >= 2 { 点数 = 点数 + 重_逃げ * (旧$#) }
+                    ? 自ダメ >= 2 { 守点 = 守点 + 重_逃げ * (旧$#) }
                 }
             }
         }
 
-        // Self-atari. Not in the design table, but without it the
-        // engine happily walks into capture; a move that leaves its
-        // own chain on one liberty and takes nothing is almost
-        // always wrong.
+        // Self-atari. Not in the design table, and it earns its
+        // place: without it the engine walks into capture cheerfully
+        // and every other layer is wasted.
         ? 自ダメ == 1 {
-            ? 取 == 0 { 点数 = 点数 - 重_自殺 * (自群$#) }
+            ? 取 == 0 { 守点 = 守点 - 重_自殺 * (自群$#) }
         }
 
         // Layer 4 — atari against the opponent.
@@ -315,14 +346,14 @@
             ? 写[q] == 敵色 {
                 敵群 = 盤::連(写, 路, q)
                 ? 盤::群ダメ数(写, 路, 敵群) == 1 {
-                    点数 = 点数 + 重_アタリ
+                    攻点 = 攻点 + 重_アタリ
                 }
             }
         }
 
         // Beginner stops here: capture, escape, atari, and nothing
         // about shape or territory.
-        ? 級 <= 1 { <~ 点数 }
+        ? 級 <= 1 { <~ _性格適用(攻点, 守点, 性格) }
 
         // Layer 5 — shape. Connecting two of your own chains and
         // cutting two of the opponent's are the two 3x3 patterns
@@ -334,33 +365,49 @@
             ? 局面[q] == 色 { 自数 = 自数 + 1 }
             ? 局面[q] == 敵色 { 敵数 = 敵数 + 1 }
         }
-        ? 自数 >= 2 { 点数 = 点数 + 重_接続 }
-        ? 敵数 >= 2 { 点数 = 点数 + 重_切断 }
+        ? 自数 >= 2 { 守点 = 守点 + 重_接続 }
+        ? 敵数 >= 2 { 攻点 = 攻点 + 重_切断 }
         ? 最終手 > 0 {
             行 = 盤::行番(路, 点)
             列 = 盤::列番(路, 点)
             r = 盤::行番(路, 最終手)
             c = 盤::列番(路, 最終手)
-            d = _距離(行, 列, r, c)
-            ? d <= 2 { 点数 = 点数 + 重_接触 }
+            ? _距離(行, 列, r, c) <= 2 { 攻点 = 攻点 + 重_接触 }
         }
 
         // Layer 6 — influence: prefer the boundary between the two
         // spheres over the safe middle of your own.
         差 = _絶対(影響[点])
-        ? 差 < 重_勢力 { 点数 = 点数 + (重_勢力 - 差) }
+        ? 差 < 重_勢力 { 他点 = 他点 + (重_勢力 - 差) }
 
         // Layer 7 — opening book, and the edge penalty that keeps
         // the engine off the first two lines while there is still
         // open board.
         ? 手数 < 8 {
-            ? 布石点(路, 点) { 点数 = 点数 + 重_布石 }
+            ? 布石点(路, 点) { 他点 = 他点 + 重_布石 }
         }
         ? 手数 < 30 {
-            ? _線(路, 点) <= 2 { 点数 = 点数 - 重_辺 }
+            ? _線(路, 点) <= 2 { 他点 = 他点 - 重_辺 }
         }
 
-        <~ 点数
+        <~ _性格適用(攻点, 守点, 性格) + 他点
+    }
+
+    // An offensive engine values taking over keeping; a defensive
+    // one the reverse, and it fears self-atari more. Neither plays
+    // worse — they disagree about which good move is better.
+    _性格適用(攻点, 守点, 性格) {
+        攻倍 = 100
+        守倍 = 100
+        ? 性格 == 1 {
+            攻倍 = 倍_強
+            守倍 = 倍_弱
+        }
+        ? 性格 == 2 {
+            攻倍 = 倍_弱
+            守倍 = 倍_強
+        }
+        <~ 攻点 * 攻倍 / 100 + 守点 * 守倍 / 100
     }
 
     // ── move selection ────────────────────────────────────────
@@ -370,7 +417,10 @@
     // score and still be picked. A beginner is not a program that
     // plays badly on purpose — it is one that cannot tell a good
     // move from a nearly-good one.
-    着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数) {
+    // Reproducible: the seed is the caller's, advanced through the
+    // output parameter, so a game replays move for move from its
+    // recorded seed.
+    選択(局面, 路, 色, 級, 性格, コウ点, 最終手, 手数, 種<~) {
         一覧 = 候補(局面, 路, 色, コウ点, 手数, 級)
         ? (一覧$#) == 0 { <~ 0 }
 
@@ -383,7 +433,7 @@
         点数表 = []
         最高 = 0 - 1000000
         @ p : 一覧 {
-            v = 評価(局面, 路, p, 色, 級, 最終手, 手数, 影響)
+            v = 評価(局面, 路, p, 色, 級, 最終手, 手数, 影響, 性格)
             点数表 = 点数表 $+ v
             ? v > 最高 { 最高 = v }
         }
@@ -403,6 +453,14 @@
 
         n = 候$#
         ? n == 1 { <~ 候[1] }
-        <~ 候[乱::entero(1, n)]
+        種 = 乱数(種)
+        <~ 候[_範囲(種, 1, n)]
+    }
+
+    // Convenience wrapper for the game itself, where nobody needs
+    // to replay anything: seeds from std/random and forgets.
+    着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数) {
+        一時種 = 乱::entero(1, 2147483646)
+        <~ 選択(局面, 路, 色, 級, 性格_均衡, コウ点, 最終手, 手数, 一時種)
     }
 }
