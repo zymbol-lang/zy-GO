@@ -152,6 +152,11 @@
             "perhdr"   => "── ¿influye la personalidad? ──"
             "written"  => "registros escritos en"
             "moves"    => "jugadas"
+            "pgame"    => "partida"
+            "pthink"   => "Pensando"
+            "sbal"     => "equ"
+            "soff"     => "ofe"
+            "sdef"     => "def"
             "noise"    => "⚠ por debajo de la resolución del reloj — el tiempo aquí es ruido"
             "noisehow" => "  usa un tablero mayor, o el tree-walker, para medir esto"
             "replay"   => "— la tanda entera se reproduce con ella"
@@ -190,6 +195,11 @@
         "perhdr"   => "── does personality matter? ──"
         "written"  => "records written to"
         "moves"    => "moves"
+        "pgame"    => "game"
+        "pthink"   => "Thinking"
+        "sbal"     => "bal"
+        "soff"     => "off"
+        "sdef"     => "def"
         "noise"    => "⚠ below the clock's resolution — these timings are noise"
         "noisehow" => "  use a bigger board, or the tree-walker, to measure this"
         "replay"   => "— the whole run replays from it"
@@ -222,12 +232,15 @@
     }
 }
 
-// Short forms for the live panel, where a column is 26 wide.
+// Short forms for the live panel, where a full word will not fit
+// beside a level name. Three letters, in the report's language —
+// a panel that translates its levels and not its labels is worse
+// than one that translates neither.
 性格記号(n) {
     <~ ?? n {
-        1 => "攻"
-        2 => "守"
-        _ => "均"
+        1 => 訳("soff")
+        2 => 訳("sdef")
+        _ => 訳("sbal")
     }
 }
 
@@ -371,23 +384,32 @@ time_last10_ms {終ms}
     io::write("{場所}/{番札}.kifu", 記録)
 }
 
+欄幅 := 30
+
 _状況描画(番号, 路, 手数, 色, 座, ms, 黒級, 黒性, 白級, 白性, 黒取, 白取) {
     左 = ##!(主::区画幅(路) + 6)
-    黒札 = 級名(黒級)
+    黒札 = 文::右詰(級名(黒級), 14)
     黒性札 = 性格記号(黒性)
-    白札 = 級名(白級)
+    白札 = 文::右詰(級名(白級), 14)
     白性札 = 性格記号(白性)
 
-    >>~ (2, 左, 1, 255) > 描::枠上(26)
-    >>~ (3, 左, 0, 252) > 描::枠行(" 棋戦  第{番号}局", 26)
-    >>~ (4, 左, 0, 240) > 描::枠中(26)
-    >>~ (5, 左, 0, 252) > 描::枠行(" ⚫ {黒札} {黒性札}   取{黒取}", 26)
-    >>~ (6, 左, 0, 252) > 描::枠行(" ⚪ {白札} {白性札}   取{白取}", 26)
-    >>~ (7, 左, 0, 240) > 描::枠中(26)
-    >>~ (8, 左, 0, 252) > 描::枠行(" 手数   {手数}", 26)
-    >>~ (9, 左, 0, 252) > 描::枠行(" 最終   {色} {座}", 26)
-    >>~ (10, 左, 1, 214) > 描::枠行(" 思考   {ms} ms", 26)
-    >>~ (11, 左, 0, 240) > 描::枠下(26)
+    語局 = 訳("pgame")
+    語取 = 文::右詰(言::語("panel.captures"), 10)
+    語手 = 文::右詰(言::語("panel.moves"), 10)
+    語終 = 文::右詰(言::語("panel.last"), 10)
+    語思 = 文::右詰(訳("pthink"), 10)
+
+    >>~ (2, 左, 1, 255) > 描::枠上(欄幅)
+    >>~ (3, 左, 0, 252) > 描::枠行(" 棋戦 · {語局} {番号}", 欄幅)
+    >>~ (4, 左, 0, 240) > 描::枠中(欄幅)
+    >>~ (5, 左, 0, 252) > 描::枠行(" ⚫ {黒札}{黒性札}", 欄幅)
+    >>~ (6, 左, 0, 252) > 描::枠行(" ⚪ {白札}{白性札}", 欄幅)
+    >>~ (7, 左, 0, 240) > 描::枠中(欄幅)
+    >>~ (8, 左, 0, 252) > 描::枠行(" {語取}⚫{黒取}  ⚪{白取}", 欄幅)
+    >>~ (9, 左, 0, 252) > 描::枠行(" {語手}{手数}", 欄幅)
+    >>~ (10, 左, 0, 252) > 描::枠行(" {語終}{色} {座}", 欄幅)
+    >>~ (11, 左, 1, 214) > 描::枠行(" {語思}{ms} ms", 欄幅)
+    >>~ (12, 左, 0, 240) > 描::枠下(欄幅)
 }
 
 // ── main ──────────────────────────────────────────────────────
