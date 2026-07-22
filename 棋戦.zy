@@ -6,6 +6,11 @@
 //   games   how many to play          default 10
 //   board   9 · 13 · 19               default 9
 //   mode    pausa | continua | 静     default continua
+//   lang    en | es                   default en
+//
+// Mode and language may come in either order, or not at all:
+//   zymbol run 棋戦.zy 1 19 es
+//   zymbol run 棋戦.zy 200 9 静 en
 //
 //   pausa    draws every move and waits for ↵ — study mode
 //   continua draws every move and keeps going
@@ -38,6 +43,7 @@
 <# ./表示/主題 => 主
 <# ./表示/描画 => 描
 <# ./表示/文字 => 文
+<# ./言語/module => 言
 <# std/io => io
 
 上限手数 := 400
@@ -82,17 +88,123 @@
     <~ s
 }
 
+// ── report language ───────────────────────────────────────────
+// The harness is an instrument, not the game, so its report lives
+// here rather than in 言語/: adding thirty benchmark labels to a
+// catalogue that exists for what a *player* reads would dilute it.
+// Game vocabulary still comes from 言語/ — level names below are
+// 言::語("level.N"), the same strings the setup screen uses.
+//
+// The records in 棋譜/ are NOT translated. They stay in one stable
+// machine form whatever this is set to, because a dataset split
+// across two languages is two datasets.
+
+訳(鍵) {
+    ? 言::現在() == "es" {
+        <~ ?? 鍵 {
+            "title"    => "棋戦 — prueba de complejidad y comportamiento"
+            "games"    => "partidas"
+            "board"    => "tablero"
+            "seed"     => "semilla maestra"
+            "clock"    => "coste del reloj"
+            "subtr"    => "µs por marca (restado)"
+            "stamp"    => "marca de ejecución"
+            "records"  => "registros"
+            "results"  => "resultados"
+            "bwins"    => "victorias negras"
+            "wwins"    => "victorias blancas"
+            "jigo"     => "empates"
+            "avgmov"   => "jugadas de media"
+            "timehdr"  => "── tiempo por jugada ──"
+            "first10"  => "primeras 10 jugadas"
+            "last10"   => "últimas 10 jugadas"
+            "slowest"  => "tramo final más lento"
+            "run"      => "toda la tanda"
+            "thinking" => "s de pensamiento"
+            "growth"   => "crecimiento inicio→final"
+            "memhdr"   => "── memoria (RSS) ──"
+            "before"   => "antes de la primera"
+            "after"    => "tras la última"
+            "memgrow"  => "crecimiento"
+            "over"     => "KB en"
+            "peak"     => "pico"
+            "lvlhdr"   => "── ¿gana de verdad un nivel superior? ──"
+            "lvlhint"  => "(filas: nivel del motor · columnas: del rival)"
+            "perhdr"   => "── ¿influye la personalidad? ──"
+            "written"  => "registros escritos en"
+            "moves"    => "jugadas"
+            "noise"    => "⚠ por debajo de la resolución del reloj — el tiempo aquí es ruido"
+            "noisehow" => "  usa un tablero mayor, o el tree-walker, para medir esto"
+            "replay"   => "— la tanda entera se reproduce con ella"
+            _          => 鍵
+        }
+    }
+    <~ ?? 鍵 {
+        "title"    => "棋戦 — stress and behaviour test"
+        "games"    => "games"
+        "board"    => "board"
+        "seed"     => "master seed"
+        "clock"    => "clock cost"
+        "subtr"    => "µs per timestamp (subtracted)"
+        "stamp"    => "run stamp"
+        "records"  => "records"
+        "results"  => "results"
+        "bwins"    => "black wins"
+        "wwins"    => "white wins"
+        "jigo"     => "jigo"
+        "avgmov"   => "avg moves"
+        "timehdr"  => "── time per move ──"
+        "first10"  => "first 10 moves, avg"
+        "last10"   => "last 10 moves, avg"
+        "slowest"  => "slowest final stretch"
+        "run"      => "whole run"
+        "thinking" => "s of thinking"
+        "growth"   => "growth first→last"
+        "memhdr"   => "── memory (RSS) ──"
+        "before"   => "before first game"
+        "after"    => "after last game"
+        "memgrow"  => "growth"
+        "over"     => "KB over"
+        "peak"     => "peak"
+        "lvlhdr"   => "── does a stronger level win? ──"
+        "lvlhint"  => "(rows: engine's level · columns: opponent's)"
+        "perhdr"   => "── does personality matter? ──"
+        "written"  => "records written to"
+        "moves"    => "moves"
+        "noise"    => "⚠ below the clock's resolution — these timings are noise"
+        "noisehow" => "  use a bigger board, or the tree-walker, to measure this"
+        "replay"   => "— the whole run replays from it"
+        _          => 鍵
+    }
+}
+
 // ── naming ────────────────────────────────────────────────────
 
 級名(n) {
     <~ ?? n {
-        1 => "初級"
-        3 => "上級"
-        _ => "中級"
+        1 => 言::語("level.1")
+        3 => 言::語("level.3")
+        _ => 言::語("level.2")
     }
 }
 
 性格名(n) {
+    ? 言::現在() == "es" {
+        <~ ?? n {
+            1 => "ofensiva"
+            2 => "defensiva"
+            _ => "equilibrada"
+        }
+    }
+    <~ ?? n {
+        1 => "offensive"
+        2 => "defensive"
+        _ => "balanced"
+    }
+}
+
+// Short forms for the live panel, where a column is 26 wide.
+性格記号(n) {
     <~ ?? n {
         1 => "攻"
         2 => "守"
@@ -247,9 +359,9 @@ time_last10_ms {終ms}
 _状況描画(番号, 路, 手数, 色, 座, ms, 黒級, 黒性, 白級, 白性, 黒取, 白取) {
     左 = ##!(主::区画幅(路) + 6)
     黒札 = 級名(黒級)
-    黒性札 = 性格名(黒性)
+    黒性札 = 性格記号(黒性)
     白札 = 級名(白級)
-    白性札 = 性格名(白性)
+    白性札 = 性格記号(白性)
 
     >>~ (2, 左, 1, 255) > 描::枠上(26)
     >>~ (3, 左, 0, 252) > 描::枠行(" 棋戦  第{番号}局", 26)
@@ -270,15 +382,26 @@ _状況描画(番号, 路, 手数, 色, 座, ms, 黒級, 黒性, 白級, 白性,
 対局数 = 10
 路 = 9
 模式 = 1
+言語 = "en"
 
 ? (引数$#) >= 1 { 対局数 = #|引数[1]| }
 ? (引数$#) >= 2 { 路 = #|引数[2]| }
-? (引数$#) >= 3 {
-    m = 引数[3]
-    ? m == "pausa" { 模式 = 0 }
-    ? m == "静" { 模式 = 2 }
-    ? m == "silencio" { 模式 = 2 }
+
+// Mode and language are recognised by what they say, not by where
+// they sit, so `1 19 es` and `200 9 静 en` both do what they look
+// like they do.
+_総引数 = 引数$#
+@ i:3.._総引数 {
+    t = 引数[i]
+    ? t == "pausa" { 模式 = 0 }
+    ? t == "continua" { 模式 = 1 }
+    ? t == "静" { 模式 = 2 }
+    ? t == "silencio" { 模式 = 2 }
+    ? t == "es" { 言語 = "es" }
+    ? t == "en" { 言語 = "en" }
 }
+
+言::設定(言語)
 
 // Master seed from three independent sources, the way serpiente
 // does it. Printed, so the whole run replays.
@@ -295,13 +418,24 @@ io::mkdir(記録場所)
 // with another.
 実行印 = <\ "date +%Y%m%d_%H%M%S" \>
 
->> "═══ 棋戦 — zy-GO stress and behaviour test ═══" ¶
->> "  games        " 対局数 ¶
->> "  board        " 路 "×" 路 ¶
->> "  master seed  " 親種 ¶
->> "  clock cost   " (較正値 / 1000) " µs per timestamp (subtracted)" ¶
->> "  run stamp    " 実行印 ¶
->> "  records      " 記録場所 "/" 路 "路_" 実行印 "_NNNN.kifu" ¶
+// Two parenthesised expressions side by side parse as a call, so
+// every line here is assembled before it is printed.
+_t = 訳("title")
+>> "═══ {_t} ═══" ¶
+_l = 文::右詰(訳("games"), 20)
+>> "  {_l}{対局数}" ¶
+_l = 文::右詰(訳("board"), 20)
+>> "  {_l}{路}×{路}" ¶
+_l = 文::右詰(訳("seed"), 20)
+>> "  {_l}{親種}" ¶
+_l = 文::右詰(訳("clock"), 20)
+_v = 較正値 / 1000
+_u = 訳("subtr")
+>> "  {_l}{_v} {_u}" ¶
+_l = 文::右詰(訳("stamp"), 20)
+>> "  {_l}{実行印}" ¶
+_l = 文::右詰(訳("records"), 20)
+>> "  {_l}{記録場所}/{路}路_{実行印}_NNNN.kifu" ¶
 >> "" ¶
 
 黒勝 = 0
@@ -369,14 +503,16 @@ io::mkdir(記録場所)
 
     ? 模式 == 2 {
         勝名 = 色名(勝)
-        黒札 = 級名(黒級)
-        白札 = 級名(白級)
-        黒性札 = 性格名(黒性)
-        白性札 = 性格名(白性)
+        黒札 = 文::右詰(級名(黒級), 13)
+        白札 = 文::右詰(級名(白級), 13)
+        黒性札 = 性格記号(黒性)
+        白性札 = 性格記号(白性)
         手 = 結果[2]
         差 = 結果[3]
         ms = ミリ(結果[7])
-        >> "  " (文::左詰("{n}", 4)) "  ⚫{黒札}{黒性札} vs ⚪{白札}{白性札}   {勝名}+{差}   {手} moves   {ms} ms" ¶
+        _n = 文::左詰("{n}", 4)
+        _mv = 訳("moves")
+        >> "  {_n}  ⚫{黒札}{黒性札} vs ⚪{白札}{白性札}   {勝名}+{差}   {手} {_mv}   {ms} ms" ¶
     }
 }
 
@@ -386,51 +522,87 @@ io::mkdir(記録場所)
 
 ? 模式 <> 2 { >>! }
 >> "" ¶
->> "═══ results — " 対局数 " games on " 路 "×" 路 " ═══" ¶
+_t = 訳("results")
+>> "═══ {_t} — {対局数} · {路}×{路} ═══" ¶
 >> "" ¶
->> "  black wins   " 黒勝 ¶
->> "  white wins   " 白勝 ¶
->> "  jigo         " 持碁 ¶
->> "  avg moves    " (総手数 / 対局数) ¶
+_l = 文::右詰(訳("bwins"), 20)
+>> "  {_l}{黒勝}" ¶
+_l = 文::右詰(訳("wwins"), 20)
+>> "  {_l}{白勝}" ¶
+_l = 文::右詰(訳("jigo"), 20)
+>> "  {_l}{持碁}" ¶
+_l = 文::右詰(訳("avgmov"), 20)
+_v = 総手数 / 対局数
+>> "  {_l}{_v}" ¶
 >> "" ¶
 
->> "── time per move ──" ¶
->> "  first 10 moves, avg   " (ミリ(総初 / (対局数 * 10))) " ms" ¶
->> "  last 10 moves, avg    " (ミリ(総終 / (対局数 * 10))) " ms" ¶
->> "  slowest final stretch " (ミリ(最遅 / 10)) " ms per move" ¶
->> "  whole run             " (ミリ(総時間) / 1000) " s of thinking" ¶
+>> (訳("timehdr")) ¶
+_l = 文::右詰(訳("first10"), 26)
+_v = ミリ(総初 / (対局数 * 10))
+>> "  {_l}{_v} ms" ¶
+_l = 文::右詰(訳("last10"), 26)
+_v = ミリ(総終 / (対局数 * 10))
+>> "  {_l}{_v} ms" ¶
+_l = 文::右詰(訳("slowest"), 26)
+_v = ミリ(最遅 / 10)
+>> "  {_l}{_v} ms" ¶
+_l = 文::右詰(訳("run"), 26)
+_v = ミリ(総時間) / 1000
+_u = 訳("thinking")
+>> "  {_l}{_v} {_u}" ¶
+
 ? 総初 > 0 {
     // Integer division would round a 1.7x growth down to 1x and
     // hide the very thing this test exists to show.
     比 = 総終 * 10 / 総初
     entero = 比 / 10
     decimal = 比 % 10
-    >> "  growth first→last     ×{entero}.{decimal}" ¶
+    札 = 文::右詰(訳("growth"), 26)
+    >> "  {札}×{entero}.{decimal}" ¶
+}
+
+// An instrument that does not know its own limits reports nonsense
+// with a straight face. Under --vm on a small board a move can cost
+// less than the timestamp used to measure it, and the growth ratio
+// comes out below 1 — which is impossible, and is the measurement
+// saying it has run out of resolution.
+一手平均 = 総初 / (対局数 * 10)
+? 一手平均 < 較正値 * 3 {
+    >> "" ¶
+    >> "  " (訳("noise")) ¶
+    >> (訳("noisehow")) ¶
 }
 >> "" ¶
 
->> "── memory (RSS) ──" ¶
->> "  before first game  " 記憶初 " KB" ¶
->> "  after last game    " 記憶終 " KB" ¶
->> "  growth             " (記憶終 - 記憶初) " KB over " 対局数 " games" ¶
+>> (訳("memhdr")) ¶
+_l = 文::右詰(訳("before"), 26)
+>> "  {_l}{記憶初} KB" ¶
+_l = 文::右詰(訳("after"), 26)
+>> "  {_l}{記憶終} KB" ¶
+_l = 文::右詰(訳("memgrow"), 26)
+_v = 記憶終 - 記憶初
+_u = 訳("over")
+>> "  {_l}{_v} {_u} {対局数}" ¶
 ? (記憶表$#) > 0 {
     最大記憶 = 0
     @ v : 記憶表 {
         ? v > 最大記憶 { 最大記憶 = v }
     }
-    >> "  peak               " 最大記憶 " KB" ¶
+    _lp = 文::右詰(訳("peak"), 26)
+    >> "  {_lp}{最大記憶} KB" ¶
 }
 >> "" ¶
 
->> "── does a stronger level win? ──" ¶
->> "  (rows: engine's level · columns: opponent's)" ¶
+>> (訳("lvlhdr")) ¶
+_h3 = 訳("lvlhint")
+>> "  {_h3}" ¶
 >> "" ¶
 // Juxtaposing two parenthesised calls parses as a call, so the
 // header is assembled before it is printed.
 _h = 文::右詰("", 8)
-_a = 文::中央("初級", 10)
-_b = 文::中央("中級", 10)
-_c = 文::中央("上級", 10)
+_a = 文::中央(級名(1), 14)
+_b = 文::中央(級名(2), 14)
+_c = 文::中央(級名(3), 14)
 >> "  {_h}{_a}{_b}{_c}" ¶
 @ a:1..3 {
     線 = 文::右詰(級名(a), 8)
@@ -443,18 +615,18 @@ _c = 文::中央("上級", 10)
             欄 = "{pct}% /{n}"
         }
         線 = "{線}{欄}"
-        線 = 文::右詰(線, 8 + b * 10)
+        線 = 文::右詰(線, 8 + b * 14)
     }
     >> "  " 線 ¶
 }
 >> "" ¶
 
->> "── does personality matter? ──" ¶
+>> (訳("perhdr")) ¶
 >> "" ¶
 _h2 = 文::右詰("", 8)
-_p1 = 文::中央("均衡", 10)
-_p2 = 文::中央("攻", 10)
-_p3 = 文::中央("守", 10)
+_p1 = 文::中央(性格名(0), 14)
+_p2 = 文::中央(性格名(1), 14)
+_p3 = 文::中央(性格名(2), 14)
 >> "  {_h2}{_p1}{_p2}{_p3}" ¶
 @ a:0..2 {
     線 = 文::右詰(性格名(a), 8)
@@ -467,10 +639,13 @@ _p3 = 文::中央("守", 10)
             欄 = "{pct}% /{n}"
         }
         線 = "{線}{欄}"
-        線 = 文::右詰(線, 8 + (b + 1) * 10)
+        線 = 文::右詰(線, 8 + (b + 1) * 14)
     }
     >> "  " 線 ¶
 }
 >> "" ¶
->> "  " 対局数 " records written to " 記録場所 "/" 路 "路_" 実行印 "_*.kifu" ¶
->> "  master seed " 親種 " — the whole run replays from it" ¶
+_w = 訳("written")
+>> "  {対局数} {_w} {記録場所}/{路}路_{実行印}_*.kifu" ¶
+_s1 = 訳("seed")
+_s2 = 訳("replay")
+>> "  {_s1} {親種} {_s2}" ¶

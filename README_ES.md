@@ -468,6 +468,7 @@ real y no a un fixture de pruebas.
 | 8 | 核/思考: la IA y sus tres niveles | **hecho** |
 | 9 | 棋戦: banco IA contra IA — tiempos, memoria, estadísticas de nivel y personalidad, partidas reproducibles | **hecho** |
 |   | *30 partidas medidas: 上級 ganó 12 de 12 a 初級, y la memoria se estabiliza en 12–13 MB tanto con 3 partidas como con 30* | |
+|   | *y la VM de registros resulta 8–14× más rápida que el tree-walker en esta carga, no el ~4× que dice la documentación* | |
 | 10 | api/: capas de traducción de la API a nivel de identificadores | pendiente |
 | 11 | 棋譜 (exportación SGF), 置き碁 (handicap), superko posicional, benchmark TW contra VM | pendiente |
 

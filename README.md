@@ -455,6 +455,7 @@ fixture.
 | 8 | 核/思考: the AI and its three levels | **done** |
 | 9 | 棋戦: AI vs AI harness — timing, memory, level and personality statistics, replayable game records | **done** |
 |   | *30 games measured: 上級 beat 初級 12/12, and memory plateaus at 12–13 MB whether you play 3 games or 30* | |
+|   | *and the register VM turns out to be 8–14× faster than the tree-walker on this workload, not the ~4× the docs claim* | |
 | 10 | api/: identifier-level API translation layers | pending |
 | 11 | 棋譜 (SGF export), 置き碁 (handicap), positional superko, TW vs VM benchmark | pending |
 
