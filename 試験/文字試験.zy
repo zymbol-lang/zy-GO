@@ -1,5 +1,13 @@
 // ============================================================
-// 試験/文字試験.zy — text metric tests
+// 試験/文字試験.zy — 文字寸法の試験
+//
+// 桁の算術は対局のどの画面の土台でもあり、五つの言語で同時に
+// 成り立たねばならない。この一式が落ちたら区画も盤もずれる。
+// その上に建つものを調べても無駄である。
+//
+//   zymbol run 試験/文字試験.zy
+//
+// EN: 試験/文字試験.zy — text metric tests
 //
 // Column arithmetic is the foundation of every screen in the
 // game, and it has to hold in five languages at once. If this
@@ -47,7 +55,10 @@
 確認("mixed script", 文::幅("手番 turn"), 9, 失敗)
 確認("empty string", 文::幅(""), 0, 失敗)
 
-// A 5-road board row is 2×5-1 = 9 columns, and it must measure
+// 5 路盤の一行は 2×5-1 = 9 桁であり、どの主題でも同じ寸法で
+// なければならない。描画の層すべてが載る二桁の不変条件である。
+//
+// EN: A 5-road board row is 2×5-1 = 9 columns, and it must measure
 // the same in every theme — that is the two-column invariant the
 // whole rendering layer rests on.
 確認("stone theme row", 文::幅("├─┼─⚫┼─┤"), 9, 失敗)

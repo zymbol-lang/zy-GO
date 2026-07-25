@@ -166,7 +166,7 @@ set of the interpreter running the games.
 
 ## Reproducibility is the point
 
-`std/random` keeps its state hidden. That is fine for a game and useless for a
+`標準/乱数` — the Japanese layer over `std/random` — keeps its state hidden. That is fine for a game and useless for a
 study: a recorded game that cannot be replayed records *what* happened without
 recording *why*.
 

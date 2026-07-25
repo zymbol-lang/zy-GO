@@ -1,5 +1,14 @@
 // ============================================================
-// go.zy — entry point, English — for terminals where typing CJK is inconvenient
+// go.zy — 入口、英語 — 漢字仮名を打ちにくい端末のために
+//
+// 四つの入口は、あらかじめ選ぶ言語だけが違う。どの入口からでも
+// 設定の画面で言語は変えられる。ここが決めるのは、その設定の
+// 画面自身が何語かということだけである。
+//
+//   zymbol run go.zy
+//
+// EN: go.zy — entry point, English — for terminals where typing CJK
+// is inconvenient
 //
 // The four entry points differ only in the locale they preselect.
 // Every one of them can switch language from the setup screen —

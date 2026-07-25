@@ -1,5 +1,14 @@
 // ============================================================
-// 試験/言語検証.zy — i18n completeness gate
+// 試験/言語検証.zy — i18n の完全性の関所
+//
+// 鍵の親目録を、登録されたすべての言語に突き合わせて歩く。
+// 鍵を欠く言語は鍵そのものを返す（語 の中の同一への落とし所）。
+// 検査が決定可能なのはまさにそのおかげである。鍵は中立な ASCII
+// であり、訳が ASCII になることは決して無い。
+//
+//   zymbol run 試験/言語検証.zy
+//
+// EN: 試験/言語検証.zy — i18n completeness gate
 //
 // Walks the master key catalogue against every registered locale.
 // A locale that lacks a key returns the key itself (the identity
@@ -9,7 +18,7 @@
 //   zymbol run 試験/言語検証.zy
 // ============================================================
 
-<# ../言語/module => 言
+<# ../言語/取次 => 言
 <# ../表示/文字 => 文
 
 鍵 = 言::鍵一覧()
@@ -23,14 +32,14 @@
 
 @ コード : 言語 {
     言::設定(コード)
-    名 = 言::語("lang.name")
+    名 = 言::語("言語.名前")
     欠落 = 0
 
-    @ k : 鍵 {
-        訳 = 言::語(k)
-        ? 訳 == k {
+    @ 一鍵 : 鍵 {
+        訳 = 言::語(一鍵)
+        ? 訳 == 一鍵 {
             ? 欠落 == 0 { >> "  [" コード "] " 名 ¶ }
-            >> "      MISSING  " k ¶
+            >> "      MISSING  " 一鍵 ¶
             欠落 = 欠落 + 1
         }
     }
@@ -47,7 +56,10 @@
 
 >> "" ¶
 
-// Composed messages: exercised in every locale so that a broken
+// 組み立てる文言。すべての言語で動かすので、壊れた数の書式や
+// 抜けた語法の枝は、終局の画面ではなくここで露わになる。
+//
+// EN: Composed messages: exercised in every locale so that a broken
 // number format or a missing grammar branch shows up here rather
 // than on the end-of-game screen.
 >> "composed messages" ¶

@@ -1,0 +1,25 @@
+// ============================================================
+// 標準/端末.zy — std/term の日本語層
+//
+// 表示/文字.zy が桁勘定を任せる先。列幅は書記素の数では
+// なく端末の桁数であり、その判断は標準ライブラリが持つ。
+// ここはその答えを日本語の名前で受け渡すだけである。
+//
+// EN: 標準/端末.zy — Japanese layer over std/term.
+// Where 表示/文字.zy sends every column question. Column count
+// is not grapheme count; the standard library owns that answer
+// and this layer only hands it over under Japanese names.
+// ============================================================
+
+# .標準_端末 {
+
+    #> {
+        端::width     => 幅
+        端::pad_left  => 左詰
+        端::pad_right => 右詰
+        端::center    => 中央
+        端::truncate  => 切詰
+    }
+
+    <# std/term => 端
+}

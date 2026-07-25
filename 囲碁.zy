@@ -1,5 +1,13 @@
 // ============================================================
-// 囲碁.zy — entry point, Japanese
+// 囲碁.zy — 入口、日本語
+//
+// 四つの入口は、あらかじめ選ぶ言語だけが違う。どの入口からでも
+// 設定の画面で言語は変えられる。ここが決めるのは、その設定の
+// 画面自身が何語かということだけである。
+//
+//   zymbol run 囲碁.zy
+//
+// EN: 囲碁.zy — entry point, Japanese
 //
 // The four entry points differ only in the locale they preselect.
 // Every one of them can switch language from the setup screen —

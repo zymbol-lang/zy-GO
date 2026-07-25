@@ -21,8 +21,8 @@ ocupa exactamente dos columnas de terminal.
 > en cinco idiomas (textos de interfaz en tiempo de ejecución y traducción de la
 > API a nivel de identificadores).
 
-> **English:** [README.md](README.md) · **Especificación técnica:** [DESIGN.md](DESIGN.md)
-> · **Prueba de complejidad:** [棋戦.md](棋戦.md)
+> **日本語:** [README_JA.md](README_JA.md) · **English:** [README.md](README.md)
+> · **Especificación técnica:** [DESIGN.md](DESIGN.md) · **Prueba de complejidad:** [BENCHMARK.md](BENCHMARK.md)
 
 ---
 
@@ -347,7 +347,7 @@ zy-GO/
 ├── 围棋.zy              punto de entrada, mandarín     │ con el idioma
 ├── go.zy                punto de entrada, menú         ┘ preseleccionado
 ├── 対局.zy              controlador de partida — turnos, historial, deshacer
-├── 棋戦.zy              IA contra IA, instrumentado — ver 棋戦.md
+├── 棋戦.zy              IA contra IA, instrumentado — ver BENCHMARK.md
 ├── 集計.zy              suma todas las tandas en un solo juego de matrices
 │                       los registros van a zy-GO-kifu (ZYGO_KIFU para redirigir)
 ├── 核/                  motor
@@ -360,7 +360,7 @@ zy-GO/
 │   ├── 描画.zy          tablero, cursor, panel, pantallas
 │   └── 主題.zy          temas de fichas y aritmética de maquetación
 ├── 言語/                textos de interfaz en tiempo de ejecución
-│   ├── module.zy        despachador, estado del idioma, catálogo de claves
+│   ├── 取次.zy          despachador, estado del idioma, catálogo de claves
 │   ├── 日本語.zy        ja
 │   ├── 한국어.zy        ko
 │   ├── 中文.zy          zh
@@ -419,12 +419,15 @@ no puede expresar «blancas ganan por 1,5 puntos» en cinco gramáticas:
 | `結果文(勝色, 差, 中押)` | la frase de resultado — 白の1目半勝ち · 백 1집반승 · 白胜1目半 · White wins by 1.5 points · las blancas ganan por 1,5 puntos |
 | `取石文(数)` | anuncio de captura, con concordancia de plural donde el idioma la necesita |
 
-Las claves son identificadores ASCII neutros (`panel.captures`, `msg.ko`), nunca
-palabras japonesas. Eso es lo que hace el sistema verificable: un idioma al que
-le falte una clave devuelve la clave misma, así que `試験/言語検証.zy` recorre el
-catálogo maestro contra cada idioma y falla ante cualquier cadena que vuelva sin
-cambiar. Añadir un idioma son tres ediciones, y la puerta te dice al instante qué
-olvidaste.
+Las claves son conceptos japoneses con prefijo de dominio (`区画.アゲハマ`,
+`報せ.コウ`), porque la base del sistema es el japonés y los demás idiomas se
+apoyan encima: pedir `区画.アゲハマ` es pedir un concepto, no un identificador
+inglés. El prefijo es lo que mantiene el sistema verificable: una clave nunca
+puede coincidir con su propia traducción japonesa (`終局.石`, nunca `石` a
+secas), así que un idioma al que le falte una clave devuelve la clave misma y
+`試験/言語検証.zy` recorre el catálogo maestro contra cada idioma —japonés
+incluido— y falla ante cualquier cadena que vuelva sin cambiar. Añadir un idioma
+son tres ediciones, y la puerta te dice al instante qué olvidaste.
 
 **Traducción de la API a nivel de identificadores** (`api/`) — capas de
 reexportación puras que exponen la API pública del motor con nombres en inglés y

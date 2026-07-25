@@ -1,5 +1,12 @@
 // ============================================================
-// 試験/盤試験.zy — rule engine tests
+// 試験/盤試験.zy — 規則のエンジンの試験
+//
+// どの場合も 5×5 の局面を図として書いてある。だから期待する
+// 答えを盤と見比べて目で確かめられる。
+//
+//   zymbol run 試験/盤試験.zy
+//
+// EN: 試験/盤試験.zy — rule engine tests
 //
 // Every case is a 5×5 position written as a diagram, so the
 // expected answer can be checked by eye against the board.
@@ -145,7 +152,7 @@
 確認("occupied point rejected", 規則::判定(局面, 路, 1, 2, 0), 1, 失敗)
 確認("off-board rejected", 規則::判定(局面, 路, 26, 1, 0), 1, 失敗)
 確認("empty point accepted", 規則::判定(局面, 路, 13, 2, 0), 0, 失敗)
-確認("reason key for ko", 規則::理由鍵(3), "msg.ko", 失敗)
+確認("reason key for ko", 規則::理由鍵(3), "報せ.コウ", 失敗)
 
 空盤 = 盤::新規(路)
 確認("every point legal on an empty board", (規則::着手可能(空盤, 路, 1, 0))$#, 25, 失敗)

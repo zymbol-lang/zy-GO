@@ -1,5 +1,40 @@
 // ============================================================
-// 棋戦.zy — AI versus AI, instrumented
+// 棋戦.zy — AI 対 AI、計器付き
+//
+//   zymbol run 棋戦.zy [対局数] [盤] [様式]
+//
+//   対局数  何局打つか                既定 10
+//   盤      9 · 13 · 19               既定 9
+//   様式    pausa | continua | 静     既定 continua
+//   言語    en | es                   既定 en
+//
+// 様式と言語はどちらの順でもよく、無くてもよい。
+//   zymbol run 棋戦.zy 1 19 es
+//   zymbol run 棋戦.zy 200 9 静 en
+//
+//   pausa    一手ごとに描き ↵ を待つ — 研究の様式
+//   continua 一手ごとに描いて進み続ける
+//   静       何も描かず、一局につき一行を出す — 一括の様式
+//
+// どの対局にも、両者それぞれの無作為な級と性格、その局だけの種、
+// そして 棋譜/ の中の一つの file が与えられる。種は file の中に
+// ある。記録した対局は一手ずつそのまま再演される。それが記録と
+// 資料の違いである。
+//
+// 勝敗のほかに、これが測るもの。
+//
+//   · 一手あたりの時間 — 序盤の一手はミリ秒で決まり、終盤の一手は
+//     はるかに長くかかる。候補の集合が盤とともに増え、その候補
+//     ごとに写しの上で点数をつけるからである
+//   · 各局の前後の常駐 memory。v0.0.8 が答えるために在る問いである
+//   · 強い級が本当に弱い級に勝つのか。級に意味があるかを知る
+//     正直な道はこれしかない
+//
+// 時計も含めてすべて Zymbol で書いてある。時間の基本命令は無いので
+// 時刻は BashExec から取り、尋ねること自体の費用を起動時に較正して
+// 差し引く。
+//
+// EN: 棋戦.zy — AI versus AI, instrumented
 //
 //   zymbol run 棋戦.zy [games] [board] [mode]
 //
@@ -43,12 +78,21 @@
 <# ./表示/主題 => 主
 <# ./表示/描画 => 描
 <# ./表示/文字 => 文
-<# ./言語/module => 言
-<# std/io => io
+<# ./言語/取次 => 言
+<# ./標準/入出力 => 入出
 
 上限手数 := 400
 
-// Where records go. One directory per run:
+// 記録の置き場。一回の tanda につき一つの directorio。
+//
+//   games/20260722_003241_GO9x9/0001.kifu
+//
+// 失敗した一回は `rm -rf` 一つで消え、他のすべての回は生き残る。
+// 増え続ける資料を repositorio の外に置きたいときは ZYGO_KIFU で
+// 根を差し替える。
+//   ZYGO_KIFU=~/datos/go zymbol run 棋戦.zy 200 9 静
+//
+// EN: Where records go. One directory per run:
 //
 //   games/20260722_003241_GO9x9/0001.kifu
 //
@@ -58,61 +102,86 @@
 //   ZYGO_KIFU=~/datos/go zymbol run 棋戦.zy 200 9 静
 既定場所 := "games"
 
-// ── instrumentation ───────────────────────────────────────────
+// ── 計器 ──────────────────────────────────────────────────────
+// EN: instrumentation
 
 時刻() {
-    t = <\ "date +%s%N" \>
-    <~ #|t|
+    刻 = <\ "date +%s%N" \>
+    <~ #|刻|
 }
 
 記憶() {
-    m = <\ "ps -o rss= -p $PPID | tr -d ' '" \>
-    <~ #|m|
+    常駐 = <\ "ps -o rss= -p $PPID | tr -d ' '" \>
+    <~ #|常駐|
 }
 
-// One BashExec round trip sits inside every interval we measure.
+// 測るどの区間の中にも BashExec の往復が一つ座っている。
+// いま測り、あとで差し引き、そのことを報告に書く。数字が綺麗だ
+// という振りをするよりましである。
+//
+// EN: One BashExec round trip sits inside every interval we measure.
 // Measure it now, subtract it later, and say so in the report
 // rather than pretending the number is clean.
 較正() {
     合計 = 0
-    a = 時刻()
-    @ i:1..8 {
-        b = 時刻()
-        合計 = 合計 + (b - a)
-        a = b
+    前 = 時刻()
+    @ _回:1..8 {
+        後 = 時刻()
+        合計 = 合計 + (後 - 前)
+        前 = 後
     }
     <~ 合計 / 8
 }
 
 ミリ(ナノ) { <~ ナノ / 1000000 }
 
-// Every report line goes through here: printed when the screen is
-// free to show it, and always appended to the run's own copy. The
-// summary a person reads and the summary that scrolled past have to
-// be the same text, or one of them is a lie.
+// 報告のどの行もここを通る。画面に余裕があるときは印字し、
+// その回の控えには常に書き足す。人が読む要約と、流れて消えた
+// 要約は同じ文でなければならない。さもなければどちらかが嘘に
+// なる。
+//
+// EN: Every report line goes through here: printed when the screen
+// is free to show it, and always appended to the run's own copy.
+// The summary a person reads and the summary that scrolled past
+// have to be the same text, or one of them is a lie.
 記す(線, 表示, 報告<~) {
     ? 表示 { >> 線 ¶ }
     報告 = "{報告}{線}
 "
 }
 
-// Zero-padded, so 棋譜/ sorts in playing order and no filename
+// 零で詰める。こうすると 棋譜/ は打った順に並び、file の名に
+// 空白が入らない。文::左詰 は空白で詰め、`$-` は最初の一つしか
+// 取り除かない。どちらもここで微妙に間違える道である。
+//
+// EN: Zero-padded, so 棋譜/ sorts in playing order and no filename
 // carries a space. 文::左詰 pads with spaces and `$-` removes only
 // the first occurrence — two ways to get this subtly wrong.
-零詰(n, 桁) {
-    s = "{n}"
-    @ (s$#) < 桁 {
-        s = "0{s}"
+零詰(数, 桁) {
+    文字列 = "{数}"
+    @ (文字列$#) < 桁 {
+        文字列 = "0{文字列}"
     }
-    <~ s
+    <~ 文字列
 }
 
-// ── report language ───────────────────────────────────────────
+// ── 報告の言語 ────────────────────────────────────────────────
+// この仕掛けは計器であって対局ではない。だからその報告は 言語/
+// ではなくここに置く。打ち手が読むもののために在る目録に、
+// 三十ほどの計測の名札を足せば目録が薄まる。
+// 対局の語彙はいまも 言語/ から来る。下の級の名は
+// 言::語("棋力.N") で、設定の画面が使うのと同じ文字列である。
+//
+// 棋譜/ の記録は訳さない。ここを何に設定しようと、記録は一つの
+// 安定した機械向けの形にとどまる。二つの言語に割れた資料は
+// 二つの資料だからである。
+//
+// EN: report language
 // The harness is an instrument, not the game, so its report lives
 // here rather than in 言語/: adding thirty benchmark labels to a
 // catalogue that exists for what a *player* reads would dilute it.
 // Game vocabulary still comes from 言語/ — level names below are
-// 言::語("level.N"), the same strings the setup screen uses.
+// 言::語("棋力.N"), the same strings the setup screen uses.
 //
 // The records in 棋譜/ are NOT translated. They stay in one stable
 // machine form whatever this is set to, because a dataset split
@@ -207,50 +276,62 @@
     }
 }
 
-// ── naming ────────────────────────────────────────────────────
+// ── 呼び名 ────────────────────────────────────────────────────
+// EN: naming
 
-級名(n) {
-    <~ ?? n {
-        1 => 言::語("level.1")
-        3 => 言::語("level.3")
-        _ => 言::語("level.2")
+級名(級) {
+    <~ ?? 級 {
+        1 => 言::語("棋力.1")
+        3 => 言::語("棋力.3")
+        _ => 言::語("棋力.2")
     }
 }
 
-性格名(n) {
+性格名(性格) {
     ? 言::現在() == "es" {
-        <~ ?? n {
+        <~ ?? 性格 {
             1 => "ofensiva"
             2 => "defensiva"
             _ => "equilibrada"
         }
     }
-    <~ ?? n {
+    <~ ?? 性格 {
         1 => "offensive"
         2 => "defensive"
         _ => "balanced"
     }
 }
 
-// Short forms for the live panel, where a full word will not fit
-// beside a level name. Three letters, in the report's language —
-// a panel that translates its levels and not its labels is worse
+// 対局中の区画のための短い形。級の名の横に語をまるごと置く幅は
+// 無い。報告の言語で三文字。級だけ訳して名札を訳さない区画は、
+// どちらも訳さない区画より悪い。
+//
+// EN: Short forms for the live panel, where a full word will not
+// fit beside a level name. Three letters, in the report's language
+// — a panel that translates its levels and not its labels is worse
 // than one that translates neither.
-性格記号(n) {
-    <~ ?? n {
+性格記号(性格) {
+    <~ ?? 性格 {
         1 => 訳("soff")
         2 => 訳("sdef")
         _ => 訳("sbal")
     }
 }
 
-色名(c) {
-    ? c == 1 { <~ "B" }
-    ? c == 2 { <~ "W" }
+// 棋譜の中の色の記号。機械向けの形なので B / W のまま置く。
+// EN: Colour letter inside the kifu — machine form, so B / W stay.
+色名(色) {
+    ? 色 == 1 { <~ "B" }
+    ? 色 == 2 { <~ "W" }
     <~ "-"
 }
 
-// ── one game ──────────────────────────────────────────────────
+// ── 一局 ──────────────────────────────────────────────────────
+// 結果[1] 勝者（0 は持碁）  [4] 黒の合計    [7] 総ナノ秒
+// 結果[2] 手数              [5] 白の合計    [8] 序盤 10 手のナノ秒
+// 結果[3] 差                [6] 取った石の総数 [9] 終盤 10 手のナノ秒
+//
+// EN: one game
 // 結果[1] winner (0 jigo)   [4] black total     [7] total ns
 // 結果[2] moves             [5] white total     [8] first-10 ns
 // 結果[3] margin            [6] captures total  [9] last-10 ns
@@ -296,10 +377,10 @@ white level={白級} personality={白性}
             性 = 白性
         }
 
-        t0 = 時刻()
+        開始 = 時刻()
         点 = 思::選択(局面, 路, 手番, 級, 性, コウ, 最終, 手数, 種)
-        t1 = 時刻()
-        経過 = t1 - t0 - 較正値
+        終了 = 時刻()
+        経過 = 終了 - 開始 - 較正値
         ? 経過 < 0 { 経過 = 0 }
         総時 = 総時 + 経過
 
@@ -315,36 +396,36 @@ white level={白級} personality={白性}
             コウ = 0
             最終 = 0
         } _ {
-            k = 0
-            盤::着手(局面, 路, 点, 手番, 取, k)
+            コ = 0
+            盤::着手(局面, 路, 点, 手番, 取, コ)
             ? 手番 == 1 {
                 黒取 = 黒取 + 取
             } _ {
                 白取 = 白取 + 取
             }
-            コウ = k
+            コウ = コ
             最終 = 点
             パス = 0
             座 = 描::座標名(路, 点)
         }
 
         色 = 色名(手番)
-        ms = ミリ(経過)
-        記録 = "{記録}{手数} {色} {座} ms={ms} caps={取}
+        ミリ秒 = ミリ(経過)
+        記録 = "{記録}{手数} {色} {座} ms={ミリ秒} caps={取}
 "
 
         ? 模式 <> 2 {
             描::盤描画(局面, 路, "石", 2, 2)
-            _状況描画(番号, 路, 手数, 色, 座, ms, 黒級, 黒性, 白級, 白性, 黒取, 白取)
+            _状況描画(番号, 路, 手数, 色, 座, ミリ秒, 黒級, 黒性, 白級, 白性, 黒取, 白取)
             ? 模式 == 0 {
-                << _espera
+                << _待機
             }
         }
 
         手番 = 盤::敵(手番)
     }
 
-    @ v : 最近 { 終10 = 終10 + v }
+    @ 値 : 最近 { 終10 = 終10 + 値 }
 
     計 = 計算::目算(局面, 路, 6.5)
     勝 = 計算::勝色(計)
@@ -379,14 +460,17 @@ time_first10_ms {初ms}
 time_last10_ms {終ms}
 "
 
-    // The run owns the directory, so the file is just its number.
+    // directorio は一回の tanda のものなので、file はその番号だけで
+    // よい。
+    //
+    // EN: The run owns the directory, so the file is just its number.
     番札 = 零詰(番号, 4)
-    io::write("{場所}/{番札}.kifu", 記録)
+    入出::書込("{場所}/{番札}.kifu", 記録)
 }
 
 欄幅 := 30
 
-_状況描画(番号, 路, 手数, 色, 座, ms, 黒級, 黒性, 白級, 白性, 黒取, 白取) {
+_状況描画(番号, 路, 手数, 色, 座, ミリ秒, 黒級, 黒性, 白級, 白性, 黒取, 白取) {
     左 = ##!(主::区画幅(路) + 6)
     黒札 = 文::右詰(級名(黒級), 14)
     黒性札 = 性格記号(黒性)
@@ -394,9 +478,9 @@ _状況描画(番号, 路, 手数, 色, 座, ms, 黒級, 黒性, 白級, 白性,
     白性札 = 性格記号(白性)
 
     語局 = 訳("pgame")
-    語取 = 文::右詰(言::語("panel.captures"), 10)
-    語手 = 文::右詰(言::語("panel.moves"), 10)
-    語終 = 文::右詰(言::語("panel.last"), 10)
+    語取 = 文::右詰(言::語("区画.アゲハマ"), 10)
+    語手 = 文::右詰(言::語("区画.手数"), 10)
+    語終 = 文::右詰(言::語("区画.最終手"), 10)
     語思 = 文::右詰(訳("pthink"), 10)
 
     >>~ (2, 左, 1, 255) > 描::枠上(欄幅)
@@ -408,11 +492,12 @@ _状況描画(番号, 路, 手数, 色, 座, ms, 黒級, 黒性, 白級, 白性,
     >>~ (8, 左, 0, 252) > 描::枠行(" {語取}⚫{黒取}  ⚪{白取}", 欄幅)
     >>~ (9, 左, 0, 252) > 描::枠行(" {語手}{手数}", 欄幅)
     >>~ (10, 左, 0, 252) > 描::枠行(" {語終}{色} {座}", 欄幅)
-    >>~ (11, 左, 1, 214) > 描::枠行(" {語思}{ms} ms", 欄幅)
+    >>~ (11, 左, 1, 214) > 描::枠行(" {語思}{ミリ秒} ms", 欄幅)
     >>~ (12, 左, 0, 240) > 描::枠下(欄幅)
 }
 
-// ── main ──────────────────────────────────────────────────────
+// ── 本体 ──────────────────────────────────────────────────────
+// EN: main
 
 >< 引数
 
@@ -424,45 +509,60 @@ _状況描画(番号, 路, 手数, 色, 座, ms, 黒級, 黒性, 白級, 白性,
 ? (引数$#) >= 1 { 対局数 = #|引数[1]| }
 ? (引数$#) >= 2 { 路 = #|引数[2]| }
 
-// Mode and language are recognised by what they say, not by where
-// they sit, so `1 19 es` and `200 9 静 en` both do what they look
-// like they do.
+// 様式と言語は、置かれた場所ではなく中身で見分ける。だから
+// `1 19 es` も `200 9 静 en` も、見た目のとおりに働く。
+//
+// EN: Mode and language are recognised by what they say, not by
+// where they sit, so `1 19 es` and `200 9 静 en` both do what they
+// look like they do.
 _総引数 = 引数$#
-@ i:3.._総引数 {
-    t = 引数[i]
-    ? t == "pausa" { 模式 = 0 }
-    ? t == "continua" { 模式 = 1 }
-    ? t == "静" { 模式 = 2 }
-    ? t == "silencio" { 模式 = 2 }
-    ? t == "es" { 言語 = "es" }
-    ? t == "en" { 言語 = "en" }
+@ 添字:3.._総引数 {
+    引 = 引数[添字]
+    ? 引 == "pausa" { 模式 = 0 }
+    ? 引 == "continua" { 模式 = 1 }
+    ? 引 == "静" { 模式 = 2 }
+    ? 引 == "silencio" { 模式 = 2 }
+    ? 引 == "es" { 言語 = "es" }
+    ? 引 == "en" { 言語 = "en" }
 }
 
 言::設定(言語)
 
-// Master seed from three independent sources, the way serpiente
+// 親の種は独立した三つの源から取る。serpiente と同じやり方で
+// ある。印字するので、一回の tanda 全体が再演できる。
+//
+// EN: Master seed from three independent sources, the way serpiente
 // does it. Printed, so the whole run replays.
-_ns = <\ "date +%N" \>
-_pid = <\ "echo $$" \>
-_rnd = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
-親種 = (#|_ns| + #|_pid| * 31337 + #|_rnd| * 65537) % 2147483647
+_ナノ = <\ "date +%N" \>
+_番号 = <\ "echo $$" \>
+_乱 = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
+親種 = (#|_ナノ| + #|_番号| * 31337 + #|_乱| * 65537) % 2147483647
 
 基底 = <\ "printenv ZYGO_KIFU" \>
 ? (基底$#) == 0 { 基底 = 既定場所 }
 
 較正値 = 較正()
 
-// One stamp per run, not per game: files of the same run stay
+// 印は一局ごとではなく一回の tanda ごとに一つ。同じ回の file は
+// 並べ替えても寄り添ったままで、どの回も他の回と衝突しない。
+//
+// EN: One stamp per run, not per game: files of the same run stay
 // together when the directory is sorted, and no run can collide
 // with another.
 実行印 = <\ "date +%Y%m%d_%H%M%S" \>
 
-// One directory per run. io::mkdir creates the whole path.
+// 一回の tanda につき一つの directorio。入出::階層作成 が道筋を
+// まるごと作る。
+//
+// EN: One directory per run. 入出::階層作成 creates the whole path.
 記録場所 = "{基底}/{実行印}_GO{路}x{路}"
-io::mkdir(記録場所)
+入出::階層作成(記録場所)
 
-// Two parenthesised expressions side by side parse as a call, so
-// every line here is assembled before it is printed.
+// 括弧で包んだ式を二つ並べると呼び出しとして読まれる。だから
+// ここの行はどれも、印字する前に組み立ててある。
+//
+// EN: Two parenthesised expressions side by side parse as a call,
+// so every line here is assembled before it is printed.
 報告 = ""
 題 = 訳("title")
 記す("═══ {題} ═══", #1, 報告)
@@ -491,10 +591,13 @@ io::mkdir(記録場所)
 総終 = 0
 最遅 = 0
 
-// 勝表[(a-1)*3 + b] — games in which a level-a engine beat a level-b one
+// 勝表[(甲-1)*3 + 乙] — 級 甲 のエンジンが級 乙 に勝った局数
+// EN: 勝表[(a-1)*3 + b] — games in which a level-a engine beat a
+// level-b one
 勝表 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
 戦表 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-// 性勝[(a+1)*3 ... ] — same idea for personalities 0..2
+// 性勝[(甲+1)*3 ...] — 性格 0..2 について同じ考え
+// EN: 性勝[(a+1)*3 ... ] — same idea for personalities 0..2
 性勝 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
 性戦 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
 
@@ -502,7 +605,7 @@ io::mkdir(記録場所)
 記憶表 = []
 
 種 = 親種
-@ n:1..対局数 {
+@ 局番:1..対局数 {
     種 = 思::乱数(種)
     黒級 = 種 % 3 + 1
     種 = 思::乱数(種)
@@ -515,7 +618,7 @@ io::mkdir(記録場所)
     局種 = 種
 
     結果 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-    一局(n, 路, 局種, 黒級, 黒性, 白級, 白性, 模式, 較正値, 実行印, 記録場所, 結果)
+    一局(局番, 路, 局種, 黒級, 黒性, 白級, 白性, 模式, 較正値, 実行印, 記録場所, 結果)
 
     勝 = 結果[1]
     ? 勝 == 1 { 黒勝 = 黒勝 + 1 }
@@ -528,25 +631,29 @@ io::mkdir(記録場所)
     総終 = 総終 + 結果[9]
     ? 結果[9] > 最遅 { 最遅 = 結果[9] }
 
-    // level and personality tallies
-    i = (黒級 - 1) * 3 + 白級
-    j = (白級 - 1) * 3 + 黒級
-    戦表[i] = 戦表[i] + 1
-    戦表[j] = 戦表[j] + 1
-    ? 勝 == 1 { 勝表[i] = 勝表[i] + 1 }
-    ? 勝 == 2 { 勝表[j] = 勝表[j] + 1 }
+    // 級と性格の勘定
+    // EN: level and personality tallies
+    黒枠 = (黒級 - 1) * 3 + 白級
+    白枠 = (白級 - 1) * 3 + 黒級
+    戦表[黒枠] = 戦表[黒枠] + 1
+    戦表[白枠] = 戦表[白枠] + 1
+    ? 勝 == 1 { 勝表[黒枠] = 勝表[黒枠] + 1 }
+    ? 勝 == 2 { 勝表[白枠] = 勝表[白枠] + 1 }
 
-    p = 黒性 * 3 + 白性 + 1
-    q = 白性 * 3 + 黒性 + 1
-    性戦[p] = 性戦[p] + 1
-    性戦[q] = 性戦[q] + 1
-    ? 勝 == 1 { 性勝[p] = 性勝[p] + 1 }
-    ? 勝 == 2 { 性勝[q] = 性勝[q] + 1 }
+    黒性枠 = 黒性 * 3 + 白性 + 1
+    白性枠 = 白性 * 3 + 黒性 + 1
+    性戦[黒性枠] = 性戦[黒性枠] + 1
+    性戦[白性枠] = 性戦[白性枠] + 1
+    ? 勝 == 1 { 性勝[黒性枠] = 性勝[黒性枠] + 1 }
+    ? 勝 == 2 { 性勝[白性枠] = 性勝[白性枠] + 1 }
 
     記憶表 = 記憶表 $+ 記憶()
 
-    // Recorded in every mode; printed only when the screen is not
-    // busy drawing a board.
+    // どの様式でも控えには残す。印字するのは、画面が盤を描くのに
+    // 塞がっていないときだけ。
+    //
+    // EN: Recorded in every mode; printed only when the screen is
+    // not busy drawing a board.
     勝名 = 色名(勝)
     黒札 = 文::右詰(級名(黒級), 13)
     白札 = 文::右詰(級名(白級), 13)
@@ -554,15 +661,16 @@ io::mkdir(記録場所)
     白性札 = 性格記号(白性)
     手 = 結果[2]
     差 = 結果[3]
-    ms = ミリ(結果[7])
-    番 = 文::左詰("{n}", 4)
+    ミリ秒 = ミリ(結果[7])
+    番 = 文::左詰("{局番}", 4)
     語手 = 訳("moves")
-    記す("  {番}  ⚫{黒札}{黒性札} vs ⚪{白札}{白性札}   {勝名}+{差}   {手} {語手}   {ms} ms", 模式 == 2, 報告)
+    記す("  {番}  ⚫{黒札}{黒性札} vs ⚪{白札}{白性札}   {勝名}+{差}   {手} {語手}   {ミリ秒} ms", 模式 == 2, 報告)
 }
 
 記憶終 = 記憶()
 
-// ── report ────────────────────────────────────────────────────
+// ── 報告 ──────────────────────────────────────────────────────
+// EN: report
 
 ? 模式 <> 2 { >>! }
 記す("", #1, 報告)
@@ -596,20 +704,28 @@ io::mkdir(記録場所)
 記す("  {札}{値} {単}", #1, 報告)
 
 ? 総初 > 0 {
-    // Integer division would round a 1.7x growth down to 1x and
+    // 整数の除算は 1.7 倍の伸びを 1 倍へ丸めてしまい、この試験が
+    // 見せるために在るものそのものを隠す。
+    //
+    // EN: Integer division would round a 1.7x growth down to 1x and
     // hide the very thing this test exists to show.
     比 = 総終 * 10 / 総初
-    entero = 比 / 10
-    decimal = 比 % 10
+    整数部 = 比 / 10
+    小数部 = 比 % 10
     札 = 文::右詰(訳("growth"), 26)
-    記す("  {札}×{entero}.{decimal}", #1, 報告)
+    記す("  {札}×{整数部}.{小数部}", #1, 報告)
 }
 
-// An instrument that does not know its own limits reports nonsense
-// with a straight face. Under --vm on a small board a move can cost
-// less than the timestamp used to measure it, and the growth ratio
-// comes out below 1 — which is impossible, and is the measurement
-// saying it has run out of resolution.
+// 自分の限界を知らない計器は、澄ました顔で出鱈目を報告する。
+// --vm で小さい盤を打つと、一手がそれを測る時刻取得より安く
+// つくことがあり、伸びの比が 1 を下回って出る。ありえない値で
+// あり、測定が分解能を使い果たしたと告げているのである。
+//
+// EN: An instrument that does not know its own limits reports
+// nonsense with a straight face. Under --vm on a small board a move
+// can cost less than the timestamp used to measure it, and the
+// growth ratio comes out below 1 — which is impossible, and is the
+// measurement saying it has run out of resolution.
 一手平均 = 総初 / (対局数 * 10)
 ? 一手平均 < 較正値 * 3 {
     記す("", #1, 報告)
@@ -629,11 +745,11 @@ io::mkdir(記録場所)
 記す("  {札}{値} {単} {対局数}", #1, 報告)
 ? (記憶表$#) > 0 {
     最大記憶 = 0
-    @ v : 記憶表 {
-        ? v > 最大記憶 { 最大記憶 = v }
+    @ 値 : 記憶表 {
+        ? 値 > 最大記憶 { 最大記憶 = 値 }
     }
-    札p = 文::右詰(訳("peak"), 26)
-    記す("  {札p}{最大記憶} KB", #1, 報告)
+    札峰 = 文::右詰(訳("peak"), 26)
+    記す("  {札峰}{最大記憶} KB", #1, 報告)
 }
 記す("", #1, 報告)
 
@@ -643,18 +759,18 @@ io::mkdir(記録場所)
 記す("  {案内}", #1, 報告)
 記す("", #1, 報告)
 記す("  " 文::右詰("", 14) 文::中央(級名(1), 14) 文::中央(級名(2), 14) 文::中央(級名(3), 14), #1, 報告)
-@ a:1..3 {
-    線 = 文::右詰(級名(a), 14)
-    @ b:1..3 {
-        i = (a - 1) * 3 + b
+@ 甲:1..3 {
+    線 = 文::右詰(級名(甲), 14)
+    @ 乙:1..3 {
+        枠 = (甲 - 1) * 3 + 乙
         欄 = "—"
-        ? 戦表[i] > 0 {
-            pct = 勝表[i] * 100 / 戦表[i]
-            n = 戦表[i]
-            欄 = "{pct}% /{n}"
+        ? 戦表[枠] > 0 {
+            率 = 勝表[枠] * 100 / 戦表[枠]
+            局数 = 戦表[枠]
+            欄 = "{率}% /{局数}"
         }
         線 = "{線}{欄}"
-        線 = 文::右詰(線, 14 + b * 14)
+        線 = 文::右詰(線, 14 + 乙 * 14)
     }
     記す("  {線}", #1, 報告)
 }
@@ -663,28 +779,33 @@ io::mkdir(記録場所)
 記す("", #1, 報告)
 記す(訳("perhdr"), #1, 報告)
 記す("", #1, 報告)
-_h2 = 文::右詰("", 14)
-_p1 = 文::中央(性格名(0), 14)
-_p2 = 文::中央(性格名(1), 14)
-_p3 = 文::中央(性格名(2), 14)
-記す("  {_h2}{_p1}{_p2}{_p3}", #1, 報告)
-@ a:0..2 {
-    線 = 文::右詰(性格名(a), 14)
-    @ b:0..2 {
-        i = a * 3 + b + 1
+_見出 = 文::右詰("", 14)
+_性甲 = 文::中央(性格名(0), 14)
+_性乙 = 文::中央(性格名(1), 14)
+_性丙 = 文::中央(性格名(2), 14)
+記す("  {_見出}{_性甲}{_性乙}{_性丙}", #1, 報告)
+@ 甲:0..2 {
+    線 = 文::右詰(性格名(甲), 14)
+    @ 乙:0..2 {
+        枠 = 甲 * 3 + 乙 + 1
         欄 = "—"
-        ? 性戦[i] > 0 {
-            pct = 性勝[i] * 100 / 性戦[i]
-            n = 性戦[i]
-            欄 = "{pct}% /{n}"
+        ? 性戦[枠] > 0 {
+            率 = 性勝[枠] * 100 / 性戦[枠]
+            局数 = 性戦[枠]
+            欄 = "{率}% /{局数}"
         }
         線 = "{線}{欄}"
-        線 = 文::右詰(線, 14 + (b + 1) * 14)
+        線 = 文::右詰(線, 14 + (乙 + 1) * 14)
     }
     記す("  {線}", #1, 報告)
 }
 記す("", #1, 報告)
-// ── the run's own record ──────────────────────────────────────
+// ── その回自身の記録 ──────────────────────────────────────────
+// いま報告が印字したすべてを、対局そのものと同じ行の形で残す。
+// 表示の言語が何であれ、常に機械向けの形である。旗一つで形の
+// 変わる要約は、回をまたいで足し合わせられない。
+//
+// EN: the run's own record
 // Everything the report just printed, in the same line-based form
 // as the games themselves. Always in the machine form, whatever the
 // display language: a summary that changes shape with a flag cannot
@@ -698,60 +819,60 @@ master_seed {親種}
 clock_cost_ns {較正値}
 ---
 "
-要bw = 黒勝
-要ww = 白勝
-要jg = 持碁
-要am = 総手数 / 対局数
-要約 = "{要約}black_wins {要bw}
-white_wins {要ww}
-jigo {要jg}
-avg_moves {要am}
+要黒勝 = 黒勝
+要白勝 = 白勝
+要持碁 = 持碁
+要平均手 = 総手数 / 対局数
+要約 = "{要約}black_wins {要黒勝}
+white_wins {要白勝}
+jigo {要持碁}
+avg_moves {要平均手}
 ---
 "
-要f10 = ミリ(総初 / (対局数 * 10))
-要l10 = ミリ(総終 / (対局数 * 10))
-要s10 = ミリ(最遅 / 10)
-要tot = ミリ(総時間)
-要gr = 0
-? 総初 > 0 { 要gr = 総終 * 10 / 総初 }
-要noisy = 0
-? 一手平均 < 較正値 * 3 { 要noisy = 1 }
-要約 = "{要約}time_first10_avg_ms {要f10}
-time_last10_avg_ms {要l10}
-time_slowest10_avg_ms {要s10}
-time_total_ms {要tot}
-time_growth_tenths {要gr}
-time_below_clock_resolution {要noisy}
+要初10 = ミリ(総初 / (対局数 * 10))
+要終10 = ミリ(総終 / (対局数 * 10))
+要遅10 = ミリ(最遅 / 10)
+要総時 = ミリ(総時間)
+要伸 = 0
+? 総初 > 0 { 要伸 = 総終 * 10 / 総初 }
+要雑音 = 0
+? 一手平均 < 較正値 * 3 { 要雑音 = 1 }
+要約 = "{要約}time_first10_avg_ms {要初10}
+time_last10_avg_ms {要終10}
+time_slowest10_avg_ms {要遅10}
+time_total_ms {要総時}
+time_growth_tenths {要伸}
+time_below_clock_resolution {要雑音}
 ---
 "
-要mp = 0
-@ v : 記憶表 {
-    ? v > 要mp { 要mp = v }
+要峰 = 0
+@ 値 : 記憶表 {
+    ? 値 > 要峰 { 要峰 = 値 }
 }
 要約 = "{要約}mem_before_kb {記憶初}
 mem_after_kb {記憶終}
-mem_peak_kb {要mp}
+mem_peak_kb {要峰}
 ---
 # level <row> <col> <wins> <games> — 1 beginner, 2 intermediate, 3 advanced
 "
-@ a:1..3 {
-    @ b:1..3 {
-        i = (a - 1) * 3 + b
-        要w1 = 勝表[i]
-        要g1 = 戦表[i]
-        要約 = "{要約}level {a} {b} {要w1} {要g1}
+@ 甲:1..3 {
+    @ 乙:1..3 {
+        枠 = (甲 - 1) * 3 + 乙
+        要勝数 = 勝表[枠]
+        要局数 = 戦表[枠]
+        要約 = "{要約}level {甲} {乙} {要勝数} {要局数}
 "
     }
 }
 要約 = "{要約}---
 # personality <row> <col> <wins> <games> — 0 balanced, 1 offensive, 2 defensive
 "
-@ a:0..2 {
-    @ b:0..2 {
-        i = a * 3 + b + 1
-        要w2 = 性勝[i]
-        要g2 = 性戦[i]
-        要約 = "{要約}personality {a} {b} {要w2} {要g2}
+@ 甲:0..2 {
+    @ 乙:0..2 {
+        枠 = 甲 * 3 + 乙 + 1
+        要性勝数 = 性勝[枠]
+        要性局数 = 性戦[枠]
+        要約 = "{要約}personality {甲} {乙} {要性勝数} {要性局数}
 "
     }
 }
@@ -762,11 +883,18 @@ mem_peak_kb {要mp}
 語再 = 訳("replay")
 記す("  {語種} {親種} {語再}", #1, 報告)
 
-// Two files, because they answer different questions.
+// file は二つ。答える問いが違うからである。
+// summary.txt は人が読むもの。流れて消えたとおりの報告を、
+// 動かしたときの言語のまま残す。
+// stats.txt は program が読むもの。常に同じ鍵を同じ順で英語で
+// 並べるので、何か月も離れ、言語も違う回どうしを足し合わせ
+// られる。
+//
+// EN: Two files, because they answer different questions.
 // summary.txt is what a person reads: the report exactly as it
 // scrolled past, in whatever language it was run in.
 // stats.txt is what a program reads: always the same keys in the
 // same order in English, so runs made months and languages apart
 // can still be summed.
-io::write("{記録場所}/summary.txt", 報告)
-io::write("{記録場所}/stats.txt", 要約)
+入出::書込("{記録場所}/summary.txt", 報告)
+入出::書込("{記録場所}/stats.txt", 要約)

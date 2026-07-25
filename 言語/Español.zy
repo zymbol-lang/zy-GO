@@ -1,6 +1,12 @@
 // ============================================================
-// 言語/Español.zy — Spanish locale (es)
+// 言語/Español.zy — スペイン語 (es)
+// 約束する関数: 語 · 路盤名 · 結果文 · 取石文
+// 鍵は日本語。土台は 言語/日本語.zy にある。
+// 注: スペイン語の小数点は読点である — 1.5 ではなく 1,5 puntos。
+//
+// EN: 言語/Español.zy — Spanish locale (es)
 // Interface contract: 語 · 路盤名 · 結果文 · 取石文
+// The keys are Japanese; the base lives in 言語/日本語.zy.
 // Note: Spanish uses the decimal comma — 1,5 puntos, not 1.5.
 // ============================================================
 
@@ -10,67 +16,67 @@
 
     語(鍵) {
         <~ ?? 鍵 {
-            "lang.name"        => "Español"
+            "言語.名前"       => "Español"
 
-            "menu.title"       => "GO"
-            "menu.board"       => "Tablero"
-            "menu.level"       => "Nivel"
-            "menu.side"        => "Tu color"
-            "menu.komi"        => "Komi"
-            "menu.theme"       => "Tema"
-            "menu.lang"        => "Idioma"
-            "menu.hint"        => "↑↓ elegir   ←→ cambiar   ↵ empezar"
-            "menu.unavailable" => "pantalla estrecha"
+            "品書.表題"       => "GO"
+            "品書.路盤"       => "Tablero"
+            "品書.棋力"       => "Nivel"
+            "品書.手番"       => "Tu color"
+            "品書.コミ"       => "Komi"
+            "品書.主題"       => "Tema"
+            "品書.言語"       => "Idioma"
+            "品書.案内"       => "↑↓ elegir   ←→ cambiar   ↵ empezar"
+            "品書.不可"       => "pantalla estrecha"
 
-            "level.1"          => "Principiante"
-            "level.2"          => "Intermedio"
-            "level.3"          => "Avanzado"
+            "棋力.1"          => "Principiante"
+            "棋力.2"          => "Intermedio"
+            "棋力.3"          => "Avanzado"
 
-            "theme.stone"      => "Piedra"
-            "theme.moon"       => "Luna"
-            "theme.ascii"      => "ASCII"
+            "主題.石"         => "Piedra"
+            "主題.月"         => "Luna"
+            "主題.字"         => "ASCII"
 
-            "color.black"      => "Negras"
-            "color.white"      => "Blancas"
-            "side.you"         => "tú"
-            "side.ai"          => "IA"
+            "色.黒"           => "Negras"
+            "色.白"           => "Blancas"
+            "側.自分"         => "tú"
+            "側.機械"         => "IA"
 
-            "panel.turn"       => "Turno"
-            "panel.moves"      => "Jugadas"
-            "panel.captures"   => "Capturas"
-            "panel.komi"       => "Komi"
-            "panel.last"       => "Última"
-            "panel.estimate"   => "Estimación"
+            "区画.手番"       => "Turno"
+            "区画.手数"       => "Jugadas"
+            "区画.アゲハマ"   => "Capturas"
+            "区画.コミ"       => "Komi"
+            "区画.最終手"     => "Última"
+            "区画.目算"       => "Estimación"
 
-            "msg.occupied"     => "ya hay una piedra ahí"
-            "msg.suicide"      => "el suicidio no está permitido"
-            "msg.ko"           => "prohibido por ko"
-            "msg.pass_you"     => "has pasado"
-            "msg.pass_ai"      => "la IA ha pasado"
-            "msg.undo"         => "deshacer"
-            "msg.no_undo"      => "no queda nada por deshacer"
-            "msg.thinking"     => "pensando…"
-            "msg.no_useful"     => "no queda nada útil — pulsa p para pasar"
-            "msg.resigned"     => "abandono"
+            "報せ.占有"       => "ya hay una piedra ahí"
+            "報せ.自殺"       => "el suicidio no está permitido"
+            "報せ.コウ"       => "prohibido por ko"
+            "報せ.自分パス"   => "has pasado"
+            "報せ.機械パス"   => "la IA ha pasado"
+            "報せ.待った"     => "deshacer"
+            "報せ.待った不可" => "no queda nada por deshacer"
+            "報せ.考慮中"     => "pensando…"
+            "報せ.打つ手無し" => "no queda nada útil — pulsa p para pasar"
+            "報せ.投了"       => "abandono"
 
-            "end.title"        => "Fin de la partida"
-            "end.stones"       => "Piedras"
-            "end.territory"    => "Territorio"
-            "end.komi"         => "Komi"
-            "end.total"        => "Total"
-            "end.jigo"         => "Tablas"
-            "end.result"       => "Resultado"
+            "終局.表題"       => "Fin de la partida"
+            "終局.石"         => "Piedras"
+            "終局.地"         => "Territorio"
+            "終局.コミ"       => "Komi"
+            "終局.合計"       => "Total"
+            "終局.持碁"       => "Tablas"
+            "終局.結果"       => "Resultado"
 
-            "help.title"       => "Controles"
-            "help.move"        => "mover el cursor"
-            "help.place"       => "colocar piedra"
-            "help.pass"        => "pasar"
-            "help.undo"        => "deshacer"
-            "help.estimate"    => "estimar puntuación"
-            "help.theme"       => "cambiar de tema"
-            "help.quit"        => "abandonar / salir"
+            "操作.表題"       => "Controles"
+            "操作.移動"       => "mover el cursor"
+            "操作.着手"       => "colocar piedra"
+            "操作.パス"       => "pasar"
+            "操作.待った"     => "deshacer"
+            "操作.目算"       => "estimar puntuación"
+            "操作.主題切替"   => "cambiar de tema"
+            "操作.投了"       => "abandonar / salir"
 
-            "term.small"       => "la terminal es demasiado pequeña"
+            "端末.狭い"       => "la terminal es demasiado pequeña"
 
             _                  => 鍵
         }

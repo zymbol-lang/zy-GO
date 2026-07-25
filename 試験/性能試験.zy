@@ -1,5 +1,13 @@
 // ============================================================
-// 試験/性能試験.zy — depth and cost on a full-size board
+// 試験/性能試験.zy — 実寸の盤での深さと費用
+//
+// エンジンの設計が開いたまま残した二つの問いに答える。
+//   1. 木を歩く実行系は 360 段の深さの塗り潰しに耐えるか
+//   2. 19×19 の合法性の全走査は実際いくらかかるか
+//
+//   zymbol run 試験/性能試験.zy
+//
+// EN: 試験/性能試験.zy — depth and cost on a full-size board
 //
 // Answers the two questions the engine design left open:
 //   1. does the tree-walker sustain a flood fill 360 frames deep?
@@ -16,21 +24,27 @@
 >> "囲碁 — engine cost on 19×19" ¶
 >> "" ¶
 
-// One black chain covering the whole board except the last point:
-// 360 stones, so the flood fill recurses up to 360 frames deep.
+// 最後の一点を除いて盤全体を覆う黒一連。石は 360。塗り潰しは
+// 360 段の深さまで潜る。
+//
+// EN: One black chain covering the whole board except the last
+// point: 360 stones, so the flood fill recurses up to 360 frames
+// deep.
 局面 = 盤::新規(路)
 総 = 路 * 路
-@ p:1..総 { 局面[p] = 1 }
+@ 点:1..総 { 局面[点] = 1 }
 局面[総] = 0
 
 群 = 盤::連(局面, 路, 1)
 >> "  chain size            " (群$#) ¶
 >> "  liberties             " (盤::群ダメ数(局面, 路, 群)) ¶
 
-// A realistic midgame scan: legality of every empty point.
+// 現実的な中盤の走査。すべての空点の合法性を調べる。
+//
+// EN: A realistic midgame scan: legality of every empty point.
 空盤 = 盤::新規(路)
-@ p:1..40 { 空盤[p * 7] = 1 }
-@ p:1..40 { 空盤[p * 5 + 2] = 2 }
+@ 番:1..40 { 空盤[番 * 7] = 1 }
+@ 番:1..40 { 空盤[番 * 5 + 2] = 2 }
 
 候補 = 規則::着手可能(空盤, 路, 1, 0)
 >> "  legal points scanned  " (候補$#) ¶

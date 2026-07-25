@@ -1,0 +1,24 @@
+// ============================================================
+// 標準/乱数.zy — std/random の日本語層
+//
+// 中身は無い。I18N.md の三層方式の第二層そのもので、
+// 標準ライブラリの英名を日本語名に付け替えるだけである。
+// 読み込み時に直接参照へ解決されるため実行時費用は零。
+//
+// EN: 標準/乱数.zy — Japanese layer over std/random.
+// No logic. This is layer 2 of the three-layer pattern in
+// I18N.md: it renames the standard library's English API into
+// Japanese and nothing else. Resolved to direct references at
+// load time, so it costs nothing at runtime.
+// ============================================================
+
+# .標準_乱数 {
+
+    #> {
+        乱::entero   => 整数
+        乱::rango    => 範囲
+        乱::peso_f64 => 重み
+    }
+
+    <# std/random => 乱
+}

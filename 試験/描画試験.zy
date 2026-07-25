@@ -1,5 +1,15 @@
 // ============================================================
-// 試験/描画試験.zy — layout and line-composition tests
+// 試験/描画試験.zy — 配置と行の組み立ての試験
+//
+// >>| は TTY が無ければ動かないので、描くこと自体は管でつないだ
+// 試験にかけられない。描画が出す行はどれも、まず純粋な関数が
+// 組み立てる。試験にかけるのはそちらである。一行がちょうど
+// 2 × 路 桁でなければ盤面は崩れ、どの行が崩したのかは画面を
+// いくら眺めても分からない。
+//
+//   zymbol run 試験/描画試験.zy
+//
+// EN: 試験/描画試験.zy — layout and line-composition tests
 //
 // >>| refuses to run without a TTY, so the drawing itself cannot
 // be tested by piping. Every line the renderer emits is composed
@@ -14,7 +24,7 @@
 <# ../表示/主題 => 主
 <# ../表示/描画 => 描
 <# ../表示/文字 => 文
-<# ../言語/module => 言
+<# ../言語/取次 => 言
 <# ./図 => 図
 
 確認(名, 実際, 期待, 失敗<~) {
@@ -44,7 +54,8 @@
 確認("wide — panel beside", 主::配置(9, 60, 20), 2, 失敗)
 確認("19 needs more width for the panel", 主::配置(19, 60, 30), 1, 失敗)
 確認("19 gets the panel at 71", 主::配置(19, 71, 30), 2, 失敗)
-// 19×19 side by side has to fit the classic 80×24 terminal
+// 19×19 の横並びは、古典的な 80×24 の端末に収まらねばならない
+// EN: 19×19 side by side has to fit the classic 80×24 terminal
 確認("19×19 fits 80×24", 主::配置(19, 80, 24), 2, 失敗)
 
 // ------------------------------------------------------------
@@ -68,7 +79,11 @@
 >> "" ¶
 >> "row width holds in every theme — the two-column invariant" ¶
 
-// A position with stones in both the first and the LAST column:
+// 最初の列と最後の列の両方に石がある局面。落とした継ぎが一桁の
+// ずれとして現れるのは最後の列であり、しかもそこにたまたま石が
+// あるときだけである。
+//
+// EN: A position with stones in both the first and the LAST column:
 // the last column is where a dropped connector would show up as
 // a one-column drift, and only when a stone happens to be there.
 局面 = 図::読図([
@@ -97,11 +112,14 @@
 >> "panel lines — 側面行" ¶
 @ コード : 言::言語一覧() {
     言::設定(コード)
-    線 = 描::側面行(" " 言::語("panel.captures"))
+    線 = 描::側面行(" " 言::語("区画.アゲハマ"))
     確認("panel line in {コード}", 文::幅(線), 24, 失敗)
 }
 言::設定("ja")
-// Overlong content is truncated rather than allowed to break the
+// 長すぎる中身は、枠を破らせるのではなく切り詰める。区画の一行が
+// その箱より広くなることは決して無い。
+//
+// EN: Overlong content is truncated rather than allowed to break the
 // frame: a panel line can never be wider than its box.
 確認("overlong content is truncated to the frame", 文::幅(描::側面行("形勢判断形勢判断形勢判断形勢判断")), 24, 失敗)
 確認("frame pieces agree on width", 文::幅(描::枠上(30)), 文::幅(描::枠行("x", 30)), 失敗)

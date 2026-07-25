@@ -1,5 +1,16 @@
 // ============================================================
-// 核/規則.zy — legality and end of game
+// 核/規則.zy — 合法性と終局
+//
+// 盤.zy は石の振る舞いを知り、規則.zy はどの手が打てるかを知る。
+// この分け方はコウのために要る。コウ禁止は今の局面についての
+// 事実ではなく、対局の履歴についての事実なので、盤の側には
+// 置けないのである。
+//
+// 判定() は呼び手の盤を決して書き換えない。写しの上で打つ。
+// AI の輪の中で最も多く呼ばれる関数なので、一手が重いと
+// 感じたら最初に見る場所でもある。
+//
+// EN: 核/規則.zy — legality and end of game
 //
 // 盤.zy knows how stones behave; 規則.zy knows which moves a
 // player is allowed to make. The split matters for ko: a ko ban
@@ -27,13 +38,15 @@
         理由鍵
     }
 
-    // Positive codes, matching 盤.zy's 着手().
+    // 正の符号。盤.zy の 着手() に合わせてある。
+    // EN: Positive codes, matching 盤.zy's 着手().
     可       := 0
     禁_占有  := 1
     禁_自殺  := 2
     禁_コウ  := 3
 
-    // 0 when the move is legal, otherwise the reason.
+    // 合法なら 0、そうでなければ理由を返す。
+    // EN: 0 when the move is legal, otherwise the reason.
     判定(局面, 路, 起点, 色, コウ点) {
         ? 起点 < 1 { <~ 1 }
         ? 起点 > 路 * 路 { <~ 1 }
@@ -52,14 +65,17 @@
         <~ 判定(局面, 路, 起点, 色, コウ点) == 0
     }
 
-    // Every legal point for 色. Passing is always available and is
-    // never in this list — a pass is not a point on the board.
+    // 色 が打てる点をすべて。パスは常に打てるが、この一覧には
+    // 決して入らない。パスは盤上の点ではないからである。
+    //
+    // EN: Every legal point for 色. Passing is always available and
+    // is never in this list — a pass is not a point on the board.
     着手可能(局面, 路, 色, コウ点) {
         結果 = []
         総 = 路 * 路
-        @ p:1..総 {
-            ? 局面[p] == 0 {
-                ? 判定(局面, 路, p, 色, コウ点) == 0 { 結果 = 結果 $+ p }
+        @ 点:1..総 {
+            ? 局面[点] == 0 {
+                ? 判定(局面, 路, 点, 色, コウ点) == 0 { 結果 = 結果 $+ 点 }
             }
         }
         <~ 結果
@@ -67,13 +83,16 @@
 
     終局(連続パス) { <~ 連続パス >= 2 }
 
-    // Maps a rejection code to an i18n key, so the caller never
+    // 拒否の符号を i18n の鍵へ写す。呼び手が文言を直に書くことは
+    // 決してない。
+    //
+    // EN: Maps a rejection code to an i18n key, so the caller never
     // hard-codes a message.
     理由鍵(コード) {
         <~ ?? コード {
-            1 => "msg.occupied"
-            2 => "msg.suicide"
-            3 => "msg.ko"
+            1 => "報せ.占有"
+            2 => "報せ.自殺"
+            3 => "報せ.コウ"
             _  => ""
         }
     }

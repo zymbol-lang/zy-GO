@@ -20,8 +20,8 @@ terminal columns.
 > two levels of internationalization across five languages (runtime UI strings
 > and identifier-level API translation).
 
-> **Español:** [README_ES.md](README_ES.md) · **Technical spec:** [DESIGN.md](DESIGN.md)
-> · **Complexity test:** [棋戦.md](棋戦.md)
+> **日本語:** [README_JA.md](README_JA.md) · **Español:** [README_ES.md](README_ES.md)
+> · **Technical spec:** [DESIGN.md](DESIGN.md) · **Complexity test:** [BENCHMARK.md](BENCHMARK.md)
 
 ---
 
@@ -339,7 +339,7 @@ zy-GO/
 ├── 围棋.zy              entry point, Mandarin          │ preselected
 ├── go.zy                entry point, language menu     ┘ language
 ├── 対局.zy              match controller — turn loop, history, undo
-├── 棋戦.zy              AI vs AI, instrumented — see 棋戦.md
+├── 棋戦.zy              AI vs AI, instrumented — see BENCHMARK.md
 ├── 集計.zy              sums every run into one set of matrices
 │                       records go to zy-GO-kifu (ZYGO_KIFU to redirect)
 ├── 核/                  engine
@@ -351,8 +351,12 @@ zy-GO/
 │   ├── 文字.zy          display-width metrics, padding, truncation
 │   ├── 描画.zy          board, cursor, panel, screens
 │   └── 主題.zy          stone themes and layout arithmetic
+├── 標準/                Japanese layer over the standard library
+│   ├── 乱数.zy          std/random  — 整数 範囲 重み
+│   ├── 入出力.zy        std/io      — 読込 書込 追記 存在 削除 一覧 階層作成
+│   └── 端末.zy          std/term    — 幅 左詰 右詰 中央 切詰
 ├── 言語/                runtime UI strings
-│   ├── module.zy        dispatcher, locale state, key catalogue
+│   ├── 取次.zy          dispatcher, locale state, key catalogue
 │   ├── 日本語.zy        ja
 │   ├── 한국어.zy        ko
 │   ├── 中文.zy          zh
@@ -408,11 +412,15 @@ express "White wins by 1.5 points" in five grammars:
 | `結果文(勝色, 差, 中押)` | the result sentence — 白の1目半勝ち · 백 1집반승 · 白胜1目半 · White wins by 1.5 points · las blancas ganan por 1,5 puntos |
 | `取石文(数)` | capture announcement, with plural agreement where the language needs it |
 
-Keys are neutral ASCII identifiers (`panel.captures`, `msg.ko`), never Japanese
-words. That is what makes the system verifiable: a locale missing a key returns
-the key itself, so `試験/言語検証.zy` walks the master catalogue against every
-locale and fails on any string that comes back unchanged. Adding a language is
-three edits and the gate tells you immediately what you forgot.
+Keys are Japanese concepts with a domain prefix (`区画.アゲハマ`, `報せ.コウ`),
+because the base of the system is Japanese and every other language sits on top
+of it — asking for `区画.アゲハマ` asks for a concept, not for an English
+identifier. The prefix is what keeps the system verifiable: a key can never
+equal its own Japanese translation (`終局.石`, never plain `石`), so a locale
+missing a key returns the key itself and `試験/言語検証.zy` walks the master
+catalogue against every locale — Japanese included — and fails on any string
+that comes back unchanged. Adding a language is three edits and the gate tells
+you immediately what you forgot.
 
 **Identifier-level API translation** (`api/`) — pure re-export layers that expose
 the engine's public API under English and Spanish names, with zero logic and

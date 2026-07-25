@@ -1,5 +1,28 @@
 // ============================================================
-// 表示/描画.zy — screens
+// 表示/描画.zy — 画面
+//
+// 行の文字列は純粋な関数（行文字・列見出・側面行）が組み立て、
+// そのあとで初めて >>~ が位置を与える。この分け方は意図した
+// ものである。>>| は TTY が無ければ動かないので、描くものは
+// 管でつないだ試験にかけられない。しかし組み立てるものはかけ
+// られる。試験/描画試験.zy はこのモジュールが出すすべての行の
+// 桁の算術を確かめている。
+//
+// 対局.zy が組み立てる共有の配列の並び。
+//
+//   設定[1] 路      盤の大きさ        設定[4] コミ  コミ
+//   設定[2] 主題    主題の符号        設定[5] 人色  人の色
+//   設定[3] 級      AI の級 1..3
+//
+//   状況[1] 手番    手番の色          状況[5] 最終手  最後の点
+//   状況[2] 手数    手の番号          状況[6] コウ点  コウの点
+//   状況[3] 黒取    黒が取った数      状況[7] 連続パス パスの連続
+//   状況[4] 白取    白が取った数
+//
+// Zymbol に構造体は無く、名前付きの組は不変なので、書き換え
+// られる記録は並びを文書化した配列である。
+//
+// EN: 表示/描画.zy — screens
 //
 // Row strings are built by pure functions (行文字, 列見出, 側面行)
 // and only then positioned with >>~. That split is deliberate:
@@ -29,7 +52,7 @@
     <# ./文字 => 文
     <# ../核/盤 => 盤
     <# ../核/計算 => 計算
-    <# ../言語/module => 言
+    <# ../言語/取次 => 言
 
     #> {
         列見出
@@ -68,8 +91,12 @@
 
     消去() { >>! }
 
-    // ---- pure line builders ---------------------------------
+    // ---- 純粋な行の組み立て ---------------------------------
 
+    // 盤の上に並ぶ列の記号。それぞれの記号は自分の升の左桁に座る
+    // ので、見出しは盤面と同じく 2 × 路 の幅になる。
+    //
+    // EN: pure line builders
     // Column letters over the grid: each label sits in the left
     // column of its cell, so the header is 2 × 路 wide like the
     // grid itself.
@@ -82,7 +109,8 @@
         <~ 線
     }
 
-    // One grid row, exactly 2 × 路 columns whatever it holds.
+    // 盤の一行。中身が何であれ、ちょうど 2 × 路 桁。
+    // EN: One grid row, exactly 2 × 路 columns whatever it holds.
     行文字(局面, 路, 主題, 行) {
         線 = ""
         @ 列:1..路 {
@@ -93,10 +121,15 @@
         <~ 線
     }
 
-    // Right-aligned row number, two columns.
+    // 右へ寄せた行番号、二桁。
+    // EN: Right-aligned row number, two columns.
     行札(行) { <~ 文::左詰("{行}", 2) }
 
-    // Frame pieces, parametric in the interior width. Everything
+    // 枠の部品。内側の幅を引数に取る。対局の中で枠に囲まれたものは
+    // すべてこの四つから作られるので、箱が自分の幅について自分と
+    // 食い違うことは決して起きない。
+    //
+    // EN: Frame pieces, parametric in the interior width. Everything
     // framed in the game is built from these four, so a box can
     // never disagree with itself about how wide it is.
     枠上(欄) {
@@ -124,7 +157,11 @@
         <~ "{左字}{線}{右字}"
     }
 
-    // ---- setup screen ---------------------------------------
+    // ---- 設定の画面 -----------------------------------------
+    // 名一覧 と 値一覧 は、訳し終えた文字列の対になる配列である。
+    // このモジュールは設定の呼び名を決して自分で決めない。
+    //
+    // EN: setup screen
     // 名一覧 and 値一覧 are parallel arrays of already-translated
     // strings: this module never decides what a setting is called.
     _選択行(選中, 名, 値) {
@@ -140,7 +177,7 @@
         >>~ (行, 左, 0, 色_縁) > 枠上(欄)
 
         行 = ##!(行 + 1)
-        題 = 文::中央(言::語("menu.title"), 欄)
+        題 = 文::中央(言::語("品書.表題"), 欄)
         >>~ (行, 左, 1, 色_強) > "│{題}│"
 
         行 = ##!(行 + 1)
@@ -151,10 +188,10 @@
         >>~ (行, 左, 0, 色_縁) > 枠中(欄)
 
         総 = 名一覧$#
-        @ i:1..総 {
+        @ 添字:1..総 {
             行 = ##!(行 + 1)
-            選中 = i == 選
-            線 = _選択行(選中, 名一覧[i], 値一覧[i])
+            選中 = 添字 == 選
+            線 = _選択行(選中, 名一覧[添字], 値一覧[添字])
             色 = 色_文
             ? 選中 { 色 = 色_強 }
             >>~ (行, 左, 0, 色) > 枠行(線, 欄)
@@ -164,14 +201,15 @@
         >>~ (行, 左, 0, 色_縁) > 枠中(欄)
 
         行 = ##!(行 + 1)
-        案内 = 文::中央(言::語("menu.hint"), 欄)
+        案内 = 文::中央(言::語("品書.案内"), 欄)
         >>~ (行, 左, 0, 色_札) > "│{案内}│"
 
         行 = ##!(行 + 1)
         >>~ (行, 左, 0, 色_縁) > 枠下(欄)
     }
 
-    // ---- help overlay ---------------------------------------
+    // ---- 操作の助言 -----------------------------------------
+    // EN: help overlay
     _助言行(鍵, 操作) {
         名 = 言::語(鍵)
         札 = 文::右詰(操作, 10)
@@ -184,25 +222,28 @@
         >>~ (行, 左, 0, 色_縁) > 枠上(欄)
 
         行 = ##!(行 + 1)
-        題 = 文::中央(言::語("help.title"), 欄)
+        題 = 文::中央(言::語("操作.表題"), 欄)
         >>~ (行, 左, 1, 色_強) > "│{題}│"
 
         行 = ##!(行 + 1)
         >>~ (行, 左, 0, 色_縁) > 枠中(欄)
 
-        鍵一覧 = ["help.move", "help.place", "help.pass", "help.undo", "help.estimate", "help.theme", "help.quit"]
+        鍵一覧 = ["操作.移動", "操作.着手", "操作.パス", "操作.待った", "操作.目算", "操作.主題切替", "操作.投了"]
         操作一覧 = ["↑↓←→", "↵", "p", "u", "e", "t", "q"]
         総 = 鍵一覧$#
-        @ i:1..総 {
+        @ 添字:1..総 {
             行 = ##!(行 + 1)
-            >>~ (行, 左, 0, 色_文) > 枠行(_助言行(鍵一覧[i], 操作一覧[i]), 欄)
+            >>~ (行, 左, 0, 色_文) > 枠行(_助言行(鍵一覧[添字], 操作一覧[添字]), 欄)
         }
 
         行 = ##!(行 + 1)
         >>~ (行, 左, 0, 色_縁) > 枠下(欄)
     }
 
-    // ---- positioned drawing ---------------------------------
+    // ---- 位置を与えて描く -----------------------------------
+    // 上 は列見出しの画面上の行、左 は左余白の始まる画面上の桁。
+    //
+    // EN: positioned drawing
     // 上 is the screen row of the column header, 左 the screen
     // column where the gutter starts.
 
@@ -211,11 +252,11 @@
 
     盤描画(局面, 路, 主題, 上, 左) {
         見出 = 列見出(路)
-        列0 = ##!(左 + 5)
+        起列 = ##!(左 + 5)
 
-        >>~ (上, 列0, 0, 色_札) > 見出
+        >>~ (上, 起列, 0, 色_札) > 見出
         下 = ##!(上 + 路 + 1)
-        >>~ (下, 列0, 0, 色_札) > 見出
+        >>~ (下, 起列, 0, 色_札) > 見出
 
         @ 行:1..路 {
             画行 = _画面行(上, 路, 行)
@@ -224,12 +265,15 @@
             右列 = ##!(左 + 5 + 2 * 路)
 
             >>~ (画行, ##!(左 + 2), 0, 色_札) > 札
-            >>~ (画行, 列0, 0, 色_枠) > 線
+            >>~ (画行, 起列, 0, 色_枠) > 線
             >>~ (画行, 右列, 0, 色_札) > 札
         }
     }
 
-    // Redraw a single cell. 強調 #1 highlights it as the cursor:
+    // 一升だけ描き直す。強調 が #1 のときは印として際立たせる。
+    // 空点は ＋ になるので、背景色の扱いが弱い端末でも印は見える。
+    //
+    // EN: Redraw a single cell. 強調 #1 highlights it as the cursor:
     // an empty point becomes ＋ so the cursor stays visible even
     // where background colour is poorly supported.
     升描画(局面, 路, 主題, 行, 列, 上, 左, 強調) {
@@ -250,15 +294,18 @@
         }
     }
 
-    // Who is to move: the colour when both sides are human, the
+    // 手番が誰か。両者とも人なら色を、片方が人でなければ
+    // 打ち手か AI かを示す。
+    //
+    // EN: Who is to move: the colour when both sides are human, the
     // player or the AI when one of them is not.
     _手番名(手番, 人色) {
         ? 人色 == 0 {
-            ? 手番 == 1 { <~ 言::語("color.black") }
-            <~ 言::語("color.white")
+            ? 手番 == 1 { <~ 言::語("色.黒") }
+            <~ 言::語("色.白")
         }
-        ? 手番 == 人色 { <~ 言::語("side.you") }
-        <~ 言::語("side.ai")
+        ? 手番 == 人色 { <~ 言::語("側.自分") }
+        <~ 言::語("側.機械")
     }
 
     側面描画(局面, 設定, 状況, 上, 左) {
@@ -278,11 +325,14 @@
         黒 = 主::石字(主題, 1)
         白 = 主::石字(主題, 2)
 
-        // The AI level is only announced when there is an AI to
+        // AI の級を告げるのは、それを当てはめる AI がいるときだけ。
+        // 人どうしの対局では盤の名前だけが立つ。
+        //
+        // EN: The AI level is only announced when there is an AI to
         // apply it to; in hot-seat the board name stands alone.
         題 = 盤名
         ? 人色 <> 0 {
-            級名 = 言::語("level.{級}")
+            級名 = 言::語("棋力.{級}")
             題 = "{盤名} · {級名}"
         }
 
@@ -295,35 +345,49 @@
         行 = ##!(行 + 1)
         >>~ (行, 左, 0, 色_縁) > _横線("├", "┤")
 
-        // Juxtaposition composes each row inline: the panel labels no
-        // longer need an intermediate variable each just to interpolate.
+        // 並置がその場で各行を組む。区画の見出しは、補間のためだけの
+        // 中間の変数をもう必要としない。
+        //
+        // EN: Juxtaposition composes each row inline: the panel
+        // labels no longer need an intermediate variable each just
+        // to interpolate.
         行 = ##!(行 + 1)
-        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("panel.turn"), 10) 主::石字(主題, 手番) " " _手番名(手番, 人色))
+        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("区画.手番"), 10) 主::石字(主題, 手番) " " _手番名(手番, 人色))
 
         行 = ##!(行 + 1)
-        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("panel.moves"), 10) 手数)
+        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("区画.手数"), 10) 手数)
 
         行 = ##!(行 + 1)
-        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("panel.captures"), 10) 黒 黒取 "  " 白 白取)
+        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("区画.アゲハマ"), 10) 黒 黒取 "  " 白 白取)
 
         行 = ##!(行 + 1)
-        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("panel.komi"), 10) コミ)
+        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("区画.コミ"), 10) コミ)
 
         行 = ##!(行 + 1)
-        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("panel.last"), 10) 座標名(路, 最終手))
+        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("区画.最終手"), 10) 座標名(路, 最終手))
 
         行 = ##!(行 + 1)
-        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("panel.estimate"), 10) 目算文(局面, 路, コミ, 主題, 手数))
+        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("区画.目算"), 10) 目算文(局面, 路, コミ, 主題, 手数))
 
         行 = ##!(行 + 1)
         >>~ (行, 左, 0, 色_縁) > _横線("╰", "╯")
     }
 
-    // Live estimate: "⚫ +2.5", or a level sign when the count is
+    // 対局中の形勢。「⚫ +2.5」、または互角なら等号。今の局面から
+    // 算出するので、境界が締まるにつれて揺れる。それは欠陥ではなく
+    // 正直な振る舞いである。
+    // 空白なのは両者が一手ずつ打つまでの間だけ。黒の第一着のあとの
+    // 中国式の計算は黒に八十一目すべてを渡して「+74.5」と告げる。
+    // 算術としては正しく、何も語っていない。盤上の石の数ではなく
+    // 手数で見分けているのは大事なところである。大差の対局では
+    // 終盤に一方の色が盤から消えることがあり、打ち手が差を最も
+    // 見たいのはまさにそのときだからである。
+    //
+    // EN: Live estimate: "⚫ +2.5", or a level sign when the count is
     // even. Computed from the current position, so it swings as
     // the boundaries close — that is the honest behaviour, not a
     // defect.
-    // Live estimate. Blank only until both sides have moved once:
+    // Blank only until both sides have moved once:
     // after Black's first stone, area scoring hands Black all 81
     // points and reports "+74.5", which is arithmetically right and
     // says nothing. Keying this off the move count rather than off
@@ -340,7 +404,8 @@
         <~ "{石} +{差}"
     }
 
-    // The stacked layout gets one dense line instead of a box.
+    // 縦積みの配置では、箱の代わりに詰めた一行を置く。
+    // EN: The stacked layout gets one dense line instead of a box.
     下面描画(局面, 設定, 状況, 行, 左) {
         路 = 設定[1]
         主題 = 設定[2]
@@ -364,7 +429,10 @@
         >>~ (行, 左, 0, 色_文) > 文::右詰(文::切詰(線, 欄), 欄)
     }
 
-    // "D4" for a point, "—" for none. Rows count up from the
+    // 点なら「D4」、無ければ「—」。行は下から数える。打ち手が
+    // 盤を読むのと同じ向きである。
+    //
+    // EN: "D4" for a point, "—" for none. Rows count up from the
     // bottom, the way a player reads the board.
     座標名(路, 点) {
         ? 点 < 1 { <~ "—" }
@@ -374,7 +442,10 @@
         <~ "{名}{行}"
     }
 
-    // The status line under the board. Cleared by padding to the
+    // 盤の下の状態の行。塊の幅いっぱいまで詰めて消すので、長い
+    // 文言が尾を残すことは決して無い。
+    //
+    // EN: The status line under the board. Cleared by padding to the
     // full block width, so a long message never leaves a tail.
     状態描画(文言, 行, 左, 路) {
         欄 = 主::区画幅(路)
@@ -382,7 +453,10 @@
         >>~ (行, 左, 0, 色_文) > 線
     }
 
-    // Interpolation accepts {identifier} only — no field access,
+    // 補間が受け取るのは {識別子} だけである。欄の参照も添字も
+    // 通らないので、値はすべて先に局所の名前へ束ねる。
+    //
+    // EN: Interpolation accepts {identifier} only — no field access,
     // no indexing — so every value is bound to a local first.
     終局描画(結果, 設定, 勝, 差, 中押, 上, 左) {
         主題 = 設定[2]
@@ -401,7 +475,7 @@
         >>~ (行, 左, 0, 色_縁) > _横線("╭", "╮")
 
         行 = ##!(行 + 1)
-        題 = 文::中央(言::語("end.title"), 側内幅())
+        題 = 文::中央(言::語("終局.表題"), 側内幅())
         >>~ (行, 左, 1, 色_強) > "│{題}│"
 
         行 = ##!(行 + 1)
@@ -413,17 +487,17 @@
         >>~ (行, 左, 0, 色_文) > 側面行(" {頭}{黒札}{白}")
 
         行 = ##!(行 + 1)
-        名_石 = 文::右詰(言::語("end.stones"), 10)
+        名_石 = 文::右詰(言::語("終局.石"), 10)
         黒石札 = 文::右詰("{黒石}", 6)
         >>~ (行, 左, 0, 色_文) > 側面行(" {名_石}{黒石札}{白石}")
 
         行 = ##!(行 + 1)
-        名_地 = 文::右詰(言::語("end.territory"), 10)
+        名_地 = 文::右詰(言::語("終局.地"), 10)
         黒地札 = 文::右詰("{黒地}", 6)
         >>~ (行, 左, 0, 色_文) > 側面行(" {名_地}{黒地札}{白地}")
 
         行 = ##!(行 + 1)
-        名_コミ = 文::右詰(言::語("end.komi"), 10)
+        名_コミ = 文::右詰(言::語("終局.コミ"), 10)
         空欄 = 文::右詰("—", 6)
         >>~ (行, 左, 0, 色_文) > 側面行(" {名_コミ}{空欄}{コミ}")
 
@@ -431,7 +505,7 @@
         >>~ (行, 左, 0, 色_縁) > _横線("├", "┤")
 
         行 = ##!(行 + 1)
-        名_合 = 文::右詰(言::語("end.total"), 10)
+        名_合 = 文::右詰(言::語("終局.合計"), 10)
         黒合札 = 文::右詰("{黒合}", 6)
         >>~ (行, 左, 1, 色_強) > 側面行(" {名_合}{黒合札}{白合}")
 

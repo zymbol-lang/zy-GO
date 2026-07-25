@@ -1,6 +1,11 @@
 // ============================================================
-// 言語/English.zy — English locale (en)
+// 言語/English.zy — 英語 (en)
+// 約束する関数: 語 · 路盤名 · 結果文 · 取石文
+// 鍵は日本語。土台は 言語/日本語.zy にある。
+//
+// EN: 言語/English.zy — English locale (en)
 // Interface contract: 語 · 路盤名 · 結果文 · 取石文
+// The keys are Japanese; the base lives in 言語/日本語.zy.
 // ============================================================
 
 # .言語_English {
@@ -9,67 +14,67 @@
 
     語(鍵) {
         <~ ?? 鍵 {
-            "lang.name"        => "English"
+            "言語.名前"       => "English"
 
-            "menu.title"       => "GO"
-            "menu.board"       => "Board"
-            "menu.level"       => "Level"
-            "menu.side"        => "Your side"
-            "menu.komi"        => "Komi"
-            "menu.theme"       => "Theme"
-            "menu.lang"        => "Language"
-            "menu.hint"        => "↑↓ select   ←→ change   ↵ start"
-            "menu.unavailable" => "screen too small"
+            "品書.表題"       => "GO"
+            "品書.路盤"       => "Board"
+            "品書.棋力"       => "Level"
+            "品書.手番"       => "Your side"
+            "品書.コミ"       => "Komi"
+            "品書.主題"       => "Theme"
+            "品書.言語"       => "Language"
+            "品書.案内"       => "↑↓ select   ←→ change   ↵ start"
+            "品書.不可"       => "screen too small"
 
-            "level.1"          => "Beginner"
-            "level.2"          => "Intermediate"
-            "level.3"          => "Advanced"
+            "棋力.1"          => "Beginner"
+            "棋力.2"          => "Intermediate"
+            "棋力.3"          => "Advanced"
 
-            "theme.stone"      => "Stone"
-            "theme.moon"       => "Moon"
-            "theme.ascii"      => "ASCII"
+            "主題.石"         => "Stone"
+            "主題.月"         => "Moon"
+            "主題.字"         => "ASCII"
 
-            "color.black"      => "Black"
-            "color.white"      => "White"
-            "side.you"         => "you"
-            "side.ai"          => "AI"
+            "色.黒"           => "Black"
+            "色.白"           => "White"
+            "側.自分"         => "you"
+            "側.機械"         => "AI"
 
-            "panel.turn"       => "Turn"
-            "panel.moves"      => "Moves"
-            "panel.captures"   => "Captures"
-            "panel.komi"       => "Komi"
-            "panel.last"       => "Last"
-            "panel.estimate"   => "Estimate"
+            "区画.手番"       => "Turn"
+            "区画.手数"       => "Moves"
+            "区画.アゲハマ"   => "Captures"
+            "区画.コミ"       => "Komi"
+            "区画.最終手"     => "Last"
+            "区画.目算"       => "Estimate"
 
-            "msg.occupied"     => "there is already a stone there"
-            "msg.suicide"      => "suicide is not allowed"
-            "msg.ko"           => "forbidden by ko"
-            "msg.pass_you"     => "you passed"
-            "msg.pass_ai"      => "the AI passed"
-            "msg.undo"         => "undo"
-            "msg.no_undo"      => "nothing left to undo"
-            "msg.thinking"     => "thinking…"
-            "msg.no_useful"     => "nothing useful left — press p to pass"
-            "msg.resigned"     => "resigned"
+            "報せ.占有"       => "there is already a stone there"
+            "報せ.自殺"       => "suicide is not allowed"
+            "報せ.コウ"       => "forbidden by ko"
+            "報せ.自分パス"   => "you passed"
+            "報せ.機械パス"   => "the AI passed"
+            "報せ.待った"     => "undo"
+            "報せ.待った不可" => "nothing left to undo"
+            "報せ.考慮中"     => "thinking…"
+            "報せ.打つ手無し" => "nothing useful left — press p to pass"
+            "報せ.投了"       => "resigned"
 
-            "end.title"        => "Game over"
-            "end.stones"       => "Stones"
-            "end.territory"    => "Territory"
-            "end.komi"         => "Komi"
-            "end.total"        => "Total"
-            "end.jigo"         => "Draw"
-            "end.result"       => "Result"
+            "終局.表題"       => "Game over"
+            "終局.石"         => "Stones"
+            "終局.地"         => "Territory"
+            "終局.コミ"       => "Komi"
+            "終局.合計"       => "Total"
+            "終局.持碁"       => "Draw"
+            "終局.結果"       => "Result"
 
-            "help.title"       => "Controls"
-            "help.move"        => "move cursor"
-            "help.place"       => "place stone"
-            "help.pass"        => "pass"
-            "help.undo"        => "undo"
-            "help.estimate"    => "score estimate"
-            "help.theme"       => "cycle theme"
-            "help.quit"        => "resign / quit"
+            "操作.表題"       => "Controls"
+            "操作.移動"       => "move cursor"
+            "操作.着手"       => "place stone"
+            "操作.パス"       => "pass"
+            "操作.待った"     => "undo"
+            "操作.目算"       => "score estimate"
+            "操作.主題切替"   => "cycle theme"
+            "操作.投了"       => "resign / quit"
 
-            "term.small"       => "terminal too small"
+            "端末.狭い"       => "terminal too small"
 
             _                  => 鍵
         }

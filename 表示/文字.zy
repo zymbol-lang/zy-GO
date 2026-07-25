@@ -1,5 +1,21 @@
 // ============================================================
-// 表示/文字.zy — text metrics for a multilingual TUI
+// 表示/文字.zy — 多言語の端末画面のための文字寸法
+//
+// 囲碁 の端末配置は桁が厳密である。盤の升目、脇の区画、枠で
+// 囲ったどの画面も、表示の言語が日本語・韓国語・中国語・英語・
+// スペイン語のいずれであっても揃っていなければならない。
+// 書記素の数は桁数ではない。漢字仮名も絵文字も一つで二桁を
+// 占める。だからこの program の幅の勘定はすべて $# ではなく
+// ここの 幅() を通る。
+//
+// v0.0.8 から、これは 標準/端末 の上に載る薄い日本語の覆いで
+// ある。対局は日本語で話し、標準ライブラリは英語で話す。
+// かつては手で保った四十ほどの東アジア文字幅の表を抱えていた
+// （IDEA-001 / HLZ、HALLAZGOS_ES.md 参照）。いまは
+// 標準/端末::幅 が unicode-width の表から桁を答え、その答えは
+// 囲碁 が描くあらゆる字形でその表と完全に一致する。
+//
+// EN: 表示/文字.zy — text metrics for a multilingual TUI
 //
 // Terminal layout in 囲碁 is column-exact: the board grid, the
 // side panel, and every framed screen must line up whether the
@@ -8,17 +24,17 @@
 // emoji occupy two columns each — so every width calculation in
 // the program goes through 幅() here, never through $#.
 //
-// Since v0.0.8 this is a thin localized wrapper over std/term: the
-// game speaks Japanese, the standard library speaks English. It
-// used to carry a hand-maintained ~40-range East Asian width table
-// (see IDEA-001 / HLZ in HALLAZGOS_ES.md); std/term::width now
+// Since v0.0.8 this is a thin localized wrapper over 標準/端末:
+// the game speaks Japanese, the standard library speaks English.
+// It used to carry a hand-maintained ~40-range East Asian width
+// table (see IDEA-001 / HLZ in HALLAZGOS_ES.md); 標準/端末::幅 now
 // answers the column question from the unicode-width tables, which
 // match that table exactly across every glyph 囲碁 draws.
 // ============================================================
 
 # .表示_文字 {
 
-    <# std/term => 端
+    <# ../標準/端末 => 端
 
     #> {
         符号点
@@ -29,24 +45,36 @@
         切詰
     }
 
-    // Unicode code point of a character. Since v0.0.8 ##! casts a
-    // Char directly to its code point — the old route was inverting
-    // a base literal (0d|c|) and stripping its "0d" prefix.
-    符号点(c) { <~ ##!c }
+    // 一文字の Unicode 符号位置。v0.0.8 から ##! は Char を
+    // その符号位置へ直に変換する。以前は基数付きの literal を
+    // 逆から作り（0d|文字|）、その "0d" を剥がす道を通っていた。
+    //
+    // EN: Unicode code point of a character. Since v0.0.8 ##! casts
+    // a Char directly to its code point — the old route was
+    // inverting a base literal (0d|c|) and stripping its "0d" prefix.
+    符号点(文字) { <~ ##!文字 }
 
-    // Display width of a string, in terminal columns.
-    幅(文字列) { <~ 端::width(文字列) }
+    // 文字列の表示幅、端末の桁で。
+    // EN: Display width of a string, in terminal columns.
+    幅(文字列) { <~ 端::幅(文字列) }
 
-    // Pad on the right to exactly 欄 columns. Longer strings are
+    // 右へ詰めてちょうど 欄 桁にする。長い文字列はそのまま返す。
+    // 切り詰めは 切詰 の仕事である。
+    //
+    // EN: Pad on the right to exactly 欄 columns. Longer strings are
     // returned untouched — truncation is 切詰's job.
-    右詰(文字列, 欄) { <~ 端::pad_right(文字列, 欄) }
+    右詰(文字列, 欄) { <~ 端::右詰(文字列, 欄) }
 
-    // Pad on the left to exactly 欄 columns.
-    左詰(文字列, 欄) { <~ 端::pad_left(文字列, 欄) }
+    // 左へ詰めてちょうど 欄 桁にする。
+    // EN: Pad on the left to exactly 欄 columns.
+    左詰(文字列, 欄) { <~ 端::左詰(文字列, 欄) }
 
-    // Centre within 欄 columns; a spare column goes to the right.
-    中央(文字列, 欄) { <~ 端::center(文字列, 欄) }
+    // 欄 桁の中で中央に置く。余った一桁は右へ回す。
+    // EN: Centre within 欄 columns; a spare column goes to the right.
+    中央(文字列, 欄) { <~ 端::中央(文字列, 欄) }
 
-    // Truncate to at most 欄 columns, never splitting a wide glyph.
-    切詰(文字列, 欄) { <~ 端::truncate(文字列, 欄) }
+    // 高々 欄 桁に切り詰める。広い字形を割ることは決してしない。
+    // EN: Truncate to at most 欄 columns, never splitting a wide
+    // glyph.
+    切詰(文字列, 欄) { <~ 端::切詰(文字列, 欄) }
 }

@@ -1,5 +1,14 @@
 // ============================================================
-// 試験/思考試験.zy — eye detection and useful moves
+// 試験/思考試験.zy — 眼の判別と有用な手
+//
+// 眼の判別こそ、碁のエンジンを出鱈目な手の生成器から分ける規則で
+// ある。眼が二つある群は取られないので、自分の眼を埋めるのが
+// 正しいことは決してない。AI のどの層もこの二つの関数の上に載り、
+// 打ち手に見せる助言も同じ場所に載っている。
+//
+//   zymbol run 試験/思考試験.zy
+//
+// EN: 試験/思考試験.zy — eye detection and useful moves
 //
 // Eye detection is the rule that separates a Go engine from a
 // random move generator: a group with two eyes cannot be captured,
@@ -30,7 +39,10 @@
 // ------------------------------------------------------------
 >> "eyes — 眼" ¶
 
-// Corner eye at A1: both orthogonals are black and the single
+// A1 の隅の眼。直交する隣は両方とも黒で、盤上にある唯一の斜めも
+// 黒である。
+//
+// EN: Corner eye at A1: both orthogonals are black and the single
 // on-board diagonal is black too.
 局面 = 図::読図([
     ".X...",
@@ -42,7 +54,10 @@
 確認("corner eye", 思::眼(局面, 5, 1, 1), #1, 失敗)
 確認("not an eye for the other colour", 思::眼(局面, 5, 1, 2), #0, 失敗)
 
-// Same corner, but the diagonal B2 belongs to White: on an edge
+// 同じ隅だが、斜めの B2 は白のもの。辺では盤上の斜めがすべて
+// 自分のものでなければならないので、これは欠け眼である。
+//
+// EN: Same corner, but the diagonal B2 belongs to White: on an edge
 // every on-board diagonal must be ours, so this is a false eye.
 局面 = 図::読図([
     ".X...",
@@ -53,7 +68,9 @@
 ])
 確認("corner with an enemy diagonal is not an eye", 思::眼(局面, 5, 1, 1), #0, 失敗)
 
-// Centre eye at C3: four orthogonals black, four diagonals black.
+// C3 の中央の眼。直交する隣が四つとも黒、斜めも四つとも黒。
+// EN: Centre eye at C3: four orthogonals black, four diagonals
+// black.
 局面 = 図::読図([
     ".....",
     ".XXX.",
@@ -63,7 +80,8 @@
 ])
 確認("centre eye", 思::眼(局面, 5, 13, 1), #1, 失敗)
 
-// One enemy diagonal in the centre is survivable — still an eye.
+// 中央での敵の斜め一つは凌げる。それでも眼である。
+// EN: One enemy diagonal in the centre is survivable — still an eye.
 局面 = 図::読図([
     ".....",
     ".XXX.",
@@ -73,7 +91,8 @@
 ])
 確認("centre eye survives one enemy diagonal", 思::眼(局面, 5, 13, 1), #1, 失敗)
 
-// Two enemy diagonals is a false eye.
+// 敵の斜めが二つなら欠け眼である。
+// EN: Two enemy diagonals is a false eye.
 局面 = 図::読図([
     ".....",
     ".OXX.",
@@ -83,7 +102,8 @@
 ])
 確認("two enemy diagonals — false eye", 思::眼(局面, 5, 13, 1), #0, 失敗)
 
-// An orthogonal gap is never an eye, whatever the diagonals do.
+// 直交する隣に穴があれば、斜めが何であろうと眼にはならない。
+// EN: An orthogonal gap is never an eye, whatever the diagonals do.
 局面 = 図::読図([
     ".....",
     ".XXX.",
@@ -110,7 +130,11 @@
 確認("every point is useful on an empty board", (思::有用手(空盤, 5, 1, 0))$#, 25, 失敗)
 確認("an empty board is not a dead end", 思::手詰まり(空盤, 5, 1, 0), #0, 失敗)
 
-// Black owns the board with two eyes at A1 and C1. Those two
+// 黒が A1 と C1 に眼を二つ持って盤を制している。この二点は黒に
+// とって合法だが、それでも外さねばならない。埋めれば生きている
+// 群が取られる群になるからである。
+//
+// EN: Black owns the board with two eyes at A1 and C1. Those two
 // points are legal for Black and must still be excluded: filling
 // them would turn a living group into a capturable one.
 局面 = 図::読図([
@@ -129,7 +153,12 @@
 >> "" ¶
 >> "a real game — 129 moves, White to move" ¶
 
-// The position a player actually reached. White's 13-stone group
+// 打ち手が実際に辿り着いた局面。白の十三子の群は G5 に眼が一つ、
+// ダメも一つ。そこへ打てば自殺であり、盤上の他のどこにも合法手は
+// 無い。助言が在るのはこのためである。白にはそれが見えず、規則も
+// ひとりでに対局を終わらせはしない。
+//
+// EN: The position a player actually reached. White's 13-stone group
 // has a single eye at G5 and one liberty: playing it is suicide,
 // and there is no other legal move anywhere on the board. This is
 // what the hint exists for — White cannot see it, and the rules
@@ -157,7 +186,10 @@
 >> "" ¶
 >> "move selection — 着手選択" ¶
 
-// A capture that is there for the taking must be taken. This is
+// 取れる石は取らねばならない。これが第二層であり、初級のエンジン
+// でも間違えてはならない唯一のものである。
+//
+// EN: A capture that is there for the taking must be taken. This is
 // layer 2, and it is the one a beginner engine cannot get wrong.
 局面 = 図::読図([
     ".X...",
@@ -168,7 +200,9 @@
 ])
 確認("takes the free capture", 思::着手選択(局面, 5, 1, 2, 0, 0, 10), 12, 失敗)
 
-// A chain with one liberty must run, and there is only one way out.
+// ダメが一つの連は逃げねばならず、出口は一つしかない。
+// EN: A chain with one liberty must run, and there is only one way
+// out.
 局面 = 図::読図([
     ".....",
     "OXO..",
@@ -179,8 +213,11 @@
 確認("the chain really is in atari", 盤::ダメ数(局面, 5, 7), 1, 失敗)
 確認("escapes through its only liberty", 思::着手選択(局面, 5, 1, 2, 0, 0, 10), 2, 失敗)
 
-// Two eyes and nothing else to do: passing is the only sane move,
-// and filling either eye would kill a living group.
+// 眼が二つあり、他にすることが無い。まともな手はパスだけであり、
+// どちらの眼を埋めても生きている群を殺す。
+//
+// EN: Two eyes and nothing else to do: passing is the only sane
+// move, and filling either eye would kill a living group.
 局面 = 図::読図([
     ".X.XX",
     "XXXXX",
@@ -190,18 +227,25 @@
 ])
 確認("passes rather than fill its own eyes", 思::着手選択(局面, 5, 1, 3, 0, 0, 40), 0, 失敗)
 
-// On an empty board the opening book confines the choice to the
+// 空の盤では定石が選択を隅へ閉じ込める。エンジンが抱える唯一の
+// 戦略の考えである。
+//
+// EN: On an empty board the opening book confines the choice to the
 // corners — the one strategic idea the engine holds.
 空 = 盤::新規(9)
 角 = #1
-@ t:1..6 {
-    p = 思::着手選択(空, 9, 1, 2, 0, 0, 0)
-    ? 思::布石点(9, p) == #0 { 角 = #0 }
+@ _回:1..6 {
+    点 = 思::着手選択(空, 9, 1, 2, 0, 0, 0)
+    ? 思::布石点(9, 点) == #0 { 角 = #0 }
 }
 確認("opens in a corner, every time", 角, #1, 失敗)
 
-// Whatever it picks must be legal — checked over a whole self-play
-// game below, but asserted here on a crowded position too.
+// 何を選ぼうと合法でなければならない。下では自己対局を通して
+// 丸ごと確かめるが、ここでは込み入った局面でも念を押しておく。
+//
+// EN: Whatever it picks must be legal — checked over a whole
+// self-play game below, but asserted here on a crowded position
+// too.
 局面 = 図::読図([
     "XXOO.",
     "XOXO.",
@@ -209,8 +253,8 @@
     "XXOOX",
     "OOXX."
 ])
-p = 思::着手選択(局面, 5, 1, 2, 0, 0, 20)
-確認("its move on a crowded board is legal", 規則::判定(局面, 5, p, 1, 0), 0, 失敗)
+点 = 思::着手選択(局面, 5, 1, 2, 0, 0, 20)
+確認("its move on a crowded board is legal", 規則::判定(局面, 5, 点, 1, 0), 0, 失敗)
 
 // ------------------------------------------------------------
 >> "" ¶
@@ -226,18 +270,18 @@ p = 思::着手選択(局面, 5, 1, 2, 0, 0, 20)
 
 @ 手数 < 40 {
     ? パス >= 2 { @! }
-    p = 思::着手選択(局面, 9, 手番, 2, コウ, 最終, 手数)
-    ? p == 0 {
+    点 = 思::着手選択(局面, 9, 手番, 2, コウ, 最終, 手数)
+    ? 点 == 0 {
         パス = パス + 1
         コウ = 0
         最終 = 0
     } _ {
         取 = 0
-        k = 0
-        状 = 盤::着手(局面, 9, p, 手番, 取, k)
+        コ = 0
+        状 = 盤::着手(局面, 9, 点, 手番, 取, コ)
         ? 状 <> 0 { 不正 = 不正 + 1 }
-        コウ = k
-        最終 = p
+        コウ = コ
+        最終 = 点
         パス = 0
     }
     手番 = 盤::敵(手番)

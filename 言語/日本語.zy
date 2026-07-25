@@ -1,13 +1,37 @@
 // ============================================================
-// 言語/日本語.zy — Japanese locale (ja)
+// 言語/日本語.zy — 日本語 (ja) — 土台
+//
+// これが他のすべての言語が載る土台である。鍵は日本語の概念で
+// あり、この表はその概念を日本語の言い回しへ開く。他の言語の
+// 表は同じ概念を自分の言葉へ写す。
+//
+// どの言語の module もちょうど同じ四つの関数を出す。語() は
+// 静的な鍵の引きであり、残る三つは文を組み立てる。語法も数の
+// 書式も言語ごとに違い、「白の一目半勝ち」を五つの言語で表に
+// 収めることはできないからである。
+//
+// 鍵には領域の接頭辞が付く（「終局.石」であって「石」ではない）。
+// だから鍵が訳語そのものと同じ形になることは無く、欠落は見分け
+// られる。語() は鍵をそのまま返し、試験/言語検証.zy は返ってきた
+// ものが鍵と同じなら落ちる。
+//
+// EN: 言語/日本語.zy — Japanese locale (ja) — the base
+//
+// This is the base every other language sits on. The keys are
+// Japanese concepts and this table unfolds them into Japanese
+// prose; every other table maps the same concepts into its own
+// words.
 //
 // Every locale module exports exactly the same four functions.
 // 語() is a static key lookup; the other three compose sentences,
 // because grammar and number formatting differ per language and a
 // static table cannot express "White wins by 1.5 points" in five
-// languages. Keys are neutral ASCII identifiers so that a missing
-// translation is detectable: 語() returns the key itself, and
-// 試験/言語検証.zy fails on any key that comes back unchanged.
+// languages.
+//
+// Keys carry a domain prefix (終局.石, never plain 石), so a key
+// can never equal its own translation and a missing one stays
+// detectable: 語() returns the key itself, and 試験/言語検証.zy
+// fails on any key that comes back unchanged.
 // ============================================================
 
 # .言語_日本語 {
@@ -16,67 +40,67 @@
 
     語(鍵) {
         <~ ?? 鍵 {
-            "lang.name"        => "日本語"
+            "言語.名前"       => "日本語"
 
-            "menu.title"       => "囲碁"
-            "menu.board"       => "路盤"
-            "menu.level"       => "棋力"
-            "menu.side"        => "手番"
-            "menu.komi"        => "コミ"
-            "menu.theme"       => "主題"
-            "menu.lang"        => "言語"
-            "menu.hint"        => "↑↓ 選択   ←→ 変更   ↵ 開始"
-            "menu.unavailable" => "画面が狭い"
+            "品書.表題"       => "囲碁"
+            "品書.路盤"       => "路盤"
+            "品書.棋力"       => "棋力"
+            "品書.手番"       => "手番"
+            "品書.コミ"       => "コミ"
+            "品書.主題"       => "主題"
+            "品書.言語"       => "言語"
+            "品書.案内"       => "↑↓ 選択   ←→ 変更   ↵ 開始"
+            "品書.不可"       => "画面が狭い"
 
-            "level.1"          => "初級"
-            "level.2"          => "中級"
-            "level.3"          => "上級"
+            "棋力.1"          => "初級"
+            "棋力.2"          => "中級"
+            "棋力.3"          => "上級"
 
-            "theme.stone"      => "石"
-            "theme.moon"       => "月"
-            "theme.ascii"      => "字"
+            "主題.石"         => "石"
+            "主題.月"         => "月"
+            "主題.字"         => "字"
 
-            "color.black"      => "黒"
-            "color.white"      => "白"
-            "side.you"         => "あなた"
-            "side.ai"          => "AI"
+            "色.黒"           => "黒"
+            "色.白"           => "白"
+            "側.自分"         => "あなた"
+            "側.機械"         => "AI"
 
-            "panel.turn"       => "手番"
-            "panel.moves"      => "手数"
-            "panel.captures"   => "アゲハマ"
-            "panel.komi"       => "コミ"
-            "panel.last"       => "最終手"
-            "panel.estimate"   => "目算"
+            "区画.手番"       => "手番"
+            "区画.手数"       => "手数"
+            "区画.アゲハマ"   => "アゲハマ"
+            "区画.コミ"       => "コミ"
+            "区画.最終手"     => "最終手"
+            "区画.目算"       => "目算"
 
-            "msg.occupied"     => "すでに石がある"
-            "msg.suicide"      => "自殺手は打てない"
-            "msg.ko"           => "コウにより着手禁止"
-            "msg.pass_you"     => "あなたはパスした"
-            "msg.pass_ai"      => "AIはパスした"
-            "msg.undo"         => "待った"
-            "msg.no_undo"      => "これ以上戻れない"
-            "msg.thinking"     => "考慮中…"
-            "msg.no_useful"     => "打つべき所がない — パスを"
-            "msg.resigned"     => "投了"
+            "報せ.占有"       => "すでに石がある"
+            "報せ.自殺"       => "自殺手は打てない"
+            "報せ.コウ"       => "コウにより着手禁止"
+            "報せ.自分パス"   => "あなたはパスした"
+            "報せ.機械パス"   => "AIはパスした"
+            "報せ.待った"     => "待った"
+            "報せ.待った不可" => "これ以上戻れない"
+            "報せ.考慮中"     => "考慮中…"
+            "報せ.打つ手無し" => "打つべき所がない — パスを"
+            "報せ.投了"       => "投了"
 
-            "end.title"        => "終局"
-            "end.stones"       => "石"
-            "end.territory"    => "地"
-            "end.komi"         => "コミ"
-            "end.total"        => "合計"
-            "end.jigo"         => "持碁"
-            "end.result"       => "結果"
+            "終局.表題"       => "終局"
+            "終局.石"         => "石"
+            "終局.地"         => "地"
+            "終局.コミ"       => "コミ"
+            "終局.合計"       => "合計"
+            "終局.持碁"       => "持碁"
+            "終局.結果"       => "結果"
 
-            "help.title"       => "操作説明"
-            "help.move"        => "カーソル移動"
-            "help.place"       => "着手"
-            "help.pass"        => "パス"
-            "help.undo"        => "待った"
-            "help.estimate"    => "目算"
-            "help.theme"       => "主題切替"
-            "help.quit"        => "投了・終了"
+            "操作.表題"       => "操作説明"
+            "操作.移動"       => "カーソル移動"
+            "操作.着手"       => "着手"
+            "操作.パス"       => "パス"
+            "操作.待った"     => "待った"
+            "操作.目算"       => "目算"
+            "操作.主題切替"   => "主題切替"
+            "操作.投了"       => "投了・終了"
 
-            "term.small"       => "端末が小さすぎます"
+            "端末.狭い"       => "端末が小さすぎます"
 
             _                  => 鍵
         }

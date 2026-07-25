@@ -1,5 +1,19 @@
 // ============================================================
-// 核/思考.zy — reading the position
+// 核/思考.zy — 局面を読む
+//
+// このモジュールはやがて AI そのものに育つ。まずは他のすべてが
+// 頼る二つの関数から始まる。
+//
+//   眼()     この空点は 色 の眼か？
+//   有用手() 自分を損なわない合法手
+//
+// 眼の判別こそ、碁のエンジンを出鱈目な手の生成器から分ける規則
+// である。眼が二つある群は取られない。だから自分の眼を埋めるのが
+// 正しいことは決してなく、生きている群を死なせるだけである。
+// AI のどの層もこの上に建っており、「打つ価値のある手がもう無い」
+// という助言も、ここから何の追加もなく落ちてくる。
+//
+// EN: 核/思考.zy — reading the position
 //
 // This module will grow into the AI. It starts with the two
 // functions everything else depends on:
@@ -19,7 +33,7 @@
 
     <# ./盤 => 盤
     <# ./規則 => 規則
-    <# std/random => 乱
+    <# ../標準/乱数 => 乱源
 
     #> {
         眼
@@ -37,19 +51,24 @@
         性格_守
     }
 
-    // Playing personality. Not a difficulty setting — a preference
-    // about which of two correct moves to prefer when both score
-    // near the top.
+    // 打ち筋。強さの設定ではない。等しく正しい二つの手が上位で
+    // 並んだとき、どちらを好むかという偏りである。
+    //
+    // EN: Playing personality. Not a difficulty setting — a
+    // preference about which of two correct moves to prefer when
+    // both score near the top.
     性格_均衡 := 0
     性格_攻   := 1
     性格_守   := 2
 
-    // Multipliers, in percent, applied to the attacking and
+    // 点数の攻めの側と守りの側にかける倍率、百分率で。
+    // EN: Multipliers, in percent, applied to the attacking and
     // defending halves of the score.
     倍_強 := 150
     倍_弱 := 70
 
-    // Evaluation weights. Constants so they can be tuned without
+    // 評価の重み。適用する論理に触れずに調整できるよう定数にしてある。
+    // EN: Evaluation weights. Constants so they can be tuned without
     // touching the logic that applies them.
     重_取り   := 100
     重_逃げ   := 80
@@ -62,15 +81,20 @@
     重_布石   := 50
     重_辺     := 30
 
-    // How far below the best a move may score and still be picked.
-    // This is the whole of "level": a wider margin plays worse, not
-    // by choosing bad moves on purpose but by being less sure the
-    // best one is best.
+    // 最善からどれだけ下まで選ばれうるか。これが「級」のすべてで
+    // ある。幅が広いほど弱く打つ。悪い手をわざと選ぶからではなく、
+    // 最善が最善だと見分けきれないからである。
+    //
+    // EN: How far below the best a move may score and still be
+    // picked. This is the whole of "level": a wider margin plays
+    // worse, not by choosing bad moves on purpose but by being less
+    // sure the best one is best.
     幅_初級 := 60
     幅_中級 := 25
     幅_上級 := 5
 
-    // Diagonal neighbours that are on the board.
+    // 盤上にある斜めの隣。
+    // EN: Diagonal neighbours that are on the board.
     _斜(路, 点) {
         行 = 盤::行番(路, 点)
         列 = 盤::列番(路, 点)
@@ -86,7 +110,17 @@
         <~ 出
     }
 
-    // Is 点 an eye belonging to 色?
+    // 点 は 色 の眼か？
+    //
+    // 標準的な近似である。直交する隣はすべて 色 でなければならず、
+    // 斜めはおおむね 色 であればよい。辺や隅では斜めすべて、
+    // 中央では四つのうち三つ。中央での敵の斜め一つは凌げるが、
+    // 辺ではそうはいかない。応じる余地が無いからである。
+    //
+    // これは欠け眼を読み違えうる。それは既知の、そして受け入れた
+    // 限界である。代償は AI の一手であって、規則ではない。
+    //
+    // EN: Is 点 an eye belonging to 色?
     //
     // The standard approximation: every orthogonal neighbour must
     // be 色, and the diagonals must be mostly 色 — all of them on
@@ -99,18 +133,21 @@
     眼(局面, 路, 点, 色) {
         ? 局面[点] <> 0 { <~ #0 }
 
-        @ q : 盤::隣(路, 点) {
-            ? 局面[q] <> 色 { <~ #0 }
+        @ 隣点 : 盤::隣(路, 点) {
+            ? 局面[隣点] <> 色 { <~ #0 }
         }
 
         斜 = _斜(路, 点)
         総 = 斜$#
         味方 = 0
-        @ d : 斜 {
-            ? 局面[d] == 色 { 味方 = 味方 + 1 }
+        @ 斜点 : 斜 {
+            ? 局面[斜点] == 色 { 味方 = 味方 + 1 }
         }
 
-        // Fewer than four diagonals means the point is on an edge
+        // 斜めが四つ未満なら、その点は辺か隅にある。盤の外は味方と
+        // 数えるので、盤上の斜めはすべて自分のものでなければならない。
+        //
+        // EN: Fewer than four diagonals means the point is on an edge
         // or in a corner: off-board counts as friendly, so every
         // on-board diagonal has to be ours.
         ? 総 < 4 {
@@ -121,30 +158,43 @@
         <~ #0
     }
 
-    // Legal moves that are not an eye of the player to move.
+    // 手番の側の眼ではない合法手。自分の眼を埋める手は規則の上では
+    // 合法だが、他のどの尺度でも誤りなので、欲しがる呼び手はいない。
+    //
+    // EN: Legal moves that are not an eye of the player to move.
     // A move that fills your own eye is legal by the rules and
     // wrong by every other measure, so no caller wants it.
     有用手(局面, 路, 色, コウ点) {
         出 = []
         総 = 路 * 路
-        @ p:1..総 {
-            ? 局面[p] == 0 {
-                ? 眼(局面, 路, p, 色) == #0 {
-                    ? 規則::判定(局面, 路, p, 色, コウ点) == 0 { 出 = 出 $+ p }
+        @ 点:1..総 {
+            ? 局面[点] == 0 {
+                ? 眼(局面, 路, 点, 色) == #0 {
+                    ? 規則::判定(局面, 路, 点, 色, コウ点) == 0 { 出 = 出 $+ 点 }
                 }
             }
         }
         <~ 出
     }
 
-    // #1 when the player to move has nothing left worth playing.
+    // 手番の側に打つ価値のある手が残っていなければ #1。
+    // 碁に自動の終局は無い。終わりは打ち手がパスで決める。
+    // だからこれは助言であって、プログラムが下す決定ではない。
+    //
+    // EN: #1 when the player to move has nothing left worth playing.
     // Go has no automatic end — the players decide by passing —
     // so this is advice, never a decision the program makes.
     手詰まり(局面, 路, 色, コウ点) {
         <~ (有用手(局面, 路, 色, コウ点))$# == 0
     }
 
-    // ── influence ─────────────────────────────────────────────
+    // ── 勢力 ──────────────────────────────────────────────────
+    // 各々の石が距離 0..3 にわたって 4 - 距離 を放つ。黒は正、白は
+    // 負。和が零に近い点は競り合いの境目にあり、対局はそこで決まる。
+    // だからこの図は自陣の安全な内側ではなく前線を選ばせるために
+    // 使う。一手につき一度だけ算出し、候補ごとには決して計算しない。
+    //
+    // EN: influence
     // Each stone radiates 4 - distance over distances 0..3, black
     // positive and white negative. A point whose sum is near zero
     // is on the contested boundary, which is where a game is
@@ -153,27 +203,27 @@
     影響図(局面, 路) {
         図 = 盤::新規(路)
         総 = 路 * 路
-        @ p:1..総 {
-            色 = 局面[p]
+        @ 点:1..総 {
+            色 = 局面[点]
             ? 色 <> 0 {
-                行 = 盤::行番(路, p)
-                列 = 盤::列番(路, p)
+                行 = 盤::行番(路, 点)
+                列 = 盤::列番(路, 点)
                 符 = 1
                 ? 色 == 2 { 符 = 0 - 1 }
                 下行 = 行 - 3
                 上行 = 行 + 3
                 ? 下行 < 1 { 下行 = 1 }
                 ? 上行 > 路 { 上行 = 路 }
-                @ r:下行..上行 {
+                @ 各行:下行..上行 {
                     下列 = 列 - 3
                     上列 = 列 + 3
                     ? 下列 < 1 { 下列 = 1 }
                     ? 上列 > 路 { 上列 = 路 }
-                    @ c:下列..上列 {
-                        d = _距離(行, 列, r, c)
-                        ? d <= 3 {
-                            q = 盤::位置(路, r, c)
-                            図[q] = 図[q] + 符 * (4 - d)
+                    @ 各列:下列..上列 {
+                        距離 = _距離(行, 列, 各行, 各列)
+                        ? 距離 <= 3 {
+                            対象 = 盤::位置(路, 各行, 各列)
+                            図[対象] = 図[対象] + 符 * (4 - 距離)
                         }
                     }
                 }
@@ -182,20 +232,24 @@
         <~ 図
     }
 
-    _距離(r1, c1, r2, c2) {
-        a = r1 - r2
-        ? a < 0 { a = 0 - a }
-        b = c1 - c2
-        ? b < 0 { b = 0 - b }
-        <~ a + b
+    _距離(行甲, 列甲, 行乙, 列乙) {
+        縦差 = 行甲 - 行乙
+        ? 縦差 < 0 { 縦差 = 0 - 縦差 }
+        横差 = 列甲 - 列乙
+        ? 横差 < 0 { 横差 = 0 - 横差 }
+        <~ 縦差 + 横差
     }
 
-    _絶対(n) {
-        ? n < 0 { <~ 0 - n }
-        <~ n
+    _絶対(値) {
+        ? 値 < 0 { <~ 0 - 値 }
+        <~ 値
     }
 
-    // ── opening book ──────────────────────────────────────────
+    // ── 定石 ──────────────────────────────────────────────────
+    // 星と小目。序盤では隅が中央より価値が高い。初級のエンジンに
+    // 抱えられる戦略の考えは、この一つだけである。
+    //
+    // EN: opening book
     // Star points and 3-4 points: the corners are worth more than
     // the centre at the start, which is the one strategic idea a
     // beginner engine can afford to hold.
@@ -210,7 +264,8 @@
         ? 近行 {
             ? 近列 { <~ #1 }
         }
-        // 3-4 points: one line further out on either axis
+        // 小目。どちらかの軸で一路だけ外へ寄った点。
+        // EN: 3-4 points: one line further out on either axis
         ? 近行 {
             ? 列 == 端 - 1 || 列 == 逆 + 1 { <~ #1 }
         }
@@ -223,15 +278,20 @@
     _線(路, 点) {
         行 = 盤::行番(路, 点)
         列 = 盤::列番(路, 点)
-        a = 行
-        ? 路 - 行 + 1 < a { a = 路 - 行 + 1 }
-        b = 列
-        ? 路 - 列 + 1 < b { b = 路 - 列 + 1 }
-        ? b < a { <~ b }
-        <~ a
+        縦距 = 行
+        ? 路 - 行 + 1 < 縦距 { 縦距 = 路 - 行 + 1 }
+        横距 = 列
+        ? 路 - 列 + 1 < 横距 { 横距 = 路 - 列 + 1 }
+        ? 横距 < 縦距 { <~ 横距 }
+        <~ 縦距
     }
 
-    // ── candidates ────────────────────────────────────────────
+    // ── 候補 ──────────────────────────────────────────────────
+    // 合法性は全点を走査しても十分に安い（実測で 19×19 の 287 点が
+    // 一秒を大きく下回る）。ここで絞るのは合法性のためではなく
+    // 評価の費用のためである。空の盤では候補は定石だけになる。
+    //
+    // EN: candidates
     // Legality is affordable to scan in full (measured: 287 points
     // on 19x19 in well under a second), so the pruning here is
     // about evaluation cost, not legality. On an empty board the
@@ -243,23 +303,24 @@
         石数 = 盤::石数(局面, 1) + 盤::石数(局面, 2)
         ? 石数 == 0 {
             開 = []
-            @ p : 全 {
-                ? 布石点(路, p) { 開 = 開 $+ p }
+            @ 点 : 全 {
+                ? 布石点(路, 点) { 開 = 開 $+ 点 }
             }
             ? (開$#) > 0 { <~ 開 }
             <~ 全
         }
 
-        // Advanced looks one line further out than the others.
+        // 上級は他より一路外まで見る。
+        // EN: Advanced looks one line further out than the others.
         半径 = 2
         ? 級 >= 3 { 半径 = 3 }
 
         近 = []
-        @ p : 全 {
-            ? _近い(局面, 路, p, 半径) { 近 = 近 $+ p }
+        @ 点 : 全 {
+            ? _近い(局面, 路, 点, 半径) { 近 = 近 $+ 点 }
             _ {
                 ? 手数 < 12 {
-                    ? 布石点(路, p) { 近 = 近 $+ p }
+                    ? 布石点(路, 点) { 近 = 近 $+ 点 }
                 }
             }
         }
@@ -274,23 +335,30 @@
         上行 = 行 + 半径
         ? 下行 < 1 { 下行 = 1 }
         ? 上行 > 路 { 上行 = 路 }
-        @ r:下行..上行 {
+        @ 各行:下行..上行 {
             下列 = 列 - 半径
             上列 = 列 + 半径
             ? 下列 < 1 { 下列 = 1 }
             ? 上列 > 路 { 上列 = 路 }
-            @ c:下列..上列 {
-                ? _距離(行, 列, r, c) <= 半径 {
-                    ? 局面[盤::位置(路, r, c)] <> 0 { <~ #1 }
+            @ 各列:下列..上列 {
+                ? _距離(行, 列, 各行, 各列) <= 半径 {
+                    ? 局面[盤::位置(路, 各行, 各列)] <> 0 { <~ #1 }
                 }
             }
         }
         <~ #0
     }
 
-    // ── reproducible randomness ───────────────────────────────
+    // ── 再現できる乱数 ────────────────────────────────────────
+    // 種を呼び手が繋いでいく明示的な線形合同法で、serpiente と
+    // 同じやり方である。標準/乱数 は状態を内に隠す。それは遊びには
+    // 十分でも研究には使えない。記録した対局は種だけから再現できな
+    // ければならない。さもなくば記録は、何が起きたかを残して
+    // なぜ起きたかを残さないことになる。
+    //
+    // EN: reproducible randomness
     // An explicit LCG whose seed is threaded by the caller, the way
-    // serpiente does it. std/random keeps its state hidden, which is
+    // serpiente does it. 標準/乱数 keeps its state hidden, which is
     // fine for a game and useless for a study: a logged game has to
     // be replayable from its seed alone, or the log records what
     // happened without recording why.
@@ -298,7 +366,12 @@
 
     _範囲(種, 最小, 最大) { <~ 種 % (最大 - 最小 + 1) + 最小 }
 
-    // ── evaluation ────────────────────────────────────────────
+    // ── 評価 ──────────────────────────────────────────────────
+    // どの項も、その手を打ち終えた盤の写しに対して適用する。
+    // 「この手は何を成すか」を、推し量るのではなく、その手が生む
+    // 局面を見て答えるためである。
+    //
+    // EN: evaluation
     // Every term is applied to a copy of the board with the move
     // already played, so "what does this move achieve" is answered
     // by looking at the position it produces, not by guessing.
@@ -310,79 +383,105 @@
         状 = 盤::着手(写, 路, 点, 色, 取, コ)
         ? 状 <> 0 { <~ 0 - 100000 }
 
-        // Three buckets, so personality can weigh the attacking and
-        // defending halves against each other without the layers
+        // 三つの入れ物に分ける。こうすると、下の層が性格の存在を
+        // 知らないまま、性格が攻めと守りを互いに量ることができる。
+        //
+        // EN: Three buckets, so personality can weigh the attacking
+        // and defending halves against each other without the layers
         // having to know personality exists.
         攻点 = 0
         守点 = 0
         他点 = 0
 
-        // Layer 2 — capture.
+        // 第二層 — 取り。
+        // EN: Layer 2 — capture.
         攻点 = 攻点 + 重_取り * 取
 
-        // Layer 3 — escaping atari, but only when it works: the
+        // 第三層 — アタリからの逃げ。ただし逃げ切れるときだけ。
+        // 連はダメが二つ以上になって出てこなければならない。
+        // さもなければ同じ取りに二つ目の石を差し出すだけである。
+        //
+        // EN: Layer 3 — escaping atari, but only when it works: the
         // chain must come out with more than one liberty, or the
         // move is just feeding a second stone to the same capture.
         自群 = 盤::連(写, 路, 点)
         自ダメ = 盤::群ダメ数(写, 路, 自群)
-        @ q : 盤::隣(路, 点) {
-            ? 局面[q] == 色 {
-                旧 = 盤::連(局面, 路, q)
+        @ 隣点 : 盤::隣(路, 点) {
+            ? 局面[隣点] == 色 {
+                旧 = 盤::連(局面, 路, 隣点)
                 ? 盤::群ダメ数(局面, 路, 旧) == 1 {
                     ? 自ダメ >= 2 { 守点 = 守点 + 重_逃げ * (旧$#) }
                 }
             }
         }
 
-        // Self-atari. Not in the design table, and it earns its
+        // 自らアタリに入る手。設計表には無く、それでも席に値する。
+        // これが無いとエンジンは嬉々として取られに行き、他のどの層も
+        // 無駄になる。
+        //
+        // EN: Self-atari. Not in the design table, and it earns its
         // place: without it the engine walks into capture cheerfully
         // and every other layer is wasted.
         ? 自ダメ == 1 {
             ? 取 == 0 { 守点 = 守点 - 重_自殺 * (自群$#) }
         }
 
-        // Layer 4 — atari against the opponent.
-        @ q : 盤::隣(路, 点) {
-            ? 写[q] == 敵色 {
-                敵群 = 盤::連(写, 路, q)
+        // 第四層 — 相手へのアタリ。
+        // EN: Layer 4 — atari against the opponent.
+        @ 隣点 : 盤::隣(路, 点) {
+            ? 写[隣点] == 敵色 {
+                敵群 = 盤::連(写, 路, 隣点)
                 ? 盤::群ダメ数(写, 路, 敵群) == 1 {
                     攻点 = 攻点 + 重_アタリ
                 }
             }
         }
 
-        // Beginner stops here: capture, escape, atari, and nothing
-        // about shape or territory.
+        // 初級はここで止まる。取り、逃げ、アタリだけで、形にも地にも
+        // 触れない。
+        //
+        // EN: Beginner stops here: capture, escape, atari, and
+        // nothing about shape or territory.
         ? 級 <= 1 { <~ _性格適用(攻点, 守点, 性格) }
 
-        // Layer 5 — shape. Connecting two of your own chains and
+        // 第五層 — 形。自分の連を二つ繋ぐことと、相手の連を二つ
+        // 切ることが、最も効く二つの三路四方の型である。相手の
+        // 最終手への接触が三つ目。
+        //
+        // EN: Layer 5 — shape. Connecting two of your own chains and
         // cutting two of the opponent's are the two 3x3 patterns
         // that matter most; contact with the opponent's last move
         // is the third.
         自数 = 0
         敵数 = 0
-        @ q : 盤::隣(路, 点) {
-            ? 局面[q] == 色 { 自数 = 自数 + 1 }
-            ? 局面[q] == 敵色 { 敵数 = 敵数 + 1 }
+        @ 隣点 : 盤::隣(路, 点) {
+            ? 局面[隣点] == 色 { 自数 = 自数 + 1 }
+            ? 局面[隣点] == 敵色 { 敵数 = 敵数 + 1 }
         }
         ? 自数 >= 2 { 守点 = 守点 + 重_接続 }
         ? 敵数 >= 2 { 攻点 = 攻点 + 重_切断 }
         ? 最終手 > 0 {
             行 = 盤::行番(路, 点)
             列 = 盤::列番(路, 点)
-            r = 盤::行番(路, 最終手)
-            c = 盤::列番(路, 最終手)
-            ? _距離(行, 列, r, c) <= 2 { 攻点 = 攻点 + 重_接触 }
+            終行 = 盤::行番(路, 最終手)
+            終列 = 盤::列番(路, 最終手)
+            ? _距離(行, 列, 終行, 終列) <= 2 { 攻点 = 攻点 + 重_接触 }
         }
 
-        // Layer 6 — influence: prefer the boundary between the two
-        // spheres over the safe middle of your own.
+        // 第六層 — 勢力。自陣の安全な内側より、二つの勢力圏の
+        // 境目を好む。
+        //
+        // EN: Layer 6 — influence: prefer the boundary between the
+        // two spheres over the safe middle of your own.
         差 = _絶対(影響[点])
         ? 差 < 重_勢力 { 他点 = 他点 + (重_勢力 - 差) }
 
-        // Layer 7 — opening book, and the edge penalty that keeps
-        // the engine off the first two lines while there is still
-        // open board.
+        // 第七層 — 定石と、盤にまだ余地があるうちエンジンを一線
+        // 二線から遠ざける辺の減点。
+        //
+        // EN: Layer 7 — opening book, and the edge penalty that
+        // keeps the engine off the first two lines while there is
+        // still open board.
         ? 手数 < 8 {
             ? 布石点(路, 点) { 他点 = 他点 + 重_布石 }
         }
@@ -393,9 +492,14 @@
         <~ _性格適用(攻点, 守点, 性格) + 他点
     }
 
-    // An offensive engine values taking over keeping; a defensive
-    // one the reverse, and it fears self-atari more. Neither plays
-    // worse — they disagree about which good move is better.
+    // 攻めのエンジンは守るより取ることを重んじ、守りのエンジンは
+    // その逆で、自らアタリに入ることをより恐れる。どちらも下手に
+    // 打つのではない。どの良い手がより良いかで意見が違うだけである。
+    //
+    // EN: An offensive engine values taking over keeping; a
+    // defensive one the reverse, and it fears self-atari more.
+    // Neither plays worse — they disagree about which good move is
+    // better.
     _性格適用(攻点, 守点, 性格) {
         攻倍 = 100
         守倍 = 100
@@ -410,7 +514,17 @@
         <~ 攻点 * 攻倍 / 100 + 守点 * 守倍 / 100
     }
 
-    // ── move selection ────────────────────────────────────────
+    // ── 着手の選択 ────────────────────────────────────────────
+    // 選んだ点を返す。パスなら 0。
+    //
+    // 級は一つの数である。最善からどれだけ下まで選ばれうるか。
+    // 初級とは、わざと下手に打つプログラムではない。良い手と
+    // ほぼ良い手を見分けられないプログラムである。
+    //
+    // 再現できる。種は呼び手のもので、出力引数を通して進むので、
+    // 対局は記録された種から一手ずつそのまま再演される。
+    //
+    // EN: move selection
     // Returns the chosen point, or 0 to pass.
     //
     // The level is one number: how far below the best a move may
@@ -426,19 +540,24 @@
 
         影響 = 影響図(局面, 路)
 
-        // Score once, keep the scores. Evaluating twice — once for
-        // the maximum and once to collect the near-misses — is the
-        // kind of doubling that goes unnoticed until a turn takes
-        // twice as long as it needs to.
+        // 一度だけ点数をつけ、その点数を取っておく。最大を求めるのに
+        // 一度、僅差を集めるのにもう一度と二度評価するのは、一手が
+        // 要らぬ倍の時間を食うまで気づかれない類の重複である。
+        //
+        // EN: Score once, keep the scores. Evaluating twice — once
+        // for the maximum and once to collect the near-misses — is
+        // the kind of doubling that goes unnoticed until a turn
+        // takes twice as long as it needs to.
         点数表 = []
         最高 = 0 - 1000000
-        @ p : 一覧 {
-            v = 評価(局面, 路, p, 色, 級, 最終手, 手数, 影響, 性格)
-            点数表 = 点数表 $+ v
-            ? v > 最高 { 最高 = v }
+        @ 点 : 一覧 {
+            点数 = 評価(局面, 路, 点, 色, 級, 最終手, 手数, 影響, 性格)
+            点数表 = 点数表 $+ 点数
+            ? 点数 > 最高 { 最高 = 点数 }
         }
 
-        // Every remaining move hurts: pass rather than fill in.
+        // 残る手がどれも損なら、埋めるよりパスする。
+        // EN: Every remaining move hurts: pass rather than fill in.
         ? 最高 < 0 { <~ 0 }
 
         幅 = 幅_中級
@@ -447,20 +566,23 @@
 
         候 = []
         総 = 一覧$#
-        @ i:1..総 {
-            ? 点数表[i] >= 最高 - 幅 { 候 = 候 $+ 一覧[i] }
+        @ 添字:1..総 {
+            ? 点数表[添字] >= 最高 - 幅 { 候 = 候 $+ 一覧[添字] }
         }
 
-        n = 候$#
-        ? n == 1 { <~ 候[1] }
+        個数 = 候$#
+        ? 個数 == 1 { <~ 候[1] }
         種 = 乱数(種)
-        <~ 候[_範囲(種, 1, n)]
+        <~ 候[_範囲(種, 1, 個数)]
     }
 
-    // Convenience wrapper for the game itself, where nobody needs
-    // to replay anything: seeds from std/random and forgets.
+    // 対局そのもののための短縮版。再現の要らない場でだけ使う。
+    // 標準/乱数 から種を取り、そのまま忘れる。
+    //
+    // EN: Convenience wrapper for the game itself, where nobody
+    // needs to replay anything: seeds from 標準/乱数 and forgets.
     着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数) {
-        一時種 = 乱::entero(1, 2147483646)
+        一時種 = 乱源::整数(1, 2147483646)
         <~ 選択(局面, 路, 色, 級, 性格_均衡, コウ点, 最終手, 手数, 一時種)
     }
 }

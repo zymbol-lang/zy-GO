@@ -462,8 +462,9 @@ therefore a `??` match inside a function:
 
 The `_ => 鍵` fallback means a missing translation renders as its key rather
 than as an empty string — a missing entry is visible instead of silent. Because
-keys are neutral ASCII and translations never are, that fallback is also what
-makes completeness **decidable**, and `試験/言語検証.zy` walks the master
+every key carries a domain prefix and so can never equal its own translation
+(`終局.石`, never plain `石`), that fallback is also what makes completeness
+**decidable**, and `試験/言語検証.zy` walks the master
 catalogue from `鍵一覧()` against all five locales:
 
 ```

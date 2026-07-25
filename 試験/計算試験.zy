@@ -1,11 +1,14 @@
 // ============================================================
-// 試験/計算試験.zy — area scoring tests
+// 試験/計算試験.zy — 中国式の目算の試験
+//   zymbol run 試験/計算試験.zy
+//
+// EN: 試験/計算試験.zy — area scoring tests
 //   zymbol run 試験/計算試験.zy
 // ============================================================
 
 <# ../核/盤 => 盤
 <# ../核/計算 => 計算
-<# ../言語/module => 言
+<# ../言語/取次 => 言
 <# ./図 => 図
 
 路 := 5
@@ -57,7 +60,11 @@
 // ------------------------------------------------------------
 >> "" ¶
 >> "enclosed corner — 地" ¶
-// The white stone matters: without a single white stone on the
+// 白石が一つあることに意味がある。盤に白石が一つも無ければ
+// どの空の領域も黒だけに接し、中国式の計算では黒が空点二十を
+// すべて正しく取ることになってしまう。
+//
+// EN: The white stone matters: without a single white stone on the
 // board every empty region borders black alone, and black would
 // correctly own all 20 empty points under area scoring.
 局面 = 図::読図([

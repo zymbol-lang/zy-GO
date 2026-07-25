@@ -1,0 +1,25 @@
+// ============================================================
+// 標準/入出力.zy — std/io の日本語層
+//
+// 棋譜と集計が触れる唯一の外部世界がここを通る。
+// 論理は持たず、名前だけを日本語に架け替える。
+//
+// EN: 標準/入出力.zy — Japanese layer over std/io.
+// The only door to the outside world that the kifu writer and
+// the aggregator use. No logic, only the renaming bridge.
+// ============================================================
+
+# .標準_入出力 {
+
+    #> {
+        io::read   => 読込
+        io::write  => 書込
+        io::append => 追記
+        io::exists => 存在
+        io::delete => 削除
+        io::list   => 一覧
+        io::mkdir  => 階層作成
+    }
+
+    <# std/io => io
+}

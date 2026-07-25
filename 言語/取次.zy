@@ -1,0 +1,153 @@
+// ============================================================
+// 言語/取次.zy — 言葉の取次
+//
+// 打ち手の目に触れる文字列は、すべてここを唯一の入口として通る。
+// 選ばれている言語はモジュールの状態として持つ（モジュールの状態は
+// file の道筋ごとに共有されるので、これを取り込むどのモジュールも、
+// 言語の引数を呼び出しの連なりに通して回さずに同じ選択を見る）。
+//
+// 鍵は日本語である。土台が日本語で、他の言語はその上に載る。
+// 対局が「区画.アゲハマ」を求めるとき、それは日本語の概念を求めて
+// いるのであって、英語の識別子を求めているのではない。各言語の
+// module はその概念を自分の言葉へ写す表であり、日本語の表は
+// 概念をそのまま日本語の言い回しに開く土台である。
+//
+// 言語を足すのは三箇所の編集で済む。四つの関数の約束に沿って
+// 言語/<名前>.zy を書き、ここで取り込み、四つの振り分けにそれぞれ
+// 一つ枝を足す。あとは 試験/言語検証.zy が鍵ごとに検める。
+//
+// EN: 言語/取次.zy — i18n dispatcher
+//
+// Single entry point for every user-visible string in the game.
+// Holds the active locale as module state (module state is shared
+// per file path, so every module that imports this one sees the
+// same selection without threading a language parameter through
+// the call graph).
+//
+// The keys are Japanese. The base is Japanese and every other
+// language sits on top of it: when the game asks for 区画.アゲハマ
+// it is asking for a Japanese concept, not for an English
+// identifier. Each locale module is a table mapping that concept
+// into its own words, and the Japanese table is the base that
+// unfolds the concept into Japanese prose.
+//
+// Adding a locale is three edits: write 言語/<name>.zy against the
+// four-function contract, import it here, add one arm to each
+// dispatch match. 試験/言語検証.zy then verifies it key by key.
+// ============================================================
+
+# .言語_取次 {
+
+    <# ./日本語 => 日
+    <# ./한국어 => 韓
+    <# ./中文 => 中
+    <# ./English => 英
+    <# ./Español => 西
+
+    #> {
+        設定
+        現在
+        言語一覧
+        鍵一覧
+        語
+        路盤名
+        結果文
+        取石文
+    }
+
+    現在言語 = "ja"
+
+    // ISO 639-1 の符号を品書の順に並べる。符号そのものは国際的な
+    // 取り決めなので日本語にしない。日本語が先頭に立つのは program が
+    // 日本語で書かれているからで、残りは碁がアジアを渡り、それから
+    // 西へ向かった道筋に従う。
+    //
+    // EN: ISO 639-1 codes, in menu order. The codes themselves are an
+    // international convention and stay as they are. 日本語 leads
+    // because the program is written in Japanese; the rest follow the
+    // game's path through Asia and then west.
+    言語一覧() { <~ ["ja", "ko", "zh", "en", "es"] }
+
+    設定(コード) { 現在言語 = コード }
+    現在() { <~ 現在言語 }
+
+    語(鍵) {
+        ?? 現在言語 {
+            "ko" => { <~ 韓::語(鍵) }
+            "zh" => { <~ 中::語(鍵) }
+            "en" => { <~ 英::語(鍵) }
+            "es" => { <~ 西::語(鍵) }
+            _    => { <~ 日::語(鍵) }
+        }
+    }
+
+    路盤名(路) {
+        ?? 現在言語 {
+            "ko" => { <~ 韓::路盤名(路) }
+            "zh" => { <~ 中::路盤名(路) }
+            "en" => { <~ 英::路盤名(路) }
+            "es" => { <~ 西::路盤名(路) }
+            _    => { <~ 日::路盤名(路) }
+        }
+    }
+
+    結果文(勝色, 差, 中押) {
+        ?? 現在言語 {
+            "ko" => { <~ 韓::結果文(勝色, 差, 中押) }
+            "zh" => { <~ 中::結果文(勝色, 差, 中押) }
+            "en" => { <~ 英::結果文(勝色, 差, 中押) }
+            "es" => { <~ 西::結果文(勝色, 差, 中押) }
+            _    => { <~ 日::結果文(勝色, 差, 中押) }
+        }
+    }
+
+    取石文(数) {
+        ?? 現在言語 {
+            "ko" => { <~ 韓::取石文(数) }
+            "zh" => { <~ 中::取石文(数) }
+            "en" => { <~ 英::取石文(数) }
+            "es" => { <~ 西::取石文(数) }
+            _    => { <~ 日::取石文(数) }
+        }
+    }
+
+    // 鍵の親目録。これがどの言語も満たさねばならない約束であり、
+    // 試験/言語検証.zy がこれをすべての言語に突き合わせて歩き、
+    // 同一の落とし所に抜けた鍵を報せる。
+    //
+    // 鍵には必ず領域の接頭辞が付く（「終局.石」であって「石」では
+    // ない）。日本語の訳語そのものと同じ形にならないためで、
+    // これがあるから日本語でも「訳が鍵と等しい = 欠落」という
+    // 検め方がそのまま成り立つ。
+    //
+    // EN: The master key catalogue. This is the contract every locale
+    // must satisfy — 試験/言語検証.zy walks it against every locale
+    // and reports any key that falls through to the identity case.
+    //
+    // Every key carries a domain prefix (終局.石, never plain 石) so
+    // that a key can never equal its own Japanese translation. That
+    // is what keeps the "translation equals key means missing" check
+    // decidable in Japanese too.
+    鍵一覧() {
+        <~ [
+            "言語.名前",
+            "品書.表題", "品書.路盤", "品書.棋力", "品書.手番",
+            "品書.コミ", "品書.主題", "品書.言語", "品書.案内",
+            "品書.不可",
+            "棋力.1", "棋力.2", "棋力.3",
+            "主題.石", "主題.月", "主題.字",
+            "色.黒", "色.白", "側.自分", "側.機械",
+            "区画.手番", "区画.手数", "区画.アゲハマ",
+            "区画.コミ", "区画.最終手", "区画.目算",
+            "報せ.占有", "報せ.自殺", "報せ.コウ",
+            "報せ.自分パス", "報せ.機械パス", "報せ.待った",
+            "報せ.待った不可", "報せ.考慮中", "報せ.投了",
+            "報せ.打つ手無し",
+            "終局.表題", "終局.石", "終局.地", "終局.コミ",
+            "終局.合計", "終局.持碁", "終局.結果",
+            "操作.表題", "操作.移動", "操作.着手", "操作.パス",
+            "操作.待った", "操作.目算", "操作.主題切替", "操作.投了",
+            "端末.狭い"
+        ]
+    }
+}

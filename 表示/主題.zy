@@ -1,5 +1,21 @@
 // ============================================================
-// 表示/主題.zy — stone themes and layout arithmetic
+// 表示/主題.zy — 石の主題と配置の算術
+//
+// 二桁の不変条件
+// 盤の升は、どの主題でも、行の最後の列も含めて、端末の桁を
+// ちょうど二つ占める。
+//
+//   空点            盤の字 + 継ぎ         1 + 1
+//   空点・最終列    盤の字 + 空白         1 + 1
+//   石・絵文字      ⚫ ⚪ 🌑 🌕（元より広い）  2
+//   石・字          X / O + 継ぎ          1 + 1
+//
+// 最終列は見た目より重い。末尾の継ぎを落とすと、盤の字で
+// 終わる行は石で終わる行より一桁狭くなり、右端の行番号が
+// そこへ石が打たれるたびに揺れる。だから盤面は、その上に何が
+// あろうと、常に 2 × 路 桁の幅を持つ。
+//
+// EN: 表示/主題.zy — stone themes and layout arithmetic
 //
 // THE TWO-COLUMN INVARIANT
 // Every board cell occupies exactly two terminal columns, in
@@ -40,8 +56,11 @@
         配置_横
     }
 
-    // Layout modes. Positive values only — a module constant must
-    // be a bare literal (HLZ-001).
+    // 配置の様式。正の値だけ。モジュールの定数は裸の literal で
+    // なければならない（HLZ-001）。
+    //
+    // EN: Layout modes. Positive values only — a module constant
+    // must be a bare literal (HLZ-001).
     配置_不可 := 0
     配置_下   := 1
     配置_横   := 2
@@ -52,9 +71,9 @@
 
     主題鍵(主題) {
         <~ ?? 主題 {
-            "月" => "theme.moon"
-            "字" => "theme.ascii"
-            _    => "theme.stone"
+            "月" => "主題.月"
+            "字" => "主題.字"
+            _    => "主題.石"
         }
     }
 
@@ -75,7 +94,10 @@
         }
     }
 
-    // Grid glyph for an empty point, by position on the board.
+    // 空点に描く盤の字。盤上の位置で決まる。
+    // 行 はエンジン側の行（1 = 描かれた盤の最下段）。
+    //
+    // EN: Grid glyph for an empty point, by position on the board.
     // 行 is the engine row (1 = bottom of the drawn board).
     _枠(路, 行, 列) {
         ? 行 == 路 {
@@ -94,14 +116,17 @@
         <~ "┼"
     }
 
-    // The horizontal line to the next intersection — a space in
+    // 次の交点へ伸びる横線。最終列では次の交点が無いので空白。
+    //
+    // EN: The horizontal line to the next intersection — a space in
     // the last column, where there is no next intersection.
     _継(路, 列) {
         ? 列 == 路 { <~ " " }
         <~ "─"
     }
 
-    // One cell: exactly two columns, whatever it holds.
+    // 一升。中身が何であれ、ちょうど二桁。
+    // EN: One cell: exactly two columns, whatever it holds.
     升文字(主題, 値, 路, 行, 列) {
         継 = _継(路, 列)
         ? 値 == 0 {
@@ -113,7 +138,8 @@
         <~ 石
     }
 
-    // 星 (hoshi) star points, by board size.
+    // 星。盤の大きさごとに定める。
+    // EN: 星 (hoshi) star points, by board size.
     星点(路, 行, 列) {
         ? 路 == 9 {
             ? 行 == 5 {
@@ -142,24 +168,33 @@
         <~ #0
     }
 
-    // Column letters, the international convention: I is skipped
+    // 列の記号。国際慣行に従い I を飛ばす。1 や J と読み違え
+    // られないようにするためである。
+    //
+    // EN: Column letters, the international convention: I is skipped
     // so it cannot be misread as 1 or J.
     列名(列) {
         表 = "ABCDEFGHJKLMNOPQRST"
         <~ 表$[列..列]
     }
 
-    // ---- geometry -------------------------------------------
-    // gutter  5  ("  19 ")
-    // grid    2 × 路
-    // label   2  (space + row number)
+    // ---- 寸法 -----------------------------------------------
+    // 左余白  5  （"  19 "）
+    // 盤面    2 × 路
+    // 行札    2  （空白 + 行番号）
+    //
+    // EN: geometry — gutter 5 ("  19 "), grid 2 × 路,
+    // label 2 (space + row number)
     盤幅(路)   { <~ 2 * 路 }
     区画幅(路) { <~ 2 * 路 + 7 }
     区画高(路) { <~ 路 + 2 }
 
     最小幅(路) { <~ 2 * 路 + 9 }
 
-    // Side-by-side needs the block, a gap and the boxed panel;
+    // 横並びには盤の塊と間隔と枠付きの区画が要る。区画そのものが
+    // 10 行あるので、小さい盤では盤面ではなく区画が下限を決める。
+    //
+    // EN: Side-by-side needs the block, a gap and the boxed panel;
     // the panel itself is 10 rows, so short boards are bounded by
     // the panel rather than by the grid.
     側面最小幅(路) { <~ 2 * 路 + 33 }
@@ -168,8 +203,11 @@
         <~ 路 + 4
     }
 
-    // Stacked, the panel collapses to a single dense line — a tall
-    // narrow terminal cannot afford ten rows of framed box.
+    // 縦積みでは区画は詰めた一行に畳まれる。細長い端末に枠付きの
+    // 箱を十行も置く余裕は無い。
+    //
+    // EN: Stacked, the panel collapses to a single dense line — a
+    // tall narrow terminal cannot afford ten rows of framed box.
     最小高_下(路) { <~ 路 + 6 }
 
     配置(路, 幅, 高) {

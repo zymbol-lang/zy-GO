@@ -1,5 +1,17 @@
 // ============================================================
-// 核/盤.zy — board mechanics
+// 核/盤.zy — 盤の仕組み
+//
+// 局面は 路 × 路 の平坦な配列で、添字は 1 から始まる。
+//   0 = 空、1 = 黒、2 = 白
+// 点 (行, 列) は添字 (行 - 1) × 路 + 列 に置かれ、行 1 は配列の
+// 先頭にある。表示層は行を反転させて行 1 を下に描く。碁盤は
+// そう読むものだからで、エンジン自身はその事情を知らなくてよい。
+//
+// 入れ子ではなく平坦にしてある。隣の計算が 添字 ± 1 と ± 路 で
+// 済み、連() の塗り潰しは AI の一手ごとに数百回この上を歩く。
+// その繰り返しの中では入れ子の添字づけが高くつく。
+//
+// EN: 核/盤.zy — board mechanics
 //
 // The board (局面) is a flat array of 路 × 路 points, 1-indexed:
 //   0 = 空 (empty), 1 = 黒 (black), 2 = 白 (white)
@@ -43,11 +55,17 @@
     黒 := 1
     白 := 2
 
-    // 着手() status codes. They stay positive: the API reads better
-    // with a status return and the ko point as an output parameter
-    // than with both multiplexed into one value. (Negative module
-    // constants were also impossible when this was written — that
-    // was HLZ-001, now fixed.)
+    // 着手() の状態符号。正の値で通す。状態を返り値にし、コウ点を
+    // 出力引数にするほうが、両方を一つの値に詰め込むより読みやすい。
+    // （負の定数がモジュールに置けなかった事情もある。HLZ-001、解決済み。）
+    // コウはここに無い。あれは盤ではなく履歴の規則なので、
+    // 核/規則.zy が持つ。
+    //
+    // EN: 着手() status codes. They stay positive: the API reads
+    // better with a status return and the ko point as an output
+    // parameter than with both multiplexed into one value. (Negative
+    // module constants were also impossible when this was written —
+    // that was HLZ-001, now fixed.)
     // Ko is not here: it is a rule about history, not about the
     // board, so 核/規則.zy owns it.
     可       := 0
@@ -57,20 +75,27 @@
     新規(路) {
         局面 = []
         総 = 路 * 路
-        @ i:1..総 { 局面 = 局面 $+ 0 }
+        @ _添字:1..総 { 局面 = 局面 $+ 0 }
         <~ 局面
     }
 
     複製(局面) {
         写 = []
-        @ v : 局面 { 写 = 写 $+ v }
+        @ 値 : 局面 { 写 = 写 $+ 値 }
         <~ 写
     }
 
-    // Every computed index goes through 位置(). The ##! casts that
-    // used to be here were a workaround for HLZ-002 — the analyzer
-    // inferred Float for arithmetic on untyped parameters and then
-    // rejected the result as an array index. Fixed in the
+    // 算出した添字はすべて 位置() を通る。かつてここにあった ##! の
+    // 型変換は HLZ-002 の回避策だった。解析器が無型引数の算術を Float と
+    // 推論し、その結果を配列の添字として拒んでいたのである。
+    // 通訳系側で直った（ZymbolType::Number）ので算術はそのままで立つ。
+    // それでも添字を一つの関数に集めてあるのは、必要だからではなく
+    // それが正しい形だからである。
+    //
+    // EN: Every computed index goes through 位置(). The ##! casts
+    // that used to be here were a workaround for HLZ-002 — the
+    // analyzer inferred Float for arithmetic on untyped parameters
+    // and then rejected the result as an array index. Fixed in the
     // interpreter (ZymbolType::Number), so the arithmetic stands on
     // its own; routing indices through one function is kept because
     // it is the right shape, not because it is required.
@@ -85,7 +110,8 @@
         <~ 1
     }
 
-    // Orthogonal neighbours of a point, edges clipped.
+    // 点に直交する隣。盤の外は落とす。
+    // EN: Orthogonal neighbours of a point, edges clipped.
     隣(路, 点) {
         行 = (点 - 1) / 路 + 1
         列 = 点 - (行 - 1) * 路
@@ -97,7 +123,10 @@
         <~ 隣接
     }
 
-    // Every point of the chain containing 起点, by flood fill.
+    // 起点を含む連のすべての点を、塗り潰しで集める。
+    // 深さは連の大きさで抑えられる。19 路盤で最悪 361 段。
+    //
+    // EN: Every point of the chain containing 起点, by flood fill.
     // Depth is bounded by chain size: 361 frames worst case on a
     // 19-road board.
     連(局面, 路, 起点) {
@@ -114,33 +143,35 @@
         ? 局面[点] <> 色 { <~ 0 }
         訪問[点] = 1
         結果 = 結果 $+ 点
-        @ q : 隣(路, 点) { _探索(局面, 路, q, 色, 訪問, 結果) }
+        @ 隣点 : 隣(路, 点) { _探索(局面, 路, 隣点, 色, 訪問, 結果) }
         <~ 0
     }
 
-    // Distinct liberties (ダメ) of a chain, as points.
+    // 連のダメを重複なく、点として返す。
+    // EN: Distinct liberties (ダメ) of a chain, as points.
     ダメ点(局面, 路, 群) {
         印 = 新規(路)
         結果 = []
         @ 点 : 群 {
-            @ q : 隣(路, 点) {
-                ? 局面[q] == 0 && 印[q] == 0 {
-                    印[q] = 1
-                    結果 = 結果 $+ q
+            @ 隣点 : 隣(路, 点) {
+                ? 局面[隣点] == 0 && 印[隣点] == 0 {
+                    印[隣点] = 1
+                    結果 = 結果 $+ 隣点
                 }
             }
         }
         <~ 結果
     }
 
-    // Liberty count of an already-computed chain.
+    // 求め終えた連のダメの数。
+    // EN: Liberty count of an already-computed chain.
     群ダメ数(局面, 路, 群) {
         印 = 新規(路)
         数 = 0
         @ 点 : 群 {
-            @ q : 隣(路, 点) {
-                ? 局面[q] == 0 && 印[q] == 0 {
-                    印[q] = 1
+            @ 隣点 : 隣(路, 点) {
+                ? 局面[隣点] == 0 && 印[隣点] == 0 {
+                    印[隣点] = 1
                     数 = 数 + 1
                 }
             }
@@ -148,7 +179,8 @@
         <~ 数
     }
 
-    // Liberty count of the chain containing 起点.
+    // 起点を含む連のダメの数。
+    // EN: Liberty count of the chain containing 起点.
     ダメ数(局面, 路, 起点) {
         群 = 連(局面, 路, 起点)
         ? (群$#) == 0 { <~ 0 }
@@ -159,7 +191,22 @@
         @ 点 : 群 { 局面[点] = 0 }
     }
 
-    // Plays a stone.
+    // 石を打つ。
+    //
+    // 打てたときは 可 を、断ったときは 禁_占有 か 禁_自殺 を返す。
+    // 断った場合、盤には手を触れない。
+    // 取数 は取った石の数を受け取り、コウ点 は相手の次の一手で
+    // コウにより禁じられる点を受け取る（0 は無し）。
+    //
+    // 状態を返り値に、コウ点を出力引数にしてある。逆ではない。
+    // コウ点は盤の添字なので、返り値にすると盤上のあらゆる点が
+    // 状態符号と衝突してしまう。
+    //
+    // 順序こそが取りの規則そのものである。まず置き、次に相手を
+    // 取り、そのあとで初めて自分のダメを調べる。取りが成立する
+    // 手が自殺にならないのは、この順序があるからである。
+    //
+    // EN: Plays a stone.
     //
     // Returns 可 when the move was made, or 禁_占有 / 禁_自殺 when
     // it was refused — and on refusal the board is left untouched.
@@ -185,9 +232,9 @@
         敵色 = 敵(色)
         取点 = 0
 
-        @ q : 隣(路, 起点) {
-            ? 局面[q] == 敵色 {
-                群 = 連(局面, 路, q)
+        @ 隣点 : 隣(路, 起点) {
+            ? 局面[隣点] == 敵色 {
+                群 = 連(局面, 路, 隣点)
                 ? 群ダメ数(局面, 路, 群) == 0 {
                     取数 = 取数 + (群$#)
                     取点 = 群[1]
@@ -204,8 +251,12 @@
             }
         }
 
-        // Simple ko: exactly one stone captured, by a stone that is
-        // itself alone with exactly one liberty. Anything looser
+        // 単純なコウ。取った石がちょうど一つで、取った石自身も
+        // ダメ一つで単独であること。これより緩ければ合法手を
+        // 禁じてしまい、これより厳しければ取り返しが果てしなく続く。
+        //
+        // EN: Simple ko: exactly one stone captured, by a stone that
+        // is itself alone with exactly one liberty. Anything looser
         // forbids legal moves; anything tighter allows an endless
         // recapture.
         ? 取数 == 1 {
@@ -220,8 +271,8 @@
 
     石数(局面, 色) {
         数 = 0
-        @ v : 局面 {
-            ? v == 色 { 数 = 数 + 1 }
+        @ 値 : 局面 {
+            ? 値 == 色 { 数 = 数 + 1 }
         }
         <~ 数
     }
