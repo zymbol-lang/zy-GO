@@ -97,10 +97,7 @@
 >> "panel lines — 側面行" ¶
 @ コード : 言::言語一覧() {
     言::設定(コード)
-    // Juxtaposition does not concatenate inside call arguments —
-    // the string has to be built first.
-    名札 = 言::語("panel.captures")
-    線 = 描::側面行(" {名札}")
+    線 = 描::側面行(" " 言::語("panel.captures"))
     確認("panel line in {コード}", 文::幅(線), 24, 失敗)
 }
 言::設定("ja")

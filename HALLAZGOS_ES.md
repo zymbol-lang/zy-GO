@@ -4,12 +4,14 @@ Bugs, carencias e ideas encontrados al construir 囲碁 sobre Zymbol **v0.0.8**.
 Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 [Hov veS](../klingon_galaxy/hallazgos_es.md).
 
-> **Estado (2026-07-21): siete de los nueve hallazgos están corregidos en el
-> intérprete**, en la rama `v0.0.8`, cada uno con su prueba de regresión.
-> Puertas tras los arreglos: 857 pruebas unitarias (antes 847), 526/526 de
-> paridad tree-walker/VM (antes 519), formateador sin regresiones. Con
-> HLZ-008 y HLZ-009 cerrados, **las seis suites de 囲碁 pasan también bajo
-> `--vm`**, y el juego entero se ejecuta idéntico en ambos motores.
+> **Estado (2026-07-24): los once hallazgos están corregidos en el intérprete**,
+> en la rama `v0.0.8`, cada uno con su prueba de regresión. Puertas tras los
+> arreglos: 860 pruebas unitarias (antes 847), 528/528 de paridad
+> tree-walker/VM (antes 519), 90/90 de verificación del GUIDE, formateador sin
+> regresiones. Con HLZ-008 y HLZ-009 cerrados, **las seis suites de 囲碁 pasan
+> también bajo `--vm`**, y el juego entero se ejecuta idéntico en ambos motores.
+> **IDEA-001 también está implementada** (módulo `std/term` + `##!` sobre `Char`):
+> `表示/文字.zy` cayó de 143 a 52 líneas con salida idéntica byte a byte.
 
 | ID | Tipo | Descripción | Estado |
 |----|------|-------------|--------|
@@ -19,9 +21,11 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 | [HLZ-004](#hlz-004--check-y-el-lsp-rechazan-la-convención-de-punto-de-subcarpetas) | Bug | `# .核_盤` en `核/盤.zy` se ejecuta bien pero `zymbol check` y el LSP lo marcan E001 | **Corregido** |
 | [HLZ-005](#hlz-005--ruta-de-import-relativa-al-padre) | Gap menor | `<# ./../x` no parsea; hay que escribir `<# ../x` | **Corregido** (el diagnóstico) |
 | [HLZ-006](#hlz-006--guidemd-documenta-mal-el-mapeo-de-las-flechas) | Bug (doc) | GUIDE.md §3b dice que las flechas son `'U' 'D' 'L' 'R'`; en realidad son `'↑' '↓' '←' '→'` | **Corregido** |
-| [HLZ-007](#hlz-007--la-interpolación-solo-admite-identificadores) | Gap | `"{t.campo}"` y `"{arr[i]}"` no interpolan | Pendiente de decidir |
+| [HLZ-007](#hlz-007--la-yuxtaposición-se-detenía-en-el-primer-delimitador) | Gap | La yuxtaposición no entraba en los argumentos de una llamada | **Corregido** |
 | [HLZ-008](#hlz-008--la-vm-ignora-los-parámetros-de-salida-de-un-módulo) | **Bug grave** | En `--vm`, un `<~` de función de módulo no se escribe de vuelta: resultados silenciosamente incorrectos | **Corregido** |
 | [HLZ-009](#hlz-009--la-vm-no-puede-cortar-un-string-dentro-de-un-módulo) | Bug | En `--vm`, `s$[3..]` dentro de una función de módulo da «expected Array, Tuple, or NamedTuple» | **Corregido** |
+| [HLZ-010](#hlz-010--la-vm-convertía-una-constante-interpolada-en-texto-literal) | **Bug grave** | En `--vm`, `"{CONST}"` dentro de una función producía las llaves literales | **Corregido** |
+| [HLZ-011](#hlz-011--una-variable-usada-solo-como-cota-de-rango-se-marcaba-como-no-usada) | Bug (aviso) | `総 = 名一覧$#` usado solo en `@ i:1..総` se marcaba «unused variable» | **Corregido** |
 | [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | Propuesta |
 | [IDEA-002](#idea-002--el-coste-numérico-decide-la-arquitectura-de-la-ia) | Medición | Números que descartan MCTS y redes neuronales en Zymbol actual | Aplicada |
 
@@ -214,28 +218,64 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 
 ---
 
-## HLZ-007 · La interpolación solo admite identificadores
+## HLZ-007 · La yuxtaposición se detenía en el primer delimitador
 
-- **Descripción:** `"{x}"` interpola una variable, pero cualquier expresión
-  dentro de las llaves es un error de lexer, no de tipos:
+- **Cómo se registró primero (y por qué estaba mal):** el hallazgo se abrió
+  contra la interpolación, porque cualquier expresión dentro de las llaves es un
+  error de lexer:
 
   ```zymbol
   >> "total: {結果.黒合計}" ¶   // ✗ invalid character in string interpolation
   >> "komi: {一覧[i]}" ¶        // ✗ ídem
   ```
 
-  ```
-  help: interpolation must be {identifier} — use \{ for a literal brace
+  Al ir a arreglarlo se contaron las variables intermedias de `表示/描画.zy` una
+  por una, y el diagnóstico no se sostuvo: **casi ninguna es un acceso a campo o
+  a índice, son llamadas** (`文::右詰(…)`, `言::語(…)`, `主::石字(…)`). Admitir
+  `{t.campo}` y `{arr[i]}` habría cerrado el hallazgo tal como estaba escrito
+  sin eliminar una sola de las seis variables del panel lateral.
+
+- **Lo que sí costaba:** había dos muros juntos y solo uno cargaba peso. La
+  yuxtaposición —la concatenación natural de Zymbol— existía **solo en el nivel
+  superior**:
+
+  ```zymbol
+  c = a " " b        // ✓ asignación
+  >> a " " b ¶       // ✓ salida
+  c = (a " " b)      // ✗ expected ')' to close grouped expression
+  d = [a " " b]      // ✗ expected ']' to close array literal
+  f(a " " b)         // ✗ expected ')' after function arguments
   ```
 
-- **Impacto:** cualquier valor compuesto hay que ligarlo a una variable local
-  antes de poder convertirlo en texto. En `表示/描画.zy` eso son seis variables
-  que solo existen para eso.
-- **Nota:** el mensaje de error es claro y el `help:` dice exactamente qué se
-  admite, así que el coste es verbosidad, no depuración. Se combina con el
-  caveat ya conocido de que la yuxtaposición tampoco concatena dentro de los
-  argumentos de una llamada — entre ambos, construir una cadena a partir de un
-  campo obliga siempre a un paso intermedio.
+  Como todo el panel de 囲碁 son llamadas (`側面行(…)`, `枠行(…)`), la
+  interpolación quedaba como único recurso; y la interpolación tampoco admite
+  llamadas. Entre las dos vallas, la única salida era la variable intermedia.
+
+- **Corregido:** la yuxtaposición funciona ahora dentro de argumentos de
+  llamada, elementos de array, elementos de tupla y expresiones agrupadas. La
+  coma sigue separando argumentos, y un `(` a continuación **no** continúa la
+  cadena en esas posiciones, porque ahí es ambiguo con una lambda, una tupla y
+  una agrupación.
+
+  ```zymbol
+  // antes
+  名_取 = 文::右詰(言::語("panel.captures"), 10)
+  >>~ (行, 左, 0, 色_文) > 側面行(" {名_取}{黒}{黒取}  {白}{白取}")
+
+  // ahora
+  >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("panel.captures"), 10) 黒 黒取 "  " 白 白取)
+  ```
+
+- **Coste del cambio:** `f(a b)` con una coma olvidada ahora concatena en vez de
+  dar error de parseo. Es el precio de la regla, y es el mismo que ya se pagaba
+  en el nivel superior.
+- **Alcance:** solo el parser. El nodo `BinaryOp::Concat` ya existía, así que ni
+  el tree-walker, ni el compilador, ni la VM, ni el formateador cambiaron.
+- **Estado:** **corregido**. Regresión en
+  `interpreter/tests/strings/30_juxtaposition_delimited.zy` (TW == VM).
+- **Lo que queda de la interpolación:** `"{t.campo}"` sigue siendo un error. Se
+  deja así a propósito: el mensaje es claro, el `help:` dice qué se admite, y
+  ahora existe una forma natural de componer sin ella.
 
 ---
 
@@ -323,7 +363,89 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 
 ---
 
-## IDEA-001 · Ancho de visualización como primitiva
+## HLZ-010 · La VM convertía una constante interpolada en texto literal
+
+- **Descripción:** bajo `--vm`, `"{記録場所}/9路_0001.kifu"` **dentro del cuerpo
+  de una función** compilaba a los caracteres literales `{記録場所}` seguidos de
+  `/9路_0001.kifu`. Sin error, sin aviso.
+
+  ```zymbol
+  記録場所 := "棋譜"
+
+  書き出す(番号) {
+      道 = "{記録場所}/9路_{番号}.kifu"   // --vm → "{記録場所}/9路_0001.kifu"
+      io::write(道, 内容)                 // falla en blando, no dice nada
+  }
+  ```
+
+- **Causa:** `compile_interpolated_string` resolvía cada `{nombre}` buscando un
+  registro local y, al no encontrarlo, caía directo en su rama de texto literal.
+  Nunca consultaba `global_consts`, donde viven todas las constantes de nivel
+  superior, ni `global_var_map`.
+- **Por qué se escondió tanto:** la misma cadena en el nivel superior funcionaba,
+  y un `>> K` directo dentro de la misma función también. Solo fallaba la
+  interpolación, solo dentro de una función, solo bajo la VM.
+- **Dónde salió:** el banco `棋戦.zy` jugó **64 partidas y escribió cero
+  registros**. La ruta de salida se construía así, `io::write` recibía una ruta
+  con una llave literal dentro, fallaba en blando y no avisaba: 64 partidas de
+  datos perdidas sin un solo error en pantalla.
+- **Estado:** **corregido**. Regresión en
+  `interpreter/tests/modules_scope/interp_global_const.zy`, que cubre los cinco
+  tipos de constante, el estado mutable de módulo y el nombre genuinamente
+  desconocido que **debe** quedarse literal en ambos motores.
+
+---
+
+## HLZ-011 · Una variable usada solo como cota de rango se marcaba como no usada
+
+- **Descripción:** una variable leída **únicamente** en la cota de un rango de
+  bucle disparaba el aviso «unused variable», aunque el bucle la usa:
+
+  ```zymbol
+  総 = 名一覧$#
+  @ i:1..総 {          // 総 se lee aquí, pero el analizador no lo registraba
+      >> 名一覧[i] ¶
+  }
+  ```
+
+  ```
+  warning: variable '総' is assigned but never read
+  ```
+
+- **Impacto:** solo ruido — el programa se ejecuta bien —, pero un aviso falso
+  entrena a ignorar los avisos, que es justo lo que no se quiere de un análisis
+  estático. Salió en `表示/描画.zy`, en `設定描画`.
+- **Lo desconcertante:** disparaba de forma **no determinista**. El mismo patrón
+  en `助言描画`, estructuralmente idéntico, **no** avisaba; dependía de cuántas
+  otras variables compartían el ámbito. Eso lo hizo difícil de creer al principio
+  («¿por qué solo esta línea?») hasta reproducirlo en aislamiento.
+- **Causa:** el analizador de variables no usadas trataba `Expr::Range` como un
+  no-op, con un comentario que afirmaba que las cotas eran «literales o
+  identificadores solamente». En realidad `start`, `end` y `step` son
+  expresiones completas, así que una variable usada solo como cota nunca contaba
+  como leída.
+- **Estado:** **corregido**. El analizador ahora visita las tres partes del
+  rango; una variable genuinamente sin usar sigue avisando. Regresión en
+  `interpreter/crates/zymbol-semantic/tests/underscore_semantics.rs` (tres
+  casos: cota superior, `inicio..fin:paso`, y el que debe seguir avisando).
+
+---
+
+## IDEA-001 · Ancho de visualización como primitiva — **implementada (std/term)**
+
+> **Estado (2026-07-24): implementada** como el módulo **`std/term`** del
+> intérprete (no como símbolo — es capacidad de biblioteca, y además son cinco
+> funciones, no una). `表示/文字.zy` pasó de **143 a 52 líneas**: ahora es un
+> envoltorio localizado delgado sobre `std/term`, y las seis suites de 囲碁 más
+> el panel dan salida **idéntica byte a byte** antes y después, en TW y VM. La
+> regla que fijó la frontera: `std/term` mide la **pantalla** (`width`,
+> `pad_left`, `pad_right`, `center`, `truncate`); todo lo que opera sobre el
+> **contenido** del string (split `$/`, slice `$[..]`, replace `$~~`, y los
+> futuros join/trim) es símbolo del lenguaje y nunca entra ahí — por eso se
+> llama `term` y no `text`. El rodeo `符号点` desaparece: **`##!` ahora acepta un
+> `Char`** y da su code point directamente. Un test diferencial confirmó 0
+> divergencias entre la tabla manual y `unicode-width` sobre cada glifo que el
+> juego dibuja.
 
 - **Descripción:** Un TUI multilingüe necesita **columnas de terminal**, no
   graphemes. `"手番"$#` da 2 y ocupa 4 columnas; lo mismo con hangul, hanzi,
@@ -343,14 +465,16 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
   Los `Char` no son comparables (`'あ' > 'z'` es error de ejecución) ni
   convertibles con `##!`/`###`, así que sin este rodeo no hay forma de
   clasificar un carácter por rango Unicode.
-- **Lo construido:** `表示/文字.zy` implementa `幅()`, `右詰()`, `左詰()`,
-  `中央()` y `切詰()` sobre unas 40 comprobaciones de rango East Asian Wide.
-  Funciona (verificado en los cinco idiomas), pero es una tabla Unicode
-  mantenida a mano dentro de un juego.
-- **Propuesta:** el intérprete ya conoce los grapheme clusters (el lexer los
-  maneja). Exponer `$#~` (ancho en columnas) o una función `std/text::width`
-  convertiría 150 líneas de tabla en una llamada, y beneficiaría a cualquier
-  TUI que no sea puramente ASCII.
+- **Lo que se construyó primero:** `表示/文字.zy` implementaba `幅()`, `右詰()`,
+  `左詰()`, `中央()` y `切詰()` sobre unas 40 comprobaciones de rango East Asian
+  Wide — una tabla Unicode mantenida a mano dentro de un juego.
+- **Lo que reemplazó a esa tabla:** el módulo nativo **`std/term`**
+  (`width`/`pad_left`/`pad_right`/`center`/`truncate`), que mide columnas con
+  las tablas de `unicode-width` sobre grapheme clusters. `文字.zy` es ahora un
+  envoltorio localizado de 52 líneas que delega en `端::…`, y `符号点` es un
+  simple `##!c`. Se descartó la alternativa del símbolo `$#~`: medir la pantalla
+  es una capacidad de biblioteca, y son cinco funciones, no una — la regla
+  **contenido vs pantalla** mantiene split/join/trim como símbolos del lenguaje.
 
 ---
 
@@ -383,7 +507,7 @@ tree-walker, tablero 9×9, misma máquina.
 | MCTS a 10.000 playouts por jugada | **~40 min/jugada** | inviable |
 | Pasada adelante de una red 81→64→81 (tensores de Zofía) | **~4 s** | inviable |
 | Las mismas 5.184 multiplicaciones con array plano | **~0,3 s** | 6-7× más rápido |
-| `--vm` como escape | falla (HLZ-008) | no disponible |
+| `--vm` como escape | falla (HLZ-008) | no disponible **entonces** |
 
 Dos conclusiones:
 
@@ -395,6 +519,14 @@ Dos conclusiones:
    nativo es el cambio que desbloquea todo lo demás. Aun con esa mejora, una
    pasada adelante seguiría costando ~0,6 s — suficiente para evaluar una
    posición, insuficiente para buscar sobre ella.
+
+**Corregido después (2026-07-22):** la fila de `--vm` de la tabla está fechada.
+Con HLZ-008 y HLZ-009 cerrados la VM sí es una vía, y medida contra el
+tree-walker en esta carga da **8-14× más rápida** (una partida de 19×19 pasó de
+6m40s a 49,8s) — no el ~4,4× que declara `ARCHITECTURE.md`, cifra que sale de
+bancos aritméticos y no de una carga dominada por asignación y copia de arrays.
+Aun así, un factor 10 no mueve la conclusión sobre MCTS: hacen falta tres
+órdenes de magnitud, no uno.
 
 Por eso 核/思考.zy es **determinista y metódico**, no estadístico. La única
 simulación que se paga sola es la dirigida y corta: leer una escalera

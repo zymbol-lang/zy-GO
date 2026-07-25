@@ -8,7 +8,7 @@
 *.out
 
 # Game records produced by 棋戦.zy — one directory per run, so a bad
-# run is one `rm -rf` away. They live in their own repository:
-#   https://github.com/zymbol-lang/zy-GO-kifu
-# Set ZYGO_KIFU to write straight into a clone of it.
 games/
+
+# ignore the build output of the Zymbol compiler, which is a single file
+.gitignore
