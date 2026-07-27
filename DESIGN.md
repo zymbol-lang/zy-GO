@@ -506,8 +506,11 @@ project record.
 `棋戦` and `集計` are instruments, not the game. Folding fifty benchmark labels
 into a catalogue that exists for what a *player* reads would dilute it, so the
 tool vocabulary lives in its own catalogue with its own key list, and answers in
-two locales (`en`, `es`) rather than the game's five. The records under `棋譜/`
-are not translated at all: a dataset split across two languages is two datasets.
+three locales (`ja`, `en`, `es`) rather than the game's five — the three the
+engine is developed in. Japanese is the default, as it is for the game: a program
+written in Japanese whose instruments report in English by default is the thing
+this project exists not to be. The records under `棋譜/` are not translated at
+all: a dataset split across two languages is two datasets.
 
 Only the catalogue is separate. The mechanism is identical — the active locale
 still comes from `言語/取次`'s single piece of state, and `試験/言語検証.zy` walks

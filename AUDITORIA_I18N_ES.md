@@ -17,7 +17,8 @@ abajo son los sitios donde la referencia no se cumple a sí misma.
 | [GO-I18N-001](#go-i18n-001--la-capa-api-está-documentada-pero-no-existe) | Doc vs. código | `DESIGN.md` §9 y `README.md` describen `api/english.zy` y `api/espanol.zy`; el directorio no existe | **Corregido** |
 | [GO-I18N-002](#go-i18n-002--集計zy-hila-el-idioma-como-parámetro-booleano) | Inconsistencia | `集計.zy` no importa `言語/取次` y pasa el idioma como `#0/#1` por 15 sitios de llamada | **Corregido** |
 | [GO-I18N-003](#go-i18n-003--designmd-8-se-contradice-a-sí-mismo) | Doc | El ejemplo usa claves sin prefijo de dominio; el texto explica dos párrafos después que el prefijo es obligatorio | **Corregido** |
-| [GO-I18N-004](#go-i18n-004--los-instrumentos-no-hablan-japonés) | Cobertura | `言語/道具.zy` responde en `en` y `es`; el idioma base del programa no está | Abierto |
+| [GO-I18N-004](#go-i18n-004--los-instrumentos-no-hablan-japonés) | Cobertura | `言語/道具.zy` responde en `en` y `es`; el idioma base del programa no está | **Corregido** |
+| [GO-I18N-005](#go-i18n-005--el-juego-habla-cinco-idiomas-y-se-documenta-en-tres) | Documentación | Faltan `README_KO.md` y `README_ZH.md` | Abierto |
 
 ---
 
@@ -183,7 +184,35 @@ abajo son los sitios donde la referencia no se cumple a sí misma.
 - **Argumento en contra:** «no hay inglés en este programa» fue el criterio del
   último commit del proyecto, y aquí el inglés es el idioma por defecto.
 - **Opción:** añadir `ja` a `道::言語一覧()` y traducir las 50 claves. El gate lo
-  verificaría solo. Queda a la espera de decisión: implementar / desestimar.
+  verificaría solo.
+- **Solución aplicada (2026-07-26):** implementado. `言語/道具.zy` responde ahora en
+  `ja`, `en` y `es`, y **`ja` es el idioma por defecto** de los dos instrumentos —
+  `棋戦.zy` y `集計.zy` arrancaban en inglés. Los tres códigos se aceptan como
+  argumento de línea de órdenes. El gate verifica 50 × 3.
+
+  Se decidió a favor del argumento en contra que ya recogía este hallazgo: el
+  criterio del proyecto es que no quede inglés por defecto en un programa escrito en
+  japonés, y un informe de banco de pruebas que quien lo escribió no puede leer en
+  su propio idioma es exactamente eso.
+
+---
+
+## GO-I18N-005 · El juego habla cinco idiomas y se documenta en tres
+
+- **Archivos:** `README.md`, `README_JA.md`, `README_ES.md`
+- **Descripción:** la interfaz responde en japonés, coreano, mandarín, inglés y
+  español. La documentación existe en japonés, inglés y español. Faltan el coreano y
+  el mandarín, que son dos de los tres idiomas en los que el go se juega de verdad y
+  la razón declarada de que el juego los incluya.
+- **Punto 14 de la lista** de [USERAPPI18N.md](../interpreter/USERAPPI18N.md): una
+  aplicación multiidioma cuya documentación es monolingüe —o parcial— está traducida
+  a medias.
+- **Por qué queda abierto:** son dos traducciones largas, trabajo de traducción y no
+  de código, y un README a medias en un idioma que el lector sí domina es peor que
+  no tenerlo. Queda a la espera de decisión — implementar / desestimar.
+- **Nota:** el mismo hueco existe en
+  [Hov veS](../klingon_galaxy/auditoria_i18n_es.md), que habla tres idiomas y
+  documenta en dos.
 
 ---
 
@@ -212,6 +241,7 @@ Vale la pena dejarlo por escrito, porque es de donde sale la doctrina:
 ## Historial
 
 - **2026-07-26** — Auditoría inicial. Tres hallazgos abiertos.
-- **2026-07-26** — GO-I18N-001, 002 y 003 corregidos. Nuevo GO-I18N-004 abierto,
-  a la espera de decisión. `bash 試験/全試験.sh` → `全試験 PASS` con la suite nueva
+- **2026-07-26** — GO-I18N-001, 002 y 003 corregidos. Nuevo GO-I18N-004 abierto y
+  **corregido el mismo día**: los instrumentos hablan japonés y arrancan en él.
+  Nuevo GO-I18N-005 abierto: faltan los README en coreano y mandarín. `bash 試験/全試験.sh` → `全試験 PASS` con la suite nueva
   `試験/api試験.zy` incluida.

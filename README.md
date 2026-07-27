@@ -362,7 +362,7 @@ zy-GO/
 │   └── 端末.zy          std/term    — 幅 左詰 右詰 中央 切詰
 ├── 言語/                runtime UI strings
 │   ├── 取次.zy          dispatcher, locale state, key catalogue
-│   ├── 道具.zy          vocabulary for 棋戦 and 集計 — en · es
+│   ├── 道具.zy          vocabulary for 棋戦 and 集計 — ja · en · es
 │   ├── 日本語.zy        ja
 │   ├── 한국어.zy        ko
 │   ├── 中文.zy          zh
@@ -449,7 +449,7 @@ to a real engine rather than a test fixture.
 **Vocabulary for the instruments** (`言語/道具.zy`) — `棋戦` and `集計` are not the
 game, and folding fifty benchmark labels into a catalogue that exists for what a
 *player* reads would dilute it, so their words live in a separate catalogue that
-answers in English and Spanish. Only the catalogue is separate: the active locale
+answers in Japanese, English and Spanish — Japanese by default, as the game does. Only the catalogue is separate: the active locale
 still comes from `言語/取次`, and the gate walks it the same way. The records under
 `棋譜/` are not translated at all — a dataset split across two languages is two
 datasets.

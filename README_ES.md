@@ -362,7 +362,7 @@ zy-GO/
 │   └── 主題.zy          temas de fichas y aritmética de maquetación
 ├── 言語/                textos de interfaz en tiempo de ejecución
 │   ├── 取次.zy          despachador, estado del idioma, catálogo de claves
-│   ├── 道具.zy          vocabulario de 棋戦 y 集計 — en · es
+│   ├── 道具.zy          vocabulario de 棋戦 y 集計 — ja · en · es
 │   ├── 日本語.zy        ja
 │   ├── 한국어.zy        ko
 │   ├── 中文.zy          zh
@@ -446,7 +446,8 @@ compara tablero, capturas y punto de ko, incluidos los parámetros de salida de
 **Vocabulario de los instrumentos** (`言語/道具.zy`) — `棋戦` y `集計` no son el
 juego, y meter cincuenta rótulos de banco de pruebas en un catálogo que existe
 para lo que lee un *jugador* lo diluiría, así que sus palabras viven en un
-catálogo aparte que responde en inglés y español. Solo el catálogo está aparte:
+catálogo aparte que responde en japonés, inglés y español, en japonés por defecto
+como el juego. Solo el catálogo está aparte:
 el idioma activo sigue viniendo de `言語/取次` y la puerta de completitud lo
 recorre igual. Los registros de `棋譜/` no se traducen — un conjunto de datos
 partido en dos idiomas son dos conjuntos de datos.
