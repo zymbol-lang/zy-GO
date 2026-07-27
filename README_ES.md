@@ -22,6 +22,7 @@ ocupa exactamente dos columnas de terminal.
 > API a nivel de identificadores).
 
 > **日本語:** [README_JA.md](README_JA.md) · **English:** [README.md](README.md)
+> · **Auditoría de i18n:** [AUDITORIA_I18N_ES.md](AUDITORIA_I18N_ES.md)
 > · **Especificación técnica:** [DESIGN.md](DESIGN.md) · **Prueba de complejidad:** [BENCHMARK.md](BENCHMARK.md)
 
 ---
@@ -361,6 +362,7 @@ zy-GO/
 │   └── 主題.zy          temas de fichas y aritmética de maquetación
 ├── 言語/                textos de interfaz en tiempo de ejecución
 │   ├── 取次.zy          despachador, estado del idioma, catálogo de claves
+│   ├── 道具.zy          vocabulario de 棋戦 y 集計 — en · es
 │   ├── 日本語.zy        ja
 │   ├── 한국어.zy        ko
 │   ├── 中文.zy          zh
@@ -370,6 +372,7 @@ zy-GO/
 │   ├── 全試験.sh        ejecuta todo
 │   ├── 文字試験.zy      aritmética de columnas
 │   ├── 言語検証.zy      puerta de completitud i18n
+│   ├── api試験.zy       api/ resuelve al mismo motor
 │   ├── 盤試験.zy        motor de reglas
 │   ├── 計算試験.zy      puntuación
 │   ├── 性能試験.zy      profundidad de recursión y coste en 19×19
@@ -432,8 +435,27 @@ son tres ediciones, y la puerta te dice al instante qué olvidaste.
 **Traducción de la API a nivel de identificadores** (`api/`) — capas de
 reexportación puras que exponen la API pública del motor con nombres en inglés y
 español, sin lógica y sin coste en ejecución. Alguien que no lea japonés puede
-escribir su propio front-end contra `board::place(...)` o
-`tablero::colocar(...)` sin abrir nunca un archivo fuente en japonés. Es el
+escribir su propio front-end contra `en::play(...)` o `es::jugar(...)` sin abrir
+nunca un archivo fuente en japonés. Las constantes se reexportan con `.` y las
+funciones con `::`, y así se leen: `es.NEGRO`, `es::jugar(…)`. Las dos capas
+cubren la superficie pública completa de `核/` — 21 nombres de `盤`, 6 de `規則`,
+4 de `計算` — y `試験/api試験.zy` juega la misma jugada bajo los dos nombres y
+compara tablero, capturas y punto de ko, incluidos los parámetros de salida de
+`着手`, que es donde un reexport roto se notaría primero.
+
+**Vocabulario de los instrumentos** (`言語/道具.zy`) — `棋戦` y `集計` no son el
+juego, y meter cincuenta rótulos de banco de pruebas en un catálogo que existe
+para lo que lee un *jugador* lo diluiría, así que sus palabras viven en un
+catálogo aparte que responde en inglés y español. Solo el catálogo está aparte:
+el idioma activo sigue viniendo de `言語/取次` y la puerta de completitud lo
+recorre igual. Los registros de `棋譜/` no se traducen — un conjunto de datos
+partido en dos idiomas son dos conjuntos de datos.
+
+La arquitectura que se describe aquí está escrita como doctrina común en
+[USERAPPI18N.md](https://github.com/zymbol-lang/interpreter/blob/main/USERAPPI18N.md);
+donde 囲碁 todavía no la cumple, lo dice [AUDITORIA_I18N_ES.md](AUDITORIA_I18N_ES.md).
+
+Es el
 patrón de tres capas de [I18N.md](../interpreter/I18N.md), aplicado a un motor
 real y no a un fixture de pruebas.
 
@@ -486,8 +508,10 @@ bash 試験/全試験.sh
 ```
 ─── 試験/文字試験.zy    PASS — column arithmetic holds
 ─── 試験/言語検証.zy    PASS — every key resolves in every locale
+─── 試験/api試験.zy     PASS — api/english and api/espanol resolve to the same engine
 ─── 試験/盤試験.zy      PASS — every rule case behaved
 ─── 試験/計算試験.zy    PASS — scoring behaved
+─── 試験/思考試験.zy    PASS — the engine reads the position
 ─── 試験/描画試験.zy    PASS — the grid holds together
 全試験 PASS
 ```

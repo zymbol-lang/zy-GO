@@ -1,0 +1,72 @@
+// ============================================================
+// api/espanol.zy — el motor bajo nombres en español
+//
+// Capa de reexportación pura sobre 核/. Sin lógica, sin estado y
+// sin coste en ejecución: cada nombre de abajo se resuelve a una
+// referencia directa al cargar el módulo.
+//
+// Este es el eje de código de la i18n, frente a 言語/, que es el
+// eje de texto. 言語/ decide lo que lee el *jugador*; esto decide
+// lo que lee quien *escribe* código. Un front-end escrito contra
+// este módulo no abre nunca un archivo en japonés.
+//
+//   <# ./api/espanol => go
+//   t = go::tablero_nuevo(9)
+//   go::jugar(t, 4, 4, go::NEGRO, …)
+//
+// El nombre del archivo va sin tilde a propósito: es una ruta de
+// import, y las rutas se teclean en terminales que no siempre
+// tienen la disposición adecuada. Los identificadores de dentro
+// sí llevan tilde.
+//
+// JA: api/espanol.zy — スペイン語の名前で engine を差し出す層。
+// api/english.zy と同じ約束で、核/ の上に載る純粋な再輸出である。
+// ============================================================
+
+# .api_espanol {
+
+    #> {
+        // ── tablero · 核/盤.zy ────────────────────────────
+        // Las constantes se reexportan con `.` y las funciones con
+        // `::`, y así se leen: es.NEGRO, es::jugar(…).
+        盤.空          => VACÍO
+        盤.黒          => NEGRO
+        盤.白          => BLANCO
+        盤.可          => VÁLIDO
+        盤.禁_占有     => OCUPADO
+        盤.禁_自殺     => SUICIDIO
+        盤::新規       => tablero_nuevo
+        盤::複製       => copiar_tablero
+        盤::位置       => posición
+        盤::行番       => fila_de
+        盤::列番       => columna_de
+        盤::取得       => piedra_en
+        盤::敵         => contrario
+        盤::隣         => vecinos
+        盤::連         => cadena
+        盤::ダメ点     => puntos_de_libertad
+        盤::ダメ数     => libertades
+        盤::群ダメ数   => libertades_de_cadena
+        盤::除去       => retirar
+        盤::着手       => jugar
+        盤::石数       => número_de_piedras
+
+        // ── reglas · 核/規則.zy ───────────────────────────
+        規則.禁_コウ   => KO
+        規則::判定     => clasificar
+        規則::合法     => es_legal
+        規則::着手可能 => jugadas_legales
+        規則::終局     => terminó
+        規則::理由鍵   => clave_de_motivo
+
+        // ── recuento · 核/計算.zy ─────────────────────────
+        計算::目算     => recuento
+        計算::勝色     => ganador
+        計算::差分     => diferencia
+        計算::領域図   => mapa_de_territorio
+    }
+
+    <# ../核/盤 => 盤
+    <# ../核/規則 => 規則
+    <# ../核/計算 => 計算
+}

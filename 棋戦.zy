@@ -79,6 +79,7 @@
 <# ./表示/描画 => 描
 <# ./表示/文字 => 文
 <# ./言語/取次 => 言
+<# ./言語/道具 => 道
 <# ./標準/入出力 => 入出
 
 上限手数 := 400
@@ -187,94 +188,7 @@
 // machine form whatever this is set to, because a dataset split
 // across two languages is two datasets.
 
-訳(鍵) {
-    ? 言::現在() == "es" {
-        <~ ?? 鍵 {
-            "title"    => "棋戦 — prueba de complejidad y comportamiento"
-            "games"    => "partidas"
-            "board"    => "tablero"
-            "seed"     => "semilla maestra"
-            "clock"    => "coste del reloj"
-            "subtr"    => "µs por marca (restado)"
-            "stamp"    => "marca de ejecución"
-            "records"  => "registros"
-            "results"  => "resultados"
-            "bwins"    => "victorias negras"
-            "wwins"    => "victorias blancas"
-            "jigo"     => "empates"
-            "avgmov"   => "jugadas de media"
-            "timehdr"  => "── tiempo por jugada ──"
-            "first10"  => "primeras 10 jugadas"
-            "last10"   => "últimas 10 jugadas"
-            "slowest"  => "tramo final más lento"
-            "run"      => "toda la tanda"
-            "thinking" => "s de pensamiento"
-            "growth"   => "crecimiento inicio→final"
-            "memhdr"   => "── memoria (RSS) ──"
-            "before"   => "antes de la primera"
-            "after"    => "tras la última"
-            "memgrow"  => "crecimiento"
-            "over"     => "KB en"
-            "peak"     => "pico"
-            "lvlhdr"   => "── ¿gana de verdad un nivel superior? ──"
-            "lvlhint"  => "(filas: nivel del motor · columnas: del rival)"
-            "perhdr"   => "── ¿influye la personalidad? ──"
-            "written"  => "registros escritos en"
-            "moves"    => "jugadas"
-            "pgame"    => "partida"
-            "pthink"   => "Pensando"
-            "sbal"     => "equ"
-            "soff"     => "ofe"
-            "sdef"     => "def"
-            "noise"    => "⚠ por debajo de la resolución del reloj — el tiempo aquí es ruido"
-            "noisehow" => "  usa un tablero mayor, o el tree-walker, para medir esto"
-            "replay"   => "— la tanda entera se reproduce con ella"
-            _          => 鍵
-        }
-    }
-    <~ ?? 鍵 {
-        "title"    => "棋戦 — stress and behaviour test"
-        "games"    => "games"
-        "board"    => "board"
-        "seed"     => "master seed"
-        "clock"    => "clock cost"
-        "subtr"    => "µs per timestamp (subtracted)"
-        "stamp"    => "run stamp"
-        "records"  => "records"
-        "results"  => "results"
-        "bwins"    => "black wins"
-        "wwins"    => "white wins"
-        "jigo"     => "jigo"
-        "avgmov"   => "avg moves"
-        "timehdr"  => "── time per move ──"
-        "first10"  => "first 10 moves, avg"
-        "last10"   => "last 10 moves, avg"
-        "slowest"  => "slowest final stretch"
-        "run"      => "whole run"
-        "thinking" => "s of thinking"
-        "growth"   => "growth first→last"
-        "memhdr"   => "── memory (RSS) ──"
-        "before"   => "before first game"
-        "after"    => "after last game"
-        "memgrow"  => "growth"
-        "over"     => "KB over"
-        "peak"     => "peak"
-        "lvlhdr"   => "── does a stronger level win? ──"
-        "lvlhint"  => "(rows: engine's level · columns: opponent's)"
-        "perhdr"   => "── does personality matter? ──"
-        "written"  => "records written to"
-        "moves"    => "moves"
-        "pgame"    => "game"
-        "pthink"   => "Thinking"
-        "sbal"     => "bal"
-        "soff"     => "off"
-        "sdef"     => "def"
-        "noise"    => "⚠ below the clock's resolution — these timings are noise"
-        "noisehow" => "  use a bigger board, or the tree-walker, to measure this"
-        "replay"   => "— the whole run replays from it"
-        _          => 鍵
-    }
-}
+訳(鍵) { <~ 道::語(鍵) }
 
 // ── 呼び名 ────────────────────────────────────────────────────
 // EN: naming
@@ -288,17 +202,10 @@
 }
 
 性格名(性格) {
-    ? 言::現在() == "es" {
-        <~ ?? 性格 {
-            1 => "ofensiva"
-            2 => "defensiva"
-            _ => "equilibrada"
-        }
-    }
     <~ ?? 性格 {
-        1 => "offensive"
-        2 => "defensive"
-        _ => "balanced"
+        1 => 訳("性格.攻")
+        2 => 訳("性格.守")
+        _ => 訳("性格.均衡")
     }
 }
 
@@ -312,9 +219,9 @@
 // than one that translates neither.
 性格記号(性格) {
     <~ ?? 性格 {
-        1 => 訳("soff")
-        2 => 訳("sdef")
-        _ => 訳("sbal")
+        1 => 訳("棋戦.攻短")
+        2 => 訳("棋戦.守短")
+        _ => 訳("棋戦.均衡短")
     }
 }
 
@@ -477,11 +384,11 @@ _状況描画(番号, 路, 手数, 色, 座, ミリ秒, 黒級, 黒性, 白級, 
     白札 = 文::右詰(級名(白級), 14)
     白性札 = 性格記号(白性)
 
-    語局 = 訳("pgame")
+    語局 = 訳("棋戦.一局")
     語取 = 文::右詰(言::語("区画.アゲハマ"), 10)
     語手 = 文::右詰(言::語("区画.手数"), 10)
     語終 = 文::右詰(言::語("区画.最終手"), 10)
-    語思 = 文::右詰(訳("pthink"), 10)
+    語思 = 文::右詰(訳("棋戦.考慮中"), 10)
 
     >>~ (2, 左, 1, 255) > 描::枠上(欄幅)
     >>~ (3, 左, 0, 252) > 描::枠行(" 棋戦 · {語局} {番号}", 欄幅)
@@ -564,21 +471,21 @@ _乱 = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
 // EN: Two parenthesised expressions side by side parse as a call,
 // so every line here is assembled before it is printed.
 報告 = ""
-題 = 訳("title")
+題 = 訳("棋戦.表題")
 記す("═══ {題} ═══", #1, 報告)
-札 = 文::右詰(訳("games"), 20)
+札 = 文::右詰(訳("共通.対局数"), 20)
 記す("  {札}{対局数}", #1, 報告)
-札 = 文::右詰(訳("board"), 20)
+札 = 文::右詰(訳("棋戦.路盤"), 20)
 記す("  {札}{路}×{路}", #1, 報告)
-札 = 文::右詰(訳("seed"), 20)
+札 = 文::右詰(訳("棋戦.種"), 20)
 記す("  {札}{親種}", #1, 報告)
-札 = 文::右詰(訳("clock"), 20)
+札 = 文::右詰(訳("棋戦.時計費用"), 20)
 値 = 較正値 / 1000
-単 = 訳("subtr")
+単 = 訳("棋戦.減算")
 記す("  {札}{値} {単}", #1, 報告)
-札 = 文::右詰(訳("stamp"), 20)
+札 = 文::右詰(訳("棋戦.刻印"), 20)
 記す("  {札}{実行印}", #1, 報告)
-札 = 文::右詰(訳("records"), 20)
+札 = 文::右詰(訳("棋戦.記録"), 20)
 記す("  {札}{記録場所}/NNNN.kifu", #1, 報告)
 記す("", #1, 報告)
 
@@ -663,7 +570,7 @@ _乱 = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
     差 = 結果[3]
     ミリ秒 = ミリ(結果[7])
     番 = 文::左詰("{局番}", 4)
-    語手 = 訳("moves")
+    語手 = 訳("棋戦.手数")
     記す("  {番}  ⚫{黒札}{黒性札} vs ⚪{白札}{白性札}   {勝名}+{差}   {手} {語手}   {ミリ秒} ms", 模式 == 2, 報告)
 }
 
@@ -674,33 +581,33 @@ _乱 = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
 
 ? 模式 <> 2 { >>! }
 記す("", #1, 報告)
-題 = 訳("results")
+題 = 訳("棋戦.結果")
 記す("═══ {題} — {対局数} · {路}×{路} ═══", #1, 報告)
 記す("", #1, 報告)
-札 = 文::右詰(訳("bwins"), 20)
+札 = 文::右詰(訳("棋戦.黒勝"), 20)
 記す("  {札}{黒勝}", #1, 報告)
-札 = 文::右詰(訳("wwins"), 20)
+札 = 文::右詰(訳("棋戦.白勝"), 20)
 記す("  {札}{白勝}", #1, 報告)
-札 = 文::右詰(訳("jigo"), 20)
+札 = 文::右詰(訳("棋戦.持碁"), 20)
 記す("  {札}{持碁}", #1, 報告)
-札 = 文::右詰(訳("avgmov"), 20)
+札 = 文::右詰(訳("棋戦.平均手数"), 20)
 値 = 総手数 / 対局数
 記す("  {札}{値}", #1, 報告)
 記す("", #1, 報告)
 
-記す(訳("timehdr"), #1, 報告)
-札 = 文::右詰(訳("first10"), 26)
+記す(訳("棋戦.時間見出"), #1, 報告)
+札 = 文::右詰(訳("棋戦.初十手"), 26)
 値 = ミリ(総初 / (対局数 * 10))
 記す("  {札}{値} ms", #1, 報告)
-札 = 文::右詰(訳("last10"), 26)
+札 = 文::右詰(訳("棋戦.終十手"), 26)
 値 = ミリ(総終 / (対局数 * 10))
 記す("  {札}{値} ms", #1, 報告)
-札 = 文::右詰(訳("slowest"), 26)
+札 = 文::右詰(訳("棋戦.最遅"), 26)
 値 = ミリ(最遅 / 10)
 記す("  {札}{値} ms", #1, 報告)
-札 = 文::右詰(訳("run"), 26)
+札 = 文::右詰(訳("棋戦.全体"), 26)
 値 = ミリ(総時間) / 1000
-単 = 訳("thinking")
+単 = 訳("棋戦.思考秒")
 記す("  {札}{値} {単}", #1, 報告)
 
 ? 総初 > 0 {
@@ -712,7 +619,7 @@ _乱 = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
     比 = 総終 * 10 / 総初
     整数部 = 比 / 10
     小数部 = 比 % 10
-    札 = 文::右詰(訳("growth"), 26)
+    札 = 文::右詰(訳("棋戦.伸び"), 26)
     記す("  {札}×{整数部}.{小数部}", #1, 報告)
 }
 
@@ -729,33 +636,33 @@ _乱 = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
 一手平均 = 総初 / (対局数 * 10)
 ? 一手平均 < 較正値 * 3 {
     記す("", #1, 報告)
-    警1 = 訳("noise")
+    警1 = 訳("棋戦.雑音")
     記す("  {警1}", #1, 報告)
-    記す(訳("noisehow"), #1, 報告)
+    記す(訳("棋戦.雑音対策"), #1, 報告)
 }
 記す("", #1, 報告)
-記す(訳("memhdr"), #1, 報告)
-札 = 文::右詰(訳("before"), 26)
+記す(訳("棋戦.記憶見出"), #1, 報告)
+札 = 文::右詰(訳("棋戦.前"), 26)
 記す("  {札}{記憶初} KB", #1, 報告)
-札 = 文::右詰(訳("after"), 26)
+札 = 文::右詰(訳("棋戦.後"), 26)
 記す("  {札}{記憶終} KB", #1, 報告)
-札 = 文::右詰(訳("memgrow"), 26)
+札 = 文::右詰(訳("棋戦.記憶伸び"), 26)
 値 = 記憶終 - 記憶初
-単 = 訳("over")
+単 = 訳("棋戦.超過")
 記す("  {札}{値} {単} {対局数}", #1, 報告)
 ? (記憶表$#) > 0 {
     最大記憶 = 0
     @ 値 : 記憶表 {
         ? 値 > 最大記憶 { 最大記憶 = 値 }
     }
-    札峰 = 文::右詰(訳("peak"), 26)
+    札峰 = 文::右詰(訳("棋戦.頂点"), 26)
     記す("  {札峰}{最大記憶} KB", #1, 報告)
 }
 記す("", #1, 報告)
 
 記す("", #1, 報告)
-記す(訳("lvlhdr"), #1, 報告)
-案内 = 訳("lvlhint")
+記す(訳("棋戦.級見出"), #1, 報告)
+案内 = 訳("棋戦.級補足")
 記す("  {案内}", #1, 報告)
 記す("", #1, 報告)
 記す("  " 文::右詰("", 14) 文::中央(級名(1), 14) 文::中央(級名(2), 14) 文::中央(級名(3), 14), #1, 報告)
@@ -777,7 +684,7 @@ _乱 = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
 記す("", #1, 報告)
 
 記す("", #1, 報告)
-記す(訳("perhdr"), #1, 報告)
+記す(訳("棋戦.性格見出"), #1, 報告)
 記す("", #1, 報告)
 _見出 = 文::右詰("", 14)
 _性甲 = 文::中央(性格名(0), 14)
@@ -877,10 +784,10 @@ mem_peak_kb {要峰}
     }
 }
 記す("", #1, 報告)
-語書 = 訳("written")
+語書 = 訳("棋戦.書出先")
 記す("  {対局数} {語書} {記録場所}/", #1, 報告)
-語種 = 訳("seed")
-語再 = 訳("replay")
+語種 = 訳("棋戦.種")
+語再 = 訳("棋戦.再演")
 記す("  {語種} {親種} {語再}", #1, 報告)
 
 // file は二つ。答える問いが違うからである。

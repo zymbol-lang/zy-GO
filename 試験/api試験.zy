@@ -1,0 +1,93 @@
+// ============================================================
+// 試験/api試験.zy — api/ の層が動くことを検める
+//
+// api/ は再輸出だけの層である。論理を持たないので試すべきは
+// 一つだけ、「日本語の名前で呼んだときと同じ答えが返るか」。
+// 定数も関数も出力引数を持つ関数も、三つとも通す。
+//
+//   zymbol run 試験/api試験.zy
+//   zymbol run --vm 試験/api試験.zy
+//
+// EN: 試験/api試験.zy — the api/ layers resolve to the same engine
+//
+// api/ carries no logic, so there is exactly one thing to test:
+// that a call under the English or Spanish name returns what the
+// Japanese name returns. Constants, plain functions and functions
+// with output parameters are all exercised.
+// ============================================================
+
+<# ../核/盤 => 盤
+<# ../核/規則 => 規則
+<# ../核/計算 => 計算
+<# ../api/english => en
+<# ../api/espanol => es
+
+失敗 = 0
+
+_検(名, 実, 期) {
+    ? 実 == 期 { <~ 0 }
+    >> "  FAIL  " 名 "  got " 実 "  want " 期 ¶
+    <~ 1
+}
+
+>> "囲碁 — api layer verification" ¶
+>> "" ¶
+
+// ── 定数 / constants ────────────────────────────────────────
+// 定数は `.` で読む。`::` は関数のためのものである。
+// EN: constants are read with `.`; `::` is for functions.
+失敗 = 失敗 + _検("EMPTY",  en.EMPTY,  盤.空)
+失敗 = 失敗 + _検("BLACK",  en.BLACK,  盤.黒)
+失敗 = 失敗 + _検("WHITE",  en.WHITE,  盤.白)
+失敗 = 失敗 + _検("OK",     en.OK,     盤.可)
+失敗 = 失敗 + _検("KO",     en.KO,     規則.禁_コウ)
+失敗 = 失敗 + _検("VACÍO",  es.VACÍO,  盤.空)
+失敗 = 失敗 + _検("NEGRO",  es.NEGRO,  盤.黒)
+失敗 = 失敗 + _検("BLANCO", es.BLANCO, 盤.白)
+
+// ── 素の関数 / plain functions ──────────────────────────────
+失敗 = 失敗 + _検("index_of",  en::index_of(9, 4, 4),  盤::位置(9, 4, 4))
+失敗 = 失敗 + _検("row_of",    en::row_of(9, 31),      盤::行番(9, 31))
+失敗 = 失敗 + _検("column_of", en::column_of(9, 31),   盤::列番(9, 31))
+失敗 = 失敗 + _検("opponent",  en::opponent(盤.黒),    盤::敵(盤.黒))
+失敗 = 失敗 + _検("is_over",   en::is_over(2),         規則::終局(2))
+失敗 = 失敗 + _検("posición",  es::posición(9, 4, 4),  盤::位置(9, 4, 4))
+失敗 = 失敗 + _検("contrario", es::contrario(盤.白),   盤::敵(盤.白))
+
+// ── 出力引数を持つ関数 / functions with output parameters ────
+// 着手 は局面・取数・コウ点を書き戻す。両方の名前で同じ手を打ち、
+// 三つの出力がすべて一致することを見る。
+// EN: 着手 writes back board, capture count and ko point. Play the
+// same move under both names and compare all three outputs.
+路 = 9
+盤日 = 盤::新規(路)
+盤英 = en::new_board(路)
+
+取日 = 0
+コ日 = 0
+状日 = 盤::着手(盤日, 路, 盤::位置(路, 5, 5), 盤.黒, 取日, コ日)
+
+取英 = 0
+コ英 = 0
+状英 = en::play(盤英, 路, en::index_of(路, 5, 5), en.BLACK, 取英, コ英)
+
+失敗 = 失敗 + _検("play/status",   状英, 状日)
+失敗 = 失敗 + _検("play/captures", 取英, 取日)
+失敗 = 失敗 + _検("play/ko",       コ英, コ日)
+失敗 = 失敗 + _検("stone_count",   en::stone_count(盤英, en.BLACK), 盤::石数(盤日, 盤.黒))
+失敗 = 失敗 + _検("liberties",     en::liberties(盤英, 路, en::index_of(路, 5, 5)), 盤::ダメ数(盤日, 路, 盤::位置(路, 5, 5)))
+失敗 = 失敗 + _検("is_legal",      en::is_legal(盤英, 路, en::index_of(路, 5, 5), en.WHITE, 0), 規則::合法(盤日, 路, 盤::位置(路, 5, 5), 盤.白, 0))
+
+// ── 目算 / scoring ──────────────────────────────────────────
+結果日 = 計算::目算(盤日, 路, 6.5)
+結果英 = en::score(盤英, 路, 6.5)
+失敗 = 失敗 + _検("winner", en::winner(結果英), 計算::勝色(結果日))
+失敗 = 失敗 + _検("margin", en::margin(結果英), 計算::差分(結果日))
+失敗 = 失敗 + _検("ganador", es::ganador(結果英), 計算::勝色(結果日))
+
+>> "" ¶
+? 失敗 == 0 {
+    >> "PASS — api/english and api/espanol resolve to the same engine" ¶
+} _ {
+    >> "FAIL — " 失敗 " mismatches" ¶
+}

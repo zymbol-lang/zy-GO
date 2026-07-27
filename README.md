@@ -22,6 +22,11 @@ terminal columns.
 
 > **日本語:** [README_JA.md](README_JA.md) · **Español:** [README_ES.md](README_ES.md)
 > · **Technical spec:** [DESIGN.md](DESIGN.md) · **Complexity test:** [BENCHMARK.md](BENCHMARK.md)
+> · **i18n audit:** [AUDITORIA_I18N_ES.md](AUDITORIA_I18N_ES.md)
+
+> The i18n architecture this project is the reference for is written up as
+> project-wide doctrine in
+> [USERAPPI18N.md](https://github.com/zymbol-lang/interpreter/blob/main/USERAPPI18N.md).
 
 ---
 
@@ -357,6 +362,7 @@ zy-GO/
 │   └── 端末.zy          std/term    — 幅 左詰 右詰 中央 切詰
 ├── 言語/                runtime UI strings
 │   ├── 取次.zy          dispatcher, locale state, key catalogue
+│   ├── 道具.zy          vocabulary for 棋戦 and 集計 — en · es
 │   ├── 日本語.zy        ja
 │   ├── 한국어.zy        ko
 │   ├── 中文.zy          zh
@@ -366,6 +372,7 @@ zy-GO/
 │   ├── 全試験.sh        runs everything
 │   ├── 文字試験.zy      column arithmetic
 │   ├── 言語検証.zy      i18n completeness gate
+│   ├── api試験.zy       api/ resolves to the same engine
 │   ├── 盤試験.zy        rule engine
 │   ├── 計算試験.zy      scoring
 │   ├── 性能試験.zy      recursion depth and 19×19 cost
@@ -425,10 +432,32 @@ you immediately what you forgot.
 **Identifier-level API translation** (`api/`) — pure re-export layers that expose
 the engine's public API under English and Spanish names, with zero logic and
 zero runtime cost. A developer who does not read Japanese can write their own
-front-end against `board::place(...)` or `tablero::colocar(...)` and never open
-a Japanese source file. This is the three-layer pattern from
-[I18N.md](../interpreter/I18N.md), applied to a real engine rather than a test
-fixture.
+front-end against `en::play(...)` or `es::jugar(...)` and never open a Japanese
+source file. Constants re-export with `.` and functions with `::`, and they read
+the same way — `en.BLACK`, `en::play(…)`. The two layers cover the whole public
+surface of `核/`: 21 names from `盤`, 6 from `規則`, 4 from `計算`.
+
+Because a re-export layer carries no logic, there is one thing worth testing:
+that a call under the English or Spanish name returns what the Japanese name
+returns. `試験/api試験.zy` plays the same move under both names and compares the
+board, the capture count and the ko point — including the output parameters of
+`着手`, which is where a broken re-export would show up first.
+
+This is the three-layer pattern from [I18N.md](../interpreter/I18N.md), applied
+to a real engine rather than a test fixture.
+
+**Vocabulary for the instruments** (`言語/道具.zy`) — `棋戦` and `集計` are not the
+game, and folding fifty benchmark labels into a catalogue that exists for what a
+*player* reads would dilute it, so their words live in a separate catalogue that
+answers in English and Spanish. Only the catalogue is separate: the active locale
+still comes from `言語/取次`, and the gate walks it the same way. The records under
+`棋譜/` are not translated at all — a dataset split across two languages is two
+datasets.
+
+The architecture described here is written up as project-wide doctrine in
+[USERAPPI18N.md](https://github.com/zymbol-lang/interpreter/blob/main/USERAPPI18N.md);
+where 囲碁 does not yet meet it, [AUDITORIA_I18N_ES.md](AUDITORIA_I18N_ES.md) says
+so.
 
 ---
 
@@ -478,8 +507,10 @@ bash 試験/全試験.sh
 ```
 ─── 試験/文字試験.zy    PASS — column arithmetic holds
 ─── 試験/言語検証.zy    PASS — every key resolves in every locale
+─── 試験/api試験.zy     PASS — api/english and api/espanol resolve to the same engine
 ─── 試験/盤試験.zy      PASS — every rule case behaved
 ─── 試験/計算試験.zy    PASS — scoring behaved
+─── 試験/思考試験.zy    PASS — the engine reads the position
 ─── 試験/描画試験.zy    PASS — the grid holds together
 全試験 PASS
 ```

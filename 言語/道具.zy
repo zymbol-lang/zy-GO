@@ -1,0 +1,195 @@
+// ============================================================
+// 言語/道具.zy — 道具の言葉
+//
+// 棋戦 と 集計 は対局ではない。計器である。その鉤も 言語/取次 の
+// 鍵一覧 に混ぜてしまうと、打ち手のために在る目録が五十ほどの
+// 計測の名札で薄まる。だから道具の言葉はここに分けて置く。
+//
+// 分かれているのは目録だけで、仕掛けは同じである。現在の言語は
+// 言語/取次 が持つ一つきりの状態から読む。道具が自前で言語を
+// 抱えることは無い。以前は 集計.zy が真偽値の引数を十五の
+// 呼び出しへ手で回していた（AUDITORIA_I18N_ES.md GO-I18N-002）。
+//
+// 道具が答えるのは 英語 と スペイン語 の二つだけである。対局の
+// 五言語とは違う。計器の報告を読むのは開発する者であって、碁を
+// 打ちに来た者ではない。棋譜/ の記録はそもそも訳さない。
+//
+// EN: 言語/道具.zy — vocabulary for the instruments
+//
+// 棋戦 and 集計 are not the game; they are instruments. Folding
+// their labels into 言語/取次's catalogue would dilute a catalogue
+// that exists for what a *player* reads with fifty benchmark
+// labels, so the tool vocabulary lives here instead.
+//
+// Only the catalogue is separate — the mechanism is the same. The
+// active locale is read from the single piece of state held by
+// 言語/取次; nothing here holds a locale of its own. (集計.zy used
+// to thread a boolean through fifteen call sites — see
+// AUDITORIA_I18N_ES.md, GO-I18N-002.)
+//
+// The instruments answer in two languages, English and Spanish,
+// not in the game's five: their reports are read by whoever is
+// developing the engine, not by whoever came to play. The records
+// under 棋譜/ are not translated at all.
+// ============================================================
+
+# .言語_道具 {
+
+    <# ./取次 => 言
+
+    #> { 語, 言語一覧, 鍵一覧 }
+
+    // 道具が答える言語。対局の 言語一覧() の部分集合である。
+    // EN: the locales the instruments answer in — a subset of the
+    // game's 言語一覧().
+    言語一覧() { <~ ["en", "es"] }
+
+    語(鍵) {
+        ? 言::現在() == "es" { <~ _西(鍵) }
+        <~ _英(鍵)
+    }
+
+    _西(鍵) {
+        <~ ?? 鍵 {
+            "共通.対局数"     => "partidas"
+
+            "性格.均衡"       => "equilibrada"
+            "性格.攻"         => "ofensiva"
+            "性格.守"         => "defensiva"
+
+            "棋戦.表題"       => "棋戦 — prueba de complejidad y comportamiento"
+            "棋戦.路盤"       => "tablero"
+            "棋戦.種"         => "semilla maestra"
+            "棋戦.時計費用"   => "coste del reloj"
+            "棋戦.減算"       => "µs por marca (restado)"
+            "棋戦.刻印"       => "marca de ejecución"
+            "棋戦.記録"       => "registros"
+            "棋戦.結果"       => "resultados"
+            "棋戦.黒勝"       => "victorias negras"
+            "棋戦.白勝"       => "victorias blancas"
+            "棋戦.持碁"       => "empates"
+            "棋戦.平均手数"   => "jugadas de media"
+            "棋戦.時間見出"   => "── tiempo por jugada ──"
+            "棋戦.初十手"     => "primeras 10 jugadas"
+            "棋戦.終十手"     => "últimas 10 jugadas"
+            "棋戦.最遅"       => "tramo final más lento"
+            "棋戦.全体"       => "toda la tanda"
+            "棋戦.思考秒"     => "s de pensamiento"
+            "棋戦.伸び"       => "crecimiento inicio→final"
+            "棋戦.記憶見出"   => "── memoria (RSS) ──"
+            "棋戦.前"         => "antes de la primera"
+            "棋戦.後"         => "tras la última"
+            "棋戦.記憶伸び"   => "crecimiento"
+            "棋戦.超過"       => "KB en"
+            "棋戦.頂点"       => "pico"
+            "棋戦.級見出"     => "── ¿gana de verdad un nivel superior? ──"
+            "棋戦.級補足"     => "(filas: nivel del motor · columnas: del rival)"
+            "棋戦.性格見出"   => "── ¿influye la personalidad? ──"
+            "棋戦.書出先"     => "registros escritos en"
+            "棋戦.手数"       => "jugadas"
+            "棋戦.一局"       => "partida"
+            "棋戦.考慮中"     => "Pensando"
+            "棋戦.均衡短"     => "equ"
+            "棋戦.攻短"       => "ofe"
+            "棋戦.守短"       => "def"
+            "棋戦.雑音"       => "⚠ por debajo de la resolución del reloj — el tiempo aquí es ruido"
+            "棋戦.雑音対策"   => "  usa un tablero mayor, o el tree-walker, para medir esto"
+            "棋戦.再演"       => "— la tanda entera se reproduce con ella"
+
+            "集計.表題"       => "集計 — todas las tandas juntas"
+            "集計.場所"       => "directorio"
+            "集計.回数"       => "tandas"
+            "集計.未了"       => "sin terminar (sin summary)"
+            "集計.無し"       => "no hay partidas que agregar"
+            "集計.級見出"     => "── nivel: victorias de la fila contra la columna ──"
+            "集計.性格見出"   => "── personalidad ──"
+            "集計.注意"       => "las celdas con menos de 30 partidas no dicen nada"
+
+            _                  => 鍵
+        }
+    }
+
+    _英(鍵) {
+        <~ ?? 鍵 {
+            "共通.対局数"     => "games"
+
+            "性格.均衡"       => "balanced"
+            "性格.攻"         => "offensive"
+            "性格.守"         => "defensive"
+
+            "棋戦.表題"       => "棋戦 — stress and behaviour test"
+            "棋戦.路盤"       => "board"
+            "棋戦.種"         => "master seed"
+            "棋戦.時計費用"   => "clock cost"
+            "棋戦.減算"       => "µs per timestamp (subtracted)"
+            "棋戦.刻印"       => "run stamp"
+            "棋戦.記録"       => "records"
+            "棋戦.結果"       => "results"
+            "棋戦.黒勝"       => "black wins"
+            "棋戦.白勝"       => "white wins"
+            "棋戦.持碁"       => "jigo"
+            "棋戦.平均手数"   => "avg moves"
+            "棋戦.時間見出"   => "── time per move ──"
+            "棋戦.初十手"     => "first 10 moves, avg"
+            "棋戦.終十手"     => "last 10 moves, avg"
+            "棋戦.最遅"       => "slowest final stretch"
+            "棋戦.全体"       => "whole run"
+            "棋戦.思考秒"     => "s of thinking"
+            "棋戦.伸び"       => "growth first→last"
+            "棋戦.記憶見出"   => "── memory (RSS) ──"
+            "棋戦.前"         => "before first game"
+            "棋戦.後"         => "after last game"
+            "棋戦.記憶伸び"   => "growth"
+            "棋戦.超過"       => "KB over"
+            "棋戦.頂点"       => "peak"
+            "棋戦.級見出"     => "── does a stronger level win? ──"
+            "棋戦.級補足"     => "(rows: engine's level · columns: opponent's)"
+            "棋戦.性格見出"   => "── does personality matter? ──"
+            "棋戦.書出先"     => "records written to"
+            "棋戦.手数"       => "moves"
+            "棋戦.一局"       => "game"
+            "棋戦.考慮中"     => "Thinking"
+            "棋戦.均衡短"     => "bal"
+            "棋戦.攻短"       => "off"
+            "棋戦.守短"       => "def"
+            "棋戦.雑音"       => "⚠ below the clock's resolution — these timings are noise"
+            "棋戦.雑音対策"   => "  use a bigger board, or the tree-walker, to measure this"
+            "棋戦.再演"       => "— the whole run replays from it"
+
+            "集計.表題"       => "集計 — every run together"
+            "集計.場所"       => "directory"
+            "集計.回数"       => "runs"
+            "集計.未了"       => "unfinished (no summary)"
+            "集計.無し"       => "no games to aggregate"
+            "集計.級見出"     => "── level: row's wins against column ──"
+            "集計.性格見出"   => "── personality ──"
+            "集計.注意"       => "cells under 30 games say nothing"
+
+            _                  => 鍵
+        }
+    }
+
+    // 道具の鍵の親目録。対局の 鍵一覧() と同じ役目を果たし、
+    // 試験/言語検証.zy が同じやり方でこれを歩く。
+    //
+    // EN: master catalogue for the instruments — same role as the
+    // game's 鍵一覧(), walked the same way by 試験/言語検証.zy.
+    鍵一覧() {
+        <~ [
+            "共通.対局数",
+            "性格.均衡", "性格.攻", "性格.守",
+            "棋戦.表題", "棋戦.路盤", "棋戦.種", "棋戦.時計費用",
+            "棋戦.減算", "棋戦.刻印", "棋戦.記録", "棋戦.結果",
+            "棋戦.黒勝", "棋戦.白勝", "棋戦.持碁", "棋戦.平均手数",
+            "棋戦.時間見出", "棋戦.初十手", "棋戦.終十手", "棋戦.最遅",
+            "棋戦.全体", "棋戦.思考秒", "棋戦.伸び", "棋戦.記憶見出",
+            "棋戦.前", "棋戦.後", "棋戦.記憶伸び", "棋戦.超過",
+            "棋戦.頂点", "棋戦.級見出", "棋戦.級補足", "棋戦.性格見出",
+            "棋戦.書出先", "棋戦.手数", "棋戦.一局", "棋戦.考慮中",
+            "棋戦.均衡短", "棋戦.攻短", "棋戦.守短",
+            "棋戦.雑音", "棋戦.雑音対策", "棋戦.再演",
+            "集計.表題", "集計.場所", "集計.回数", "集計.未了",
+            "集計.無し", "集計.級見出", "集計.性格見出", "集計.注意"
+        ]
+    }
+}

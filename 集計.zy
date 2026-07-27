@@ -32,49 +32,16 @@
 
 <# ./表示/文字 => 文
 <# ./標準/入出力 => 入出
+<# ./言語/取次 => 言
+<# ./言語/道具 => 道
 
 既定 := "games"
 
-訳(鍵, 西) {
-    ? 西 {
-        <~ ?? 鍵 {
-            "title"   => "集計 — todas las tandas juntas"
-            "dir"     => "directorio"
-            "runs"    => "tandas"
-            "games"   => "partidas"
-            "skipped" => "sin terminar (sin summary)"
-            "lvlhdr"  => "── nivel: victorias de la fila contra la columna ──"
-            "perhdr"  => "── personalidad ──"
-            "none"    => "no hay partidas que agregar"
-            "beg"     => "Principiante"
-            "int"     => "Intermedio"
-            "adv"     => "Avanzado"
-            "bal"     => "equilibrada"
-            "off"     => "ofensiva"
-            "def"     => "defensiva"
-            "warn"    => "las celdas con menos de 30 partidas no dicen nada"
-            _         => 鍵
-        }
-    }
-    <~ ?? 鍵 {
-        "title"   => "集計 — every run together"
-        "dir"     => "directory"
-        "runs"    => "runs"
-        "games"   => "games"
-        "skipped" => "unfinished (no summary)"
-        "lvlhdr"  => "── level: row's wins against column ──"
-        "perhdr"  => "── personality ──"
-        "none"    => "no games to aggregate"
-        "beg"     => "Beginner"
-        "int"     => "Intermediate"
-        "adv"     => "Advanced"
-        "bal"     => "balanced"
-        "off"     => "offensive"
-        "def"     => "defensive"
-        "warn"    => "cells under 30 games say nothing"
-        _         => 鍵
-    }
-}
+// 言葉は 言語/道具 が持つ。現在の言語は 言語/取次 の状態から
+// 読むので、ここを通り抜ける引数は無い。
+// EN: the words live in 言語/道具 and the active locale in
+// 言語/取次's state, so nothing is threaded through here.
+訳(鍵) { <~ 道::語(鍵) }
 
 // 記録から "black level=2 personality=1" を取り出す。行頭 で
 // 始まる行の中で、印 に続く数字を返す。
@@ -127,7 +94,7 @@ _勝者(本文) {
 
 >< 引数
 場所 = 既定
-西 = #0
+言語 = "en"
 // `@ 添字:1..数` は 数 が 1 未満のとき下へ数える。`1..0` は
 // [1, 0] を歩く。降る範囲は文書化された機能だからである。
 // だから空になりうる集まりを数えて回る輪には番人が要る。無ければ
@@ -141,12 +108,14 @@ _勝者(本文) {
 ? 総引数 > 0 {
     @ 添字:1..総引数 {
         引 = 引数[添字]
-        ? 引 == "es" { 西 = #1 }
+        ? 引 == "es" { 言語 = "es" }
         _ {
             ? 引 <> "en" { 場所 = 引 }
         }
     }
 }
+
+言::設定(言語)
 
 勝表 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
 戦表 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -214,27 +183,44 @@ _勝者(本文) {
     }
 }
 
-題 = 訳("title", 西)
+題 = 訳("集計.表題")
 >> "═══ {題} ═══" ¶
-札 = 文::右詰(訳("dir", 西), 26)
+
+// 名札の欄は測って決める。手で選んだ定数は、いちばん長い訳が
+// ちょうどそれに達したときに黙って隣の数とくっつく。
+// （スペイン語の「sin terminar (sin summary)」が 26 桁だった。）
+//
+// EN: The label column is measured, not chosen. A hand-picked
+// constant silently runs into the number beside it the day the
+// longest translation reaches it — Spanish's "sin terminar (sin
+// summary)" is exactly 26 columns.
+名札 = [訳("集計.場所"), 訳("集計.回数"), 訳("共通.対局数"), 訳("集計.未了")]
+名幅 = 0
+@ 一札 : 名札 {
+    幅 = 文::幅(一札)
+    ? 幅 > 名幅 { 名幅 = 幅 }
+}
+名幅 = 名幅 + 2
+
+札 = 文::右詰(名札[1], 名幅)
 >> "  {札}{場所}" ¶
-札 = 文::右詰(訳("runs", 西), 26)
+札 = 文::右詰(名札[2], 名幅)
 >> "  {札}{総走}" ¶
-札 = 文::右詰(訳("games", 西), 26)
+札 = 文::右詰(名札[3], 名幅)
 >> "  {札}{総局}" ¶
 ? 未了 > 0 {
-    札 = 文::右詰(訳("skipped", 西), 26)
+    札 = 文::右詰(名札[4], 名幅)
     >> "  {札}{未了}" ¶
 }
 >> "" ¶
 
 ? 総局 == 0 {
-    >> "  " (訳("none", 西)) ¶
+    >> "  " (訳("集計.無し")) ¶
 } _ {
-    級札 = [訳("beg", 西), 訳("int", 西), 訳("adv", 西)]
-    性札 = [訳("bal", 西), 訳("off", 西), 訳("def", 西)]
+    級札 = [言::語("棋力.1"), 言::語("棋力.2"), 言::語("棋力.3")]
+    性札 = [訳("性格.均衡"), 訳("性格.攻"), 訳("性格.守")]
 
-    >> (訳("lvlhdr", 西)) ¶
+    >> (訳("集計.級見出")) ¶
     級甲 = 文::中央(級札[1], 14)
     級乙 = 文::中央(級札[2], 14)
     級丙 = 文::中央(級札[3], 14)
@@ -257,7 +243,7 @@ _勝者(本文) {
     }
     >> "" ¶
 
-    >> (訳("perhdr", 西)) ¶
+    >> (訳("集計.性格見出")) ¶
     性甲 = 文::中央(性札[1], 14)
     性乙 = 文::中央(性札[2], 14)
     性丙 = 文::中央(性札[3], 14)
@@ -278,5 +264,5 @@ _勝者(本文) {
         >> "  " 線 ¶
     }
     >> "" ¶
-    >> "  " (訳("warn", 西)) ¶
+    >> "  " (訳("集計.注意")) ¶
 }

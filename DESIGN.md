@@ -450,15 +450,19 @@ therefore a `??` match inside a function:
 
     _日(キー) {
         <~ ?? キー {
-            "手番"     => "手番"
-            "アゲハマ" => "アゲハマ"
-            "終局"     => "終局"
-            "持碁"     => "持碁"
-            _          => キー
+            "区画.手番"     => "手番"
+            "区画.アゲハマ" => "アゲハマ"
+            "終局.表題"     => "終局"
+            "終局.持碁"     => "持碁"
+            _               => キー
         }
     }
 }
 ```
+
+Note the domain prefix on every key. It is not decoration: it is what keeps a
+key from ever equalling its own Japanese translation, which is what the
+completeness check below depends on.
 
 The `_ => 鍵` fallback means a missing translation renders as its key rather
 than as an empty string — a missing entry is visible instead of silent. Because
@@ -490,9 +494,26 @@ half point as 半 rather than a decimal, Korean counts in 집, English inflects 
 plural, and Spanish uses the decimal comma.
 
 Language choice is module state, so it survives every call for the session
-without being threaded through the render functions as a parameter. This is the
-deliberate contrast with Hov veS, which threaded language as a parameter through
-five modules; the two approaches sit side by side in the project record.
+without being threaded through the render functions as a parameter. There are 64
+call sites through `言::` across `対局.zy`, `表示/描画.zy` and `棋戦.zy`, and not
+one of them passes a locale. This is the deliberate contrast with Hov veS, which
+threads language as a parameter — through two modules, `HUD.zy` and `hov_veS.zy`,
+not the five its README claims. The two approaches sit side by side in the
+project record.
+
+### 8b. 言語/道具.zy — vocabulary for the instruments
+
+`棋戦` and `集計` are instruments, not the game. Folding fifty benchmark labels
+into a catalogue that exists for what a *player* reads would dilute it, so the
+tool vocabulary lives in its own catalogue with its own key list, and answers in
+two locales (`en`, `es`) rather than the game's five. The records under `棋譜/`
+are not translated at all: a dataset split across two languages is two datasets.
+
+Only the catalogue is separate. The mechanism is identical — the active locale
+still comes from `言語/取次`'s single piece of state, and `試験/言語検証.zy` walks
+the tool catalogue exactly as it walks the game's. `集計.zy` used to thread a
+boolean through fifteen call sites instead; see
+[AUDITORIA_I18N_ES.md](AUDITORIA_I18N_ES.md), GO-I18N-002.
 
 ---
 
@@ -503,25 +524,41 @@ Pure re-export layers, no logic, no runtime cost — the three-layer pattern fro
 
 ```zymbol
 # .api_english {
-    <# ../核/盤 => b
-    <# ../核/規則 => r
-    <# ../核/計算 => s
 
     #> {
-        b::新規   => new_board
-        b::着手   => play
-        b::連     => chain
-        b::ダメ数 => liberties
-        r::合法   => is_legal
-        r::終局   => is_over
-        s::目算   => score
+        // constants re-export with `.`, functions with `::`
+        盤.空          => EMPTY
+        盤.黒          => BLACK
+        盤.白          => WHITE
+        盤::新規       => new_board
+        盤::着手       => play
+        盤::連         => chain
+        盤::ダメ数     => liberties
+        規則::合法     => is_legal
+        規則::終局     => is_over
+        計算::目算     => score
     }
+
+    <# ../核/盤 => 盤
+    <# ../核/規則 => 規則
+    <# ../核/計算 => 計算
 }
 ```
 
 A developer writing a front-end in English imports `api/english` and never opens
 a Japanese file. `api/espanol.zy` does the same in Spanish. Subdirectory modules
 use the dot convention: `核/盤.zy` declares `# .核_盤`.
+
+The two layers cover the whole public surface of `核/` — 21 names from `盤`,
+6 from `規則`, 4 from `計算` — and they are read the way they are declared:
+`en.BLACK` for a constant, `en::play(…)` for a function. Mixing the two is a
+semantic error, not a runtime surprise.
+
+Because a re-export layer carries no logic, there is exactly one thing worth
+testing: that a call under the English or Spanish name returns what the Japanese
+name returns. `試験/api試験.zy` plays the same move under both names and compares
+the board, the capture count and the ko point, including the output parameters of
+`着手`, which is where a broken re-export would show up first.
 
 ---
 

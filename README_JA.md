@@ -19,6 +19,7 @@ module を渡り歩く大きな持続的データ構造（最大 361 点）、�
 > 表示文字列と、識別子そのものの翻訳）に負荷をかける。
 
 > **English:** [README.md](README.md) · **Español:** [README_ES.md](README_ES.md)
+> · **i18n の点検:** [AUDITORIA_I18N_ES.md](AUDITORIA_I18N_ES.md)
 > · **設計書:** [DESIGN.md](DESIGN.md) · **複雑さの試験:** [BENCHMARK.md](BENCHMARK.md)
 
 ---
@@ -342,6 +343,7 @@ zy-GO/
 │   └── 端末.zy          std/term    — 幅 左詰 右詰 中央 切詰
 ├── 言語/                実行時の表示文字列
 │   ├── 取次.zy          取次、言語の状態、鍵の目録
+│   ├── 道具.zy          棋戦 と 集計 の言葉 — en · es
 │   ├── 日本語.zy        ja（土台）
 │   ├── 한국어.zy        ko
 │   ├── 中文.zy          zh
@@ -351,6 +353,7 @@ zy-GO/
 │   ├── 全試験.sh        すべてを走らせる
 │   ├── 文字試験.zy      桁の算術
 │   ├── 言語検証.zy      i18n の完全性の関所
+│   ├── api試験.zy       api/ が同じ engine に解けること
 │   ├── 盤試験.zy        規則のエンジン
 │   ├── 計算試験.zy      目算
 │   ├── 性能試験.zy      再帰の深さと 19×19 の費用
@@ -405,10 +408,27 @@ zy-GO/
 
 **識別子ごとの API の翻訳**（`api/`）— エンジンの公開 API を英語とスペイン語の名で
 差し出す、純粋な再輸出の層である。論理は無く、実行時の費用も零。日本語を読まない
-開発者が `board::place(...)` や `tablero::colocar(...)` に対して自分の前面を書け、
+開発者が `en::play(...)` や `es::jugar(...)` に対して自分の前面を書け、
 日本語の原文を一度も開かずに済む。これは
 [I18N.md](../interpreter/I18N.md) の三層の型を、試験の作り物ではなく本物のエンジン
 に当てたものである。
+
+定数は `.` で、関数は `::` で再輸出し、読むときも同じ形になる（`en.BLACK`、
+`en::play(…)`）。二つの層は `核/` の公開面をすべて覆う — `盤` から 21、`規則`
+から 6、`計算` から 4。再輸出の層は論理を持たないので試すべきは一つだけで、
+`試験/api試験.zy` が同じ手を両方の名前で打ち、盤と取数とコウ点を — `着手` の
+出力引数も含めて — 突き合わせる。
+
+**道具の言葉**（`言語/道具.zy`）— `棋戦` と `集計` は対局ではない。打ち手の
+ために在る目録に五十ほどの計測の名札を混ぜれば目録が薄まるので、道具の言葉は
+別の目録に置き、英語とスペイン語の二つで答える。分かれているのは目録だけで、
+現在の言語は 言語/取次 の一つきりの状態から読み、関所も同じやり方で歩く。
+`棋譜/` の記録は訳さない。二つの言語に割れた資料は二つの資料だからである。
+
+ここで述べた作りは
+[USERAPPI18N.md](https://github.com/zymbol-lang/interpreter/blob/main/USERAPPI18N.md)
+に共通の指針として書き出してある。囲碁 がまだそれに届いていないところは
+[AUDITORIA_I18N_ES.md](AUDITORIA_I18N_ES.md) が記している。
 
 ---
 
@@ -457,8 +477,10 @@ bash 試験/全試験.sh
 ```
 ─── 試験/文字試験.zy    PASS — column arithmetic holds
 ─── 試験/言語検証.zy    PASS — every key resolves in every locale
+─── 試験/api試験.zy     PASS — api/english and api/espanol resolve to the same engine
 ─── 試験/盤試験.zy      PASS — every rule case behaved
 ─── 試験/計算試験.zy    PASS — scoring behaved
+─── 試験/思考試験.zy    PASS — the engine reads the position
 ─── 試験/描画試験.zy    PASS — the grid holds together
 全試験 PASS
 ```

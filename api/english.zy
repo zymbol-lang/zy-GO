@@ -1,0 +1,74 @@
+// ============================================================
+// api/english.zy — the engine under English names
+//
+// A pure re-export layer over 核/. No logic, no state, no cost at
+// run time: every name below resolves to a direct reference when
+// the module is loaded.
+//
+// This is the code axis of i18n, as opposed to 言語/, which is the
+// text axis. 言語/ decides what the *player* reads; this decides
+// what the *programmer* reads. A front-end written against this
+// module never opens a file written in Japanese.
+//
+//   <# ./api/english => go
+//   b = go::new_board(9)
+//   go::play(b, 4, 4, go::BLACK, …)
+//
+// The Japanese names are the originals — see 核/盤.zy, 核/規則.zy
+// and 核/計算.zy — and this file is the dictionary, kept in the
+// same order as the exports of those three modules so that a name
+// added there is visibly missing here.
+//
+// JA: api/english.zy — 英語の名前で engine を差し出す層。
+// 核/ の上に載る純粋な再輸出であり、論理も状態も実行時の費用も
+// 持たない。言語/ が打ち手の読むものを決めるのに対し、ここは
+// 書き手の読むものを決める。
+// ============================================================
+
+# .api_english {
+
+    #> {
+        // ── board · 核/盤.zy ──────────────────────────────
+        // Constants re-export with `.`, functions with `::`, and
+        // they are read the same way: en.BLACK, en::play(…).
+        盤.空          => EMPTY
+        盤.黒          => BLACK
+        盤.白          => WHITE
+        盤.可          => OK
+        盤.禁_占有     => OCCUPIED
+        盤.禁_自殺     => SUICIDE
+        盤::新規       => new_board
+        盤::複製       => copy_board
+        盤::位置       => index_of
+        盤::行番       => row_of
+        盤::列番       => column_of
+        盤::取得       => stone_at
+        盤::敵         => opponent
+        盤::隣         => neighbours
+        盤::連         => chain
+        盤::ダメ点     => liberty_points
+        盤::ダメ数     => liberties
+        盤::群ダメ数   => chain_liberties
+        盤::除去       => remove
+        盤::着手       => play
+        盤::石数       => stone_count
+
+        // ── rules · 核/規則.zy ────────────────────────────
+        規則.禁_コウ   => KO
+        規則::判定     => classify
+        規則::合法     => is_legal
+        規則::着手可能 => legal_moves
+        規則::終局     => is_over
+        規則::理由鍵   => reason_key
+
+        // ── scoring · 核/計算.zy ──────────────────────────
+        計算::目算     => score
+        計算::勝色     => winner
+        計算::差分     => margin
+        計算::領域図   => territory_map
+    }
+
+    <# ../核/盤 => 盤
+    <# ../核/規則 => 規則
+    <# ../核/計算 => 計算
+}

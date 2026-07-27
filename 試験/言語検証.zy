@@ -19,6 +19,7 @@
 // ============================================================
 
 <# ../言語/取次 => 言
+<# ../言語/道具 => 道
 <# ../表示/文字 => 文
 
 鍵 = 言::鍵一覧()
@@ -73,6 +74,45 @@
     >> "        " (言::結果文(1, 0, #0)) ¶
     >> "        " (言::取石文(1)) " / " (言::取石文(3)) ¶
 }
+
+// 道具の目録。棋戦 と 集計 の名札は打ち手のためのものではないので
+// 別の目録に住むが、検め方はまったく同じである。道具が答えるのは
+// 二言語だけなので、その一覧も道具自身から取る。
+//
+// EN: The instrument catalogue. The labels of 棋戦 and 集計 are not
+// for the player, so they live in a separate catalogue — but the
+// check is identical. The instruments answer in two locales only,
+// so that list comes from the instruments themselves.
+>> "" ¶
+>> "instrument keys: " (道::鍵一覧()$#) "   locales: " (道::言語一覧()$#) ¶
+
+道鍵 = 道::鍵一覧()
+@ コード : 道::言語一覧() {
+    言::設定(コード)
+    欠落 = 0
+    @ 一鍵 : 道鍵 {
+        ? (道::語(一鍵)) == 一鍵 {
+            ? 欠落 == 0 { >> "  [" コード "]" ¶ }
+            >> "      MISSING  " 一鍵 ¶
+            欠落 = 欠落 + 1
+        }
+    }
+    ? 欠落 == 0 {
+        >> "  [" コード "] " (文::右詰("道具", 12)) "  " (道鍵$#) "/" (道鍵$#) "  OK" ¶
+    } _ {
+        >> "      → " 欠落 " missing" ¶
+    }
+    欠落合計 = 欠落合計 + 欠落
+}
+
+// 検めたあとで対局の言語に戻す。取次の状態は file の道筋ごとに
+// 共有されるので、ここで置き去りにした選択はこの後の試験にも
+// そのまま残る。
+//
+// EN: Put the game locale back. The dispatcher's state is shared
+// per file path, so a selection abandoned here would carry into
+// whatever runs next.
+言::設定("ja")
 
 >> "" ¶
 ? 欠落合計 == 0 {
