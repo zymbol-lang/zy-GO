@@ -559,6 +559,60 @@ Note what this does **not** mean for the game: `対局.zy` runs the tree-walker
 because a human move takes seconds of human thought, so 180 ms versus 20 ms is
 invisible. The VM matters here, where the machine plays both sides for an hour.
 
+### All four engines — benchmark_go.sh
+
+`benchmark_go.sh` runs the harness under every Zymbol engine and
+`benchmark_summary.sh` renders the result:
+
+```bash
+bash benchmark_go.sh                          # 1 game each on 9, 13, 19
+bash benchmark_go.sh --games 3 --boards 9,13
+bash benchmark_go.sh --engines zyvm,zyml --timeout 600
+bash benchmark_summary.sh                     # re-render the newest run
+```
+
+One game per board, all four engines:
+
+| board | tree-walker | `--vm` | JavaScript | zyml (OCaml) |
+|-------|-------------|--------|------------|--------------|
+| 9×9   | 14.0 s · 10.8× | **1.3 s** · base | rejected | 1.7 s · 1.3× |
+| 13×13 | 139.6 s · 19.1× | **7.3 s** · base | rejected | 9.8 s · 1.3× |
+| 19×19 | 1171.0 s · 29.7× | **39.4 s** · base | rejected | 223.3 s · 5.7× |
+
+Three things worth reading off that table.
+
+**The tree-walker's gap widens with the board** — 10.8× at 9×9, 29.7× at 19×19.
+The 8–14× measured earlier in this document was at the small end of that range.
+A 19×19 game costs nearly twenty minutes under the tree-walker and forty seconds
+under the VM.
+
+**zyml tracks the VM closely at 9×9 and 13×13 and then falls behind at 19×19**,
+from 1.3× to 5.7×. That is not the closure model; it is zyml's eager
+value-semantics copy. A board copy per legality test is 81 cells on 9×9 and 361
+on 19×19, and copying them eagerly is the one place its design pays more than
+the VM's. Copy-on-write is the fix, and this is the measurement that says so.
+
+**The JavaScript engine refuses the program**, and the report says `rejected`
+rather than a time:
+
+```
+error: cannot access underscore variable '_状況描画' from inner scope
+```
+
+That is worth stating plainly because of how it first appeared. The engine
+writes that error to *stdout* and exits 0, so the first version of the script
+scored it as having finished three boards in a tenth of a second each — and
+then used it as the baseline, making every other engine look thousands of times
+slower. A benchmark whose fastest result is a program that never ran is worse
+than no benchmark. The script now treats "exit 0 but no game recorded" as a
+failure, and never takes a baseline from one.
+
+Two limits of this measurement, stated rather than hidden. Games are seeded
+from the clock, so each engine plays a *different* game — the comparison is of
+workload cost at a given board size, not of identical positions. And one game
+per board is one sample; `--games` raises it, at the cost of the tree-walker's
+19×19 column taking twenty minutes per extra game.
+
 ### The instrument has a floor
 
 Under `--vm` on 9 × 9 a move costs about 5 ms, and a timestamp costs about 3 ms.
