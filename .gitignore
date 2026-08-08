@@ -12,3 +12,6 @@ games/
 
 # ignore the build output of the Zymbol compiler, which is a single file
 .gitignore
+# Benchmark runs — one .tsv and per-engine logs each, same reasoning as
+# games/: a run that went wrong is one rm away and the rest survive.
+benchmark_results/
