@@ -592,6 +592,42 @@ value-semantics copy. A board copy per legality test is 81 cells on 9×9 and 361
 on 19×19, and copying them eagerly is the one place its design pays more than
 the VM's. Copy-on-write is the fix, and this is the measurement that says so.
 
+#### Copy-on-write, measured
+
+zyml implemented it. Assignment now shares the cell array and the first writer
+through a shared box detaches, so a board that is only read is never copied.
+Same machine, same session, both zyml binaries built from the same tree — the
+seed comes from the clock, so each run is a *different* game and the spread is
+the measurement's own noise, not the engine's:
+
+| board | `--vm` | zyml before | zyml after |
+|-------|--------|-------------|------------|
+| 9×9   | 1.5 · 1.5 · 1.8 s | 1.4 · 1.8 · 1.3 s | 1.2 · 1.6 · 1.2 s |
+| 13×13 | 8.4 · 7.9 · 11.1 s | 14.3 · 9.4 · 6.7 s | **3.7 · 4.2 · 4.5 s** |
+| 19×19 | 41.6 · 41.6 · 36.2 s | 255.7 · 277.0 s | **132.6 · 133.0 · 137.2 s** |
+
+**9×9 says nothing** — the games are short and the three columns overlap. That
+is the row to be careful with, and the reason for taking three samples rather
+than one.
+
+**13×13 is where the change shows**: roughly half the old time, and the spread
+collapses from 6.7–14.3 s to 3.7–4.5 s. Consistency is the tell. The old cost
+scaled with how many boards a game happened to copy; the new one does not.
+
+**19×19 halves, from ~266 s to ~134 s, and is still 3.4× the VM.** So the eager
+copy was most of the gap and not all of it: the legality test *writes* to the
+board it copies, and a write still copies. What copy-on-write removed is every
+copy that was never written to. Closing the rest needs a different change —
+persistent structure, or a board representation that a test can probe without
+copying at all — and this row is the measurement that will say whether it
+worked.
+
+Correctness held throughout: 20/20 on zyml's own corpus, 414/538 against the
+reference corpus with the same 11 pre-existing differences, byte-identical TUI
+output through a pty including the whole Snake game, and a dedicated test of
+value semantics (aliasing, nesting, functions, `$~`, named tuples) matching the
+tree-walker exactly.
+
 **The JavaScript engine refuses the program**, and the report says `rejected`
 rather than a time:
 
