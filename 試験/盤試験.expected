@@ -1,0 +1,40 @@
+囲碁 — rule engine tests (5×5)
+liberties — ダメ
+  ok    corner stone has 2
+  ok    centre stone has 4
+  ok    corner stone (5,5) has 2
+  ok    two-stone chain has 3
+  ok    chain size is 2
+capture — 取り
+  ok    move accepted
+  ok    black captures one stone
+  ok    captured point is empty
+  ok    no ko — capturing stone has 4 liberties
+  ok    move accepted
+  ok    black captures a two-stone chain
+  ok    both stones removed
+suicide — 自殺手
+  ok    suicide is rejected
+  ok    board left untouched
+  ok    legal because it captures first
+  ok    both white stones captured
+  ok    black stone stayed on the board
+ko — コウ
+  ok    move accepted
+  ok    black captures one stone
+  ok    ko point is the captured point
+  ok    white may not recapture
+  ok    white may play elsewhere
+  ok    black may not play its own ko point either
+  ok    without a ko ban the point is legal
+legality — 合法
+  ok    occupied point rejected
+  ok    off-board rejected
+  ok    empty point accepted
+  ok    reason key for ko
+  ok    every point legal on an empty board
+  ok    one point fewer with a stone down
+end of game — 終局
+  ok    one pass does not end it
+  ok    two passes end it
+PASS — every rule case behaved

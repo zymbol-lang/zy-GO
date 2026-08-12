@@ -3,6 +3,22 @@
 # 試験/全試験.sh — run every 囲碁 test suite
 #   bash 試験/全試験.sh
 # ============================================================
+#
+# ── NOTE ─────────────────────────────────────────────────────────────────
+# This script is not the authority any more. It decides correctness by
+# grepping the suite's output for FAIL, so a suite that crashes half way
+# through prints no FAIL and passes — that is not hypothetical, it was
+# measured. It also runs the tree-walker only.
+#
+# The gate is in ZyQuality, which compares each suite against a golden (a
+# truncated run does not match one) and runs every engine that can:
+#
+#     cd ../zyquality && ./zyq suite --only project
+#     cd ../zyquality && bash project/run.sh --only go
+#
+# What is still worth running here is the `zymbol check` sweep below, which
+# is about this application's own sources.
+# ─────────────────────────────────────────────────────────────────────────
 set -u
 cd "$(dirname "$0")/.."
 

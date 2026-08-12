@@ -1,0 +1,35 @@
+囲碁 — position reading tests
+eyes — 眼
+  ok    corner eye
+  ok    not an eye for the other colour
+  ok    corner with an enemy diagonal is not an eye
+  ok    centre eye
+  ok    centre eye survives one enemy diagonal
+  ok    two enemy diagonals — false eye
+  ok    an open side is not an eye
+  ok    an occupied point is not an eye
+useful moves — 有用手
+  ok    every point is useful on an empty board
+  ok    an empty board is not a dead end
+  ok    black will not fill its own eyes
+  ok    black has nothing left to play
+  ok    white cannot play there either — suicide
+a real game — 129 moves, White to move
+  ok    white group is 13 stones
+  ok    with exactly one liberty
+  ok    G5 is White's only eye
+  ok    White has no useful move
+  ok    White is at a dead end
+  ok    Black still has moves
+move selection — 着手選択
+  ok    takes the free capture
+  ok    the chain really is in atari
+  ok    escapes through its only liberty
+  ok    passes rather than fill its own eyes
+  ok    opens in a corner, every time
+  ok    its move on a crowded board is legal
+self-play — the engine against itself
+  ok    never proposes an illegal move
+  ok    the game actually progressed
+  ok    and put stones on the board
+PASS — the engine reads the position
