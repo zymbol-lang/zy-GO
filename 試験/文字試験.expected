@@ -1,0 +1,35 @@
+囲碁 — text metric tests
+code points — 符号点
+  ok    ASCII
+  ok    hiragana
+  ok    hangul
+  ok    hanzi
+  ok    black stone
+display width — 幅
+  ok    latin is narrow
+  ok    kanji is wide
+  ok    hangul is wide
+  ok    hanzi is wide
+  ok    stones are wide
+  ok    moons are wide
+  ok    fullwidth plus is wide
+  ok    box drawing is narrow
+  ok    arrows are narrow
+  ok    mixed script
+  ok    empty string
+  ok    stone theme row
+  ok    moon theme row
+  ok    ascii theme row
+padding — 右詰 · 左詰 · 中央
+  ok    pad kanji right
+  ok    pad latin right
+  ok    pad hangul right
+  ok    pad left
+  ok    centre
+  ok    centre puts the spare column right
+  ok    oversized string is returned as is
+truncation — 切詰
+  ok    never splits a wide glyph
+  ok    exact fit is untouched
+  ok    narrow text cuts cleanly
+PASS — column arithmetic holds

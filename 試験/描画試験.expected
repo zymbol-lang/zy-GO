@@ -1,0 +1,62 @@
+囲碁 — layout tests
+geometry — 主題
+  ok    9-road grid is 18 columns
+  ok    19-road grid is 38 columns
+  ok    9-road block width
+  ok    19-road block width
+  ok    block height is 路 + 2
+  ok    too short — no layout
+  ok    too narrow — no layout
+  ok    narrow — panel below
+  ok    wide — panel beside
+  ok    19 needs more width for the panel
+  ok    19 gets the panel at 71
+  ok    19×19 fits 80×24
+star points — 星
+  ok    9×9 tengen
+  ok    9×9 corner star
+  ok    9×9 plain point
+  ok    19×19 star
+  ok    19×19 tengen
+  ok    13×13 tengen
+column letters — 列名
+  ok    first column
+  ok    I is skipped
+  ok    nineteenth column
+row width holds in every theme — the two-column invariant
+  ok    row 1 in theme 石
+  ok    row 2 in theme 石
+  ok    row 3 in theme 石
+  ok    row 4 in theme 石
+  ok    row 5 in theme 石
+  ok    row 1 in theme 月
+  ok    row 2 in theme 月
+  ok    row 3 in theme 月
+  ok    row 4 in theme 月
+  ok    row 5 in theme 月
+  ok    row 1 in theme 字
+  ok    row 2 in theme 字
+  ok    row 3 in theme 字
+  ok    row 4 in theme 字
+  ok    row 5 in theme 字
+  ok    empty row is 10 too
+  ok    column header matches the grid
+  ok    19-road header is 38
+panel lines — 側面行
+  ok    panel line in ja
+  ok    panel line in ko
+  ok    panel line in zh
+  ok    panel line in en
+  ok    panel line in es
+  ok    overlong content is truncated to the frame
+  ok    frame pieces agree on width
+  ok    bottom matches top
+coordinates — 座標名
+  ok    point 1 on a 9-road board
+  ok    point 9 is the first row's end
+  ok    point 41 is the centre
+  ok    no last move
+row labels — 行札
+  ok    single digit is right-aligned
+  ok    double digit fills the field
+PASS — the grid holds together

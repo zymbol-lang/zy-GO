@@ -1,0 +1,28 @@
+囲碁 — area scoring tests (5×5)
+empty board — everything is neutral
+  ok    black scores nothing
+  ok    white scores komi only
+  ok    white leads
+  ok    margin is komi
+board split down the middle
+  ok    black stones
+  ok    white stones
+  ok    column 1 is black territory
+  ok    column 5 is white territory
+  ok    column 3 borders both — neutral
+  ok    even game with komi 0 is jigo
+  ok    komi decides it
+  ok    margin equals komi
+enclosed corner — 地
+  ok    black surrounds the corner
+  ok    the open area borders both — neutral
+  ok    white counts one stone
+  ok    corner point marked black
+  ok    outside area stays neutral
+result sentences from a real count
+  [ja] 白の6目半勝ち
+  [ko] 백 6집반승
+  [zh] 白胜6目半
+  [en] White wins by 6.5 points
+  [es] las blancas ganan por 6,5 puntos
+PASS — scoring behaved

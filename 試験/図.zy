@@ -14,6 +14,9 @@
 // Row 1 of the diagram is row 1 of the board (the top).
 // ============================================================
 
+// @zyq-skip: a helper module for the test suites, not a suite; it parses the
+// @zyq-skip: board diagrams the rule tests are written as, and running it
+// @zyq-skip: directly proves nothing.
 # .試験_図 {
 
     #> { 読図, 描図 }
