@@ -106,8 +106,15 @@
 // ── 計器 ──────────────────────────────────────────────────────
 // EN: instrumentation
 
+// マイクロ秒であってナノ秒ではない。ナノ秒の紀元は約 1.7e18 で、
+// 整数の範囲 ±(2^53 − 1) ≈ 9.007e15 を超える。マイクロ秒なら
+// 約 1.7e15 で収まり、測るべき往復より遥かに細かい。
+//
+// EN: microseconds, not nanoseconds. An epoch in nanoseconds is ~1.7e18,
+// past the integer range; in microseconds it is ~1.7e15, which fits and is
+// still far finer than the shell round-trip being measured.
 時刻() {
-    刻 = <\ "date +%s%N" \>
+    刻 = <\ "date +%s%6N" \>
     <~ #|刻|
 }
 
@@ -134,7 +141,7 @@
     <~ 合計 / 8
 }
 
-ミリ(ナノ) { <~ ナノ / 1000000 }
+ミリ(マイクロ) { <~ マイクロ / 1000 }
 
 // 報告のどの行もここを通る。画面に余裕があるときは印字し、
 // その回の控えには常に書き足す。人が読む要約と、流れて消えた
