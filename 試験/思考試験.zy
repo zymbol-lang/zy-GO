@@ -51,8 +51,8 @@
     ".....",
     "....."
 ])
-確認("corner eye", 思::眼(局面, 5, 1, 1), #1, 失敗)
-確認("not an eye for the other colour", 思::眼(局面, 5, 1, 2), #0, 失敗)
+確認("corner eye", 思::眼(局面, 5, 1, 1), #1, 失敗<~)
+確認("not an eye for the other colour", 思::眼(局面, 5, 1, 2), #0, 失敗<~)
 
 // 同じ隅だが、斜めの B2 は白のもの。辺では盤上の斜めがすべて
 // 自分のものでなければならないので、これは欠け眼である。
@@ -66,7 +66,7 @@
     ".....",
     "....."
 ])
-確認("corner with an enemy diagonal is not an eye", 思::眼(局面, 5, 1, 1), #0, 失敗)
+確認("corner with an enemy diagonal is not an eye", 思::眼(局面, 5, 1, 1), #0, 失敗<~)
 
 // C3 の中央の眼。直交する隣が四つとも黒、斜めも四つとも黒。
 // EN: Centre eye at C3: four orthogonals black, four diagonals
@@ -78,7 +78,7 @@
     ".XXX.",
     "....."
 ])
-確認("centre eye", 思::眼(局面, 5, 13, 1), #1, 失敗)
+確認("centre eye", 思::眼(局面, 5, 13, 1), #1, 失敗<~)
 
 // 中央での敵の斜め一つは凌げる。それでも眼である。
 // EN: One enemy diagonal in the centre is survivable — still an eye.
@@ -89,7 +89,7 @@
     ".XXO.",
     "....."
 ])
-確認("centre eye survives one enemy diagonal", 思::眼(局面, 5, 13, 1), #1, 失敗)
+確認("centre eye survives one enemy diagonal", 思::眼(局面, 5, 13, 1), #1, 失敗<~)
 
 // 敵の斜めが二つなら欠け眼である。
 // EN: Two enemy diagonals is a false eye.
@@ -100,7 +100,7 @@
     ".XXO.",
     "....."
 ])
-確認("two enemy diagonals — false eye", 思::眼(局面, 5, 13, 1), #0, 失敗)
+確認("two enemy diagonals — false eye", 思::眼(局面, 5, 13, 1), #0, 失敗<~)
 
 // 直交する隣に穴があれば、斜めが何であろうと眼にはならない。
 // EN: An orthogonal gap is never an eye, whatever the diagonals do.
@@ -111,7 +111,7 @@
     ".XXX.",
     "....."
 ])
-確認("an open side is not an eye", 思::眼(局面, 5, 13, 1), #0, 失敗)
+確認("an open side is not an eye", 思::眼(局面, 5, 13, 1), #0, 失敗<~)
 
 局面 = 図::読図([
     ".....",
@@ -120,15 +120,15 @@
     ".XXX.",
     "....."
 ])
-確認("an occupied point is not an eye", 思::眼(局面, 5, 13, 1), #0, 失敗)
+確認("an occupied point is not an eye", 思::眼(局面, 5, 13, 1), #0, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶
 >> "useful moves — 有用手" ¶
 
 空盤 = 盤::新規(5)
-確認("every point is useful on an empty board", (思::有用手(空盤, 5, 1, 0))$#, 25, 失敗)
-確認("an empty board is not a dead end", 思::手詰まり(空盤, 5, 1, 0), #0, 失敗)
+確認("every point is useful on an empty board", (思::有用手(空盤, 5, 1, 0))$#, 25, 失敗<~)
+確認("an empty board is not a dead end", 思::手詰まり(空盤, 5, 1, 0), #0, 失敗<~)
 
 // 黒が A1 と C1 に眼を二つ持って盤を制している。この二点は黒に
 // とって合法だが、それでも外さねばならない。埋めれば生きている
@@ -145,9 +145,9 @@
     "XXXXX"
 ])
 有 = 思::有用手(局面, 5, 1, 0)
-確認("black will not fill its own eyes", 有$#, 0, 失敗)
-確認("black has nothing left to play", 思::手詰まり(局面, 5, 1, 0), #1, 失敗)
-確認("white cannot play there either — suicide", 思::手詰まり(局面, 5, 2, 0), #1, 失敗)
+確認("black will not fill its own eyes", 有$#, 0, 失敗<~)
+確認("black has nothing left to play", 思::手詰まり(局面, 5, 1, 0), #1, 失敗<~)
+確認("white cannot play there either — suicide", 思::手詰まり(局面, 5, 2, 0), #1, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶
@@ -175,12 +175,12 @@
     ".XXXXXXXX"
 ])
 群 = 盤::連(局面, 9, 42)
-確認("white group is 13 stones", 群$#, 13, 失敗)
-確認("with exactly one liberty", 盤::群ダメ数(局面, 9, 群), 1, 失敗)
-確認("G5 is White's only eye", 思::眼(局面, 9, 43, 2), #1, 失敗)
-確認("White has no useful move", (思::有用手(局面, 9, 2, 0))$#, 0, 失敗)
-確認("White is at a dead end", 思::手詰まり(局面, 9, 2, 0), #1, 失敗)
-確認("Black still has moves", (思::有用手(局面, 9, 1, 0))$#, 4, 失敗)
+確認("white group is 13 stones", 群$#, 13, 失敗<~)
+確認("with exactly one liberty", 盤::群ダメ数(局面, 9, 群), 1, 失敗<~)
+確認("G5 is White's only eye", 思::眼(局面, 9, 43, 2), #1, 失敗<~)
+確認("White has no useful move", (思::有用手(局面, 9, 2, 0))$#, 0, 失敗<~)
+確認("White is at a dead end", 思::手詰まり(局面, 9, 2, 0), #1, 失敗<~)
+確認("Black still has moves", (思::有用手(局面, 9, 1, 0))$#, 4, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶
@@ -198,7 +198,7 @@
     ".....",
     "....."
 ])
-確認("takes the free capture", 思::着手選択(局面, 5, 1, 2, 0, 0, 10), 12, 失敗)
+確認("takes the free capture", 思::着手選択(局面, 5, 1, 2, 0, 0, 10), 12, 失敗<~)
 
 // ダメが一つの連は逃げねばならず、出口は一つしかない。
 // EN: A chain with one liberty must run, and there is only one way
@@ -210,8 +210,8 @@
     ".....",
     "....."
 ])
-確認("the chain really is in atari", 盤::ダメ数(局面, 5, 7), 1, 失敗)
-確認("escapes through its only liberty", 思::着手選択(局面, 5, 1, 2, 0, 0, 10), 2, 失敗)
+確認("the chain really is in atari", 盤::ダメ数(局面, 5, 7), 1, 失敗<~)
+確認("escapes through its only liberty", 思::着手選択(局面, 5, 1, 2, 0, 0, 10), 2, 失敗<~)
 
 // 眼が二つあり、他にすることが無い。まともな手はパスだけであり、
 // どちらの眼を埋めても生きている群を殺す。
@@ -225,7 +225,7 @@
     "XXXXX",
     "XXXXX"
 ])
-確認("passes rather than fill its own eyes", 思::着手選択(局面, 5, 1, 3, 0, 0, 40), 0, 失敗)
+確認("passes rather than fill its own eyes", 思::着手選択(局面, 5, 1, 3, 0, 0, 40), 0, 失敗<~)
 
 // 空の盤では定石が選択を隅へ閉じ込める。エンジンが抱える唯一の
 // 戦略の考えである。
@@ -238,7 +238,7 @@
     点 = 思::着手選択(空, 9, 1, 2, 0, 0, 0)
     ? 思::布石点(9, 点) == #0 { 角 = #0 }
 }
-確認("opens in a corner, every time", 角, #1, 失敗)
+確認("opens in a corner, every time", 角, #1, 失敗<~)
 
 // 何を選ぼうと合法でなければならない。下では自己対局を通して
 // 丸ごと確かめるが、ここでは込み入った局面でも念を押しておく。
@@ -254,7 +254,7 @@
     "OOXX."
 ])
 点 = 思::着手選択(局面, 5, 1, 2, 0, 0, 20)
-確認("its move on a crowded board is legal", 規則::判定(局面, 5, 点, 1, 0), 0, 失敗)
+確認("its move on a crowded board is legal", 規則::判定(局面, 5, 点, 1, 0), 0, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶
@@ -278,7 +278,7 @@
     } _ {
         取 = 0
         コ = 0
-        状 = 盤::着手(局面, 9, 点, 手番, 取, コ)
+        状 = 盤::着手(局面<~, 9, 点, 手番, 取<~, コ<~)
         ? 状 <> 0 { 不正 = 不正 + 1 }
         コウ = コ
         最終 = 点
@@ -288,9 +288,9 @@
     手数 = 手数 + 1
 }
 
-確認("never proposes an illegal move", 不正, 0, 失敗)
-確認("the game actually progressed", 手数, 40, 失敗)
-確認("and put stones on the board", (盤::石数(局面, 1)) > 5, #1, 失敗)
+確認("never proposes an illegal move", 不正, 0, 失敗<~)
+確認("the game actually progressed", 手数, 40, 失敗<~)
+確認("and put stones on the board", (盤::石数(局面, 1)) > 5, #1, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶

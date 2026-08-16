@@ -30,10 +30,10 @@
 >> "empty board — everything is neutral" ¶
 局面 = 盤::新規(路)
 結果 = 計算::目算(局面, 路, 6.5)
-確認("black scores nothing", 結果.黒合計, 0.0, 失敗)
-確認("white scores komi only", 結果.白合計, 6.5, 失敗)
-確認("white leads", 計算::勝色(結果), 2, 失敗)
-確認("margin is komi", 計算::差分(結果), 6.5, 失敗)
+確認("black scores nothing", 結果.黒合計, 0.0, 失敗<~)
+確認("white scores komi only", 結果.白合計, 6.5, 失敗<~)
+確認("white leads", 計算::勝色(結果), 2, 失敗<~)
+確認("margin is komi", 計算::差分(結果), 6.5, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶
@@ -46,16 +46,16 @@
     ".X.O."
 ])
 結果 = 計算::目算(局面, 路, 0)
-確認("black stones", 結果.黒石, 5, 失敗)
-確認("white stones", 結果.白石, 5, 失敗)
-確認("column 1 is black territory", 結果.黒地, 5, 失敗)
-確認("column 5 is white territory", 結果.白地, 5, 失敗)
-確認("column 3 borders both — neutral", 結果.黒合計 + 結果.白合計, 20.0, 失敗)
-確認("even game with komi 0 is jigo", 計算::勝色(結果), 0, 失敗)
+確認("black stones", 結果.黒石, 5, 失敗<~)
+確認("white stones", 結果.白石, 5, 失敗<~)
+確認("column 1 is black territory", 結果.黒地, 5, 失敗<~)
+確認("column 5 is white territory", 結果.白地, 5, 失敗<~)
+確認("column 3 borders both — neutral", 結果.黒合計 + 結果.白合計, 20.0, 失敗<~)
+確認("even game with komi 0 is jigo", 計算::勝色(結果), 0, 失敗<~)
 
 結果 = 計算::目算(局面, 路, 6.5)
-確認("komi decides it", 計算::勝色(結果), 2, 失敗)
-確認("margin equals komi", 計算::差分(結果), 6.5, 失敗)
+確認("komi decides it", 計算::勝色(結果), 2, 失敗<~)
+確認("margin equals komi", 計算::差分(結果), 6.5, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶
@@ -75,13 +75,13 @@
     "....."
 ])
 結果 = 計算::目算(局面, 路, 0)
-確認("black surrounds the corner", 結果.黒地, 4, 失敗)
-確認("the open area borders both — neutral", 結果.白地, 0, 失敗)
-確認("white counts one stone", 結果.白合計, 1.0, 失敗)
+確認("black surrounds the corner", 結果.黒地, 4, 失敗<~)
+確認("the open area borders both — neutral", 結果.白地, 0, 失敗<~)
+確認("white counts one stone", 結果.白合計, 1.0, 失敗<~)
 
 図面 = 計算::領域図(局面, 路)
-確認("corner point marked black", 図面[1], 1, 失敗)
-確認("outside area stays neutral", 図面[25], 0, 失敗)
+確認("corner point marked black", 図面[1], 1, 失敗<~)
+確認("outside area stays neutral", 図面[25], 0, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶

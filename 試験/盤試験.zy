@@ -42,9 +42,9 @@
     ".....",
     "O...X"
 ])
-確認("corner stone has 2", 盤::ダメ数(局面, 路, 1), 2, 失敗)
-確認("centre stone has 4", 盤::ダメ数(局面, 路, 13), 4, 失敗)
-確認("corner stone (5,5) has 2", 盤::ダメ数(局面, 路, 25), 2, 失敗)
+確認("corner stone has 2", 盤::ダメ数(局面, 路, 1), 2, 失敗<~)
+確認("centre stone has 4", 盤::ダメ数(局面, 路, 13), 4, 失敗<~)
+確認("corner stone (5,5) has 2", 盤::ダメ数(局面, 路, 25), 2, 失敗<~)
 
 局面 = 図::読図([
     "XX...",
@@ -53,8 +53,8 @@
     ".....",
     "....."
 ])
-確認("two-stone chain has 3", 盤::ダメ数(局面, 路, 1), 3, 失敗)
-確認("chain size is 2", (盤::連(局面, 路, 1))$#, 2, 失敗)
+確認("two-stone chain has 3", 盤::ダメ数(局面, 路, 1), 3, 失敗<~)
+確認("chain size is 2", (盤::連(局面, 路, 1))$#, 2, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶
@@ -68,11 +68,11 @@
 ])
 取 = 0
 コウ = 0
-状態 = 盤::着手(局面, 路, 12, 1, 取, コウ)
-確認("move accepted", 状態, 0, 失敗)
-確認("black captures one stone", 取, 1, 失敗)
-確認("captured point is empty", 局面[7], 0, 失敗)
-確認("no ko — capturing stone has 4 liberties", コウ, 0, 失敗)
+状態 = 盤::着手(局面<~, 路, 12, 1, 取<~, コウ<~)
+確認("move accepted", 状態, 0, 失敗<~)
+確認("black captures one stone", 取, 1, 失敗<~)
+確認("captured point is empty", 局面[7], 0, 失敗<~)
+確認("no ko — capturing stone has 4 liberties", コウ, 0, 失敗<~)
 
 局面 = 図::読図([
     "XOO..",
@@ -83,10 +83,10 @@
 ])
 取 = 0
 コウ = 0
-状態 = 盤::着手(局面, 路, 4, 1, 取, コウ)
-確認("move accepted", 状態, 0, 失敗)
-確認("black captures a two-stone chain", 取, 2, 失敗)
-確認("both stones removed", 局面[2] + 局面[3], 0, 失敗)
+状態 = 盤::着手(局面<~, 路, 4, 1, 取<~, コウ<~)
+確認("move accepted", 状態, 0, 失敗<~)
+確認("black captures a two-stone chain", 取, 2, 失敗<~)
+確認("both stones removed", 局面[2] + 局面[3], 0, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶
@@ -100,9 +100,9 @@
 ])
 取 = 0
 コウ = 0
-結果 = 盤::着手(局面, 路, 1, 1, 取, コウ)
-確認("suicide is rejected", 結果, 2, 失敗)
-確認("board left untouched", 局面[1], 0, 失敗)
+結果 = 盤::着手(局面<~, 路, 1, 1, 取<~, コウ<~)
+確認("suicide is rejected", 結果, 2, 失敗<~)
+確認("board left untouched", 局面[1], 0, 失敗<~)
 
 局面 = 図::読図([
     ".OX..",
@@ -113,10 +113,10 @@
 ])
 取 = 0
 コウ = 0
-結果 = 盤::着手(局面, 路, 1, 1, 取, コウ)
-確認("legal because it captures first", 結果, 0, 失敗)
-確認("both white stones captured", 取, 2, 失敗)
-確認("black stone stayed on the board", 局面[1], 1, 失敗)
+結果 = 盤::着手(局面<~, 路, 1, 1, 取<~, コウ<~)
+確認("legal because it captures first", 結果, 0, 失敗<~)
+確認("both white stones captured", 取, 2, 失敗<~)
+確認("black stone stayed on the board", 局面[1], 1, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶
@@ -130,14 +130,14 @@
 ])
 取 = 0
 コウ = 0
-状態 = 盤::着手(局面, 路, 7, 1, 取, コウ)
-確認("move accepted", 状態, 0, 失敗)
-確認("black captures one stone", 取, 1, 失敗)
-確認("ko point is the captured point", コウ, 8, 失敗)
-確認("white may not recapture", 規則::判定(局面, 路, 8, 2, コウ), 3, 失敗)
-確認("white may play elsewhere", 規則::判定(局面, 路, 20, 2, コウ), 0, 失敗)
-確認("black may not play its own ko point either", 規則::判定(局面, 路, 8, 1, コウ), 3, 失敗)
-確認("without a ko ban the point is legal", 規則::判定(局面, 路, 8, 2, 0), 0, 失敗)
+状態 = 盤::着手(局面<~, 路, 7, 1, 取<~, コウ<~)
+確認("move accepted", 状態, 0, 失敗<~)
+確認("black captures one stone", 取, 1, 失敗<~)
+確認("ko point is the captured point", コウ, 8, 失敗<~)
+確認("white may not recapture", 規則::判定(局面, 路, 8, 2, コウ), 3, 失敗<~)
+確認("white may play elsewhere", 規則::判定(局面, 路, 20, 2, コウ), 0, 失敗<~)
+確認("black may not play its own ko point either", 規則::判定(局面, 路, 8, 1, コウ), 3, 失敗<~)
+確認("without a ko ban the point is legal", 規則::判定(局面, 路, 8, 2, 0), 0, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶
@@ -149,20 +149,20 @@
     ".....",
     "....."
 ])
-確認("occupied point rejected", 規則::判定(局面, 路, 1, 2, 0), 1, 失敗)
-確認("off-board rejected", 規則::判定(局面, 路, 26, 1, 0), 1, 失敗)
-確認("empty point accepted", 規則::判定(局面, 路, 13, 2, 0), 0, 失敗)
-確認("reason key for ko", 規則::理由鍵(3), "報せ.コウ", 失敗)
+確認("occupied point rejected", 規則::判定(局面, 路, 1, 2, 0), 1, 失敗<~)
+確認("off-board rejected", 規則::判定(局面, 路, 26, 1, 0), 1, 失敗<~)
+確認("empty point accepted", 規則::判定(局面, 路, 13, 2, 0), 0, 失敗<~)
+確認("reason key for ko", 規則::理由鍵(3), "報せ.コウ", 失敗<~)
 
 空盤 = 盤::新規(路)
-確認("every point legal on an empty board", (規則::着手可能(空盤, 路, 1, 0))$#, 25, 失敗)
-確認("one point fewer with a stone down", (規則::着手可能(局面, 路, 2, 0))$#, 24, 失敗)
+確認("every point legal on an empty board", (規則::着手可能(空盤, 路, 1, 0))$#, 25, 失敗<~)
+確認("one point fewer with a stone down", (規則::着手可能(局面, 路, 2, 0))$#, 24, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶
 >> "end of game — 終局" ¶
-確認("one pass does not end it", 規則::終局(1), #0, 失敗)
-確認("two passes end it", 規則::終局(2), #1, 失敗)
+確認("one pass does not end it", 規則::終局(1), #0, 失敗<~)
+確認("two passes end it", 規則::終局(2), #1, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶
