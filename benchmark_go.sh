@@ -4,7 +4,7 @@
 #   bash benchmark_go.sh                 # 1 game each on 9, 13 and 19
 #   bash benchmark_go.sh --boards 9,13   # pick the boards
 #   bash benchmark_go.sh --games 3       # more games per board
-#   bash benchmark_go.sh --engines zyvm,zyml
+#   bash benchmark_go.sh --engines zyvm,zyjs
 #   bash benchmark_go.sh --timeout 1800  # per run, seconds
 #
 # Why this workload and not the arithmetic benchmarks: a Go position is
@@ -28,7 +28,7 @@ export LC_ALL=C
 
 GAMES=1
 BOARDS="9,13,19"
-ENGINES="zytw,zyvm,zyjs,zyml"
+ENGINES="zytw,zyvm,zyjs"
 TIMEOUT=1800
 OUT="benchmark_results"
 
@@ -44,7 +44,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ZYML=${ZYML:-../zyml/zyml}
+# zyml, the OCaml engine, was retired 2026-08-17: BENCHMARK.md keeps its
+# numbers as the record of why (3.4x the VM at 19x19 even after copy-on-write).
 ZYJS=${ZYJS:-../zyquality/harness/js.mjs}
 
 engine_cmd() {                       # engine_cmd <id> <file> <args...>
@@ -52,7 +53,6 @@ engine_cmd() {                       # engine_cmd <id> <file> <args...>
   case "$id" in
     zytw) echo "zymbol run $*" ;;
     zyvm) echo "zymbol run --vm $*" ;;
-    zyml) echo "$ZYML run $*" ;;
     zyjs) echo "node $ZYJS $*" ;;
     *) return 1 ;;
   esac
@@ -61,7 +61,6 @@ engine_cmd() {                       # engine_cmd <id> <file> <args...>
 engine_available() {
   case "$1" in
     zytw|zyvm) command -v zymbol >/dev/null ;;
-    zyml) [[ -x $ZYML ]] ;;
     zyjs) command -v node >/dev/null && [[ -f $ZYJS ]] ;;
     *) return 1 ;;
   esac
