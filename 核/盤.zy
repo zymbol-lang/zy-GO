@@ -79,10 +79,16 @@
         <~ 局面
     }
 
+    // 代入も返却も値で写す。だから一つずつ足し直す必要はなく、
+    // 返すだけで呼び手は独立した写しを受け取る。写経のような
+    // 手作業の複写は 361 路で四倍遅かった。
+    //
+    // EN: Assignment and return copy by value, so handing the board
+    // back IS the copy — the caller gets an independent one. Rebuilding
+    // it element by element was four times slower at 361 points, and it
+    // is on the path of every move and every playout.
     複製(局面) {
-        写 = []
-        @ 値 : 局面 { 写 = 写 $+ 値 }
-        <~ 写
+        <~ 局面
     }
 
     // 算出した添字はすべて 位置() を通る。かつてここにあった ##! の
