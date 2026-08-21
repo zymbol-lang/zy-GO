@@ -429,16 +429,28 @@ _状況描画(番号, 路, 手数, 色, 座, ミリ秒, 黒級, 黒性, 白級, 
 // EN: Mode and language are recognised by what they say, not by
 // where they sit, so `1 19 es` and `200 9 静 en` both do what they
 // look like they do.
-_総引数 = 引数$#
-@ 添字:3.._総引数 {
-    引 = 引数[添字]
-    ? 引 == "pausa" { 模式 = 0 }
-    ? 引 == "continua" { 模式 = 1 }
-    ? 引 == "静" { 模式 = 2 }
-    ? 引 == "silencio" { 模式 = 2 }
-    ? 引 == "ja" { 言語 = "ja" }
-    ? 引 == "es" { 言語 = "es" }
-    ? 引 == "en" { 言語 = "en" }
+// 三つ目より前に引数が無ければ、この走査は空である。`3..0` は
+// 逆順に数える範囲であって空の範囲ではないので、空の場合は
+// 自分で守る。守らなければ 引数[3] が範囲外で落ちる。守りは
+// 上限そのもの（引数$#）を見るので、意味解析もそれを認めて
+// 「範囲の向きは実行時に決まる」の警告を出さない。
+//
+// EN: With fewer than three arguments this scan is empty. `3..0` is
+// a range that counts DOWN, not an empty one, so the empty case is
+// guarded here; without the guard 引数[3] runs off the end. The
+// guard tests the bound itself (引数$#), which is what lets the
+// analyser see it and drop the runtime-direction warning.
+? (引数$#) >= 3 {
+    @ 添字:3..(引数$#) {
+        引 = 引数[添字]
+        ? 引 == "pausa" { 模式 = 0 }
+        ? 引 == "continua" { 模式 = 1 }
+        ? 引 == "静" { 模式 = 2 }
+        ? 引 == "silencio" { 模式 = 2 }
+        ? 引 == "ja" { 言語 = "ja" }
+        ? 引 == "es" { 言語 = "es" }
+        ? 引 == "en" { 言語 = "en" }
+    }
 }
 
 言::設定(言語)
