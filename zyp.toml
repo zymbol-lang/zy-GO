@@ -1,0 +1,25 @@
+[package]
+name = "GO"
+version = "0.1.0"
+engine = ">=0.0.9"
+mode = "vm"
+
+[[script]]
+name = "go"
+path = "go.zy"
+default = true
+
+[[script]]
+name = "囲碁"
+path = "囲碁.zy"
+default = false
+
+[[script]]
+name = "바둑"
+path = "바둑.zy"
+default = false
+
+[[script]]
+name = "围棋"
+path = "围棋.zy"
+default = false
