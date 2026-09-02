@@ -688,6 +688,78 @@ in silence reports nonsense with a straight face.
 
 ---
 
+## 対戦 — version against version
+
+```bash
+zymbol run --vm 対戦.zy [games] [board] [a] [b] [level] [seed]
+
+zymbol run --vm 対戦.zy 400 9 1 2      # v1 against v2, 400 games on 9×9
+zymbol run --vm 対戦.zy 200 13 1 2     # the same on 13×13
+```
+
+The only way to say an engine got better is to play it against the engine it
+replaced. `版/思考v1.zy` is the engine as it stood at v0.0.8 — a copy, frozen,
+never edited again — and `核/思考.zy` is the current one. Both use the same
+`核/盤` and `核/規則`: a version differs in how it *reads* a position, never in
+what is legal, because letting the stones behave differently per version means
+comparing two things at once.
+
+Colours swap every game, or this would measure the first move rather than the
+version. The seed is an argument and not the clock, so the same arguments
+produce the same table — a comparison that cannot be replayed is an opinion.
+There is no clock here at all: speed is what the section above answers.
+
+**To add v3 tomorrow**: freeze today's `核/思考.zy` as `版/思考v3.zy` (rename the
+module to match the path, point its imports at `../核/`), write the new engine
+in `核/`, and add one line each to `選ぶ()` and `版名()`.
+
+### What it said about v2
+
+| board | games | v1 | v2 | v2's margin | captures v1 / v2 |
+|-------|-------|----|----|-------------|------------------|
+| 9×9 | 400 | 137 | **263** (65.8%) | +11.6 | 4,759 / 7,478 |
+| 13×13 | 200 | 78 | **122** (61.0%) | +11.5 | 4,871 / 6,487 |
+
+v2 is the invasion guard plus **hunting** (layer 4 rewritten): an atari is worth
+what it threatens rather than a flat 40, the score is divided by the liberties
+the chain has left, and a chain inside our own sphere counts double because
+capturing it gives back the territory it was breaking as well as the stone.
+
+### Two things the ladder said that were not obvious
+
+**The first version of hunting was worth nothing.** It scored only chains left
+with two liberties or fewer — and a stone that has just invaded has four. The
+engine therefore never touched an invader until it was already in atari, by
+which time it had roots. Measured: 205 wins with that design against 204 before
+it, i.e. nothing. Dividing by the liberties left instead of cutting at two took
+it to 237, and then to 263 once the prey stopped voting on whose territory it
+was standing in (a stone radiates 4 onto its own point, so a lone invader can
+declare its own square neutral — the deeper it lands, the more exactly).
+
+**A term for answering the opponent's last move measured worse.** The idea is
+sound on its face: when the opponent drops a stone deep inside our sphere,
+answering *now* matters, so give a bonus for playing beside it. Eight
+configurations were run, and it was worse or equal in all eight:
+
+| 重_追討 | with 重_咎め = 30 | without it |
+|---------|-------------------|------------|
+| 5 | 259 | **261** |
+| 10 | 255 | **257** |
+| 15 | 259 | **263** |
+| 20 | 221 | **221** |
+
+In hindsight the reason is plain: urgency was already counted twice — `重_接触`
+rewards playing near the opponent's last move, and hunting rewards that stone's
+weakness. A third helping only pulled the engine off bigger moves elsewhere.
+The term was removed; this table is why, so that nobody adds it back without a
+better one.
+
+The same sweep set `重_追討 := 15`. Between 5, 10 and 15 the difference is inside
+the noise (261 / 257 / 263 of 400); at 20 it falls off a cliff to 221, which is
+the engine chasing groups it cannot catch.
+
+---
+
 ## Tree-walker versus VM
 
 The harness runs under both engines, and because a game replays from its seed,

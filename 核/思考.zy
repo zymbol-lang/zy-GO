@@ -71,6 +71,7 @@
     // EN: Evaluation weights. Constants so they can be tuned without
     // touching the logic that applies them.
     重_取り   := 100
+    重_追討   := 15
     重_逃げ   := 80
     重_自殺   := 70
     重_アタリ := 40
@@ -277,6 +278,56 @@
         横差 = 列甲 - 列乙
         ? 横差 < 0 { 横差 = 0 - 横差 }
         <~ 縦差 + 横差
+    }
+
+    // 取ったときに何が手に入るか。石の数がまず立ち、その連が自分の
+    // 勢力の中にいるなら倍になる。中国式の目算では、生きている侵入の
+    // 石は相手の一目であるうえに、こちらの地を地でなくしている
+    // ——両方の色に接する空点は誰の地でもない。取ればその両方が戻る。
+    //
+    // 勢力は連の最初の一点で見る。連は繋がっているので、どの石を
+    // 見ても同じ側にいる。
+    //
+    // EN: What capturing this chain would be worth. Its size first,
+    // doubled when it sits inside our own sphere: under area scoring a
+    // living invasion is a point for the opponent AND stops our
+    // territory from being territory, since an empty region touching
+    // both colours belongs to nobody. Capturing gives back both.
+    //
+    // The sphere is read at the chain's first point — a chain is
+    // connected, so any stone of it is on the same side.
+    _獲物価値(群, 路, 影響, 色) {
+        大きさ = 群$#
+        ? 大きさ == 0 { <~ 0 }
+        点 = 群[1]
+        勢 = 影響[点]
+        ? 色 == 2 { 勢 = 0 - 勢 }
+        勢 = 勢 + _自寄与(群, 路, 点)
+        ? 勢 > 0 { <~ 大きさ * 2 }
+        <~ 大きさ
+    }
+
+    // 影響図には獲物自身の重みも入っている。石は自分の点に 4 を
+    // 放つので、地の真ん中に降りた一つきりの侵入の石は「ここは
+    // 中立だ」と自分で宣言できてしまう。深く降りるほど正確にそう
+    // なる。訊いているのは「ここは誰の懐か」なのだから、訊かれて
+    // いる当人の票は抜く。
+    //
+    // EN: The influence map includes the prey's own weight — a stone
+    // radiates 4 onto its own point — so a lone stone dropped in the
+    // middle of a territory can declare its own square neutral, and
+    // the deeper it lands the more exactly it does. The question is
+    // whose interior this is, and the one being asked about does not
+    // get a vote.
+    _自寄与(群, 路, 点) {
+        行 = 盤::行番(路, 点)
+        列 = 盤::列番(路, 点)
+        寄 = 0
+        @ 石 : 群 {
+            距 = _距離(行, 列, 盤::行番(路, 石), 盤::列番(路, 石))
+            ? 距 <= 3 { 寄 = 寄 + (4 - 距) }
+        }
+        <~ 寄
     }
 
     _絶対(値) {
@@ -512,12 +563,76 @@
 
         // 第四層 — 相手へのアタリ。
         // EN: Layer 4 — atari against the opponent.
+        // アタリの値打ちは、それが何を脅かしているかで決まる。石一つを
+        // 脅す手と十二の連を脅す手が同じ 40 点であってはならなかった。
+        // そして自分の勢力の中にいる敵ほど重い。取れば石が一つ増える
+        // だけでなく、その石が壊していた地が戻るからである。中国式の
+        // 目算では、生きている侵入の石は二重に効いている。
+        //
+        // 点数は残ったダメで割る。アタリ（残り一つ）で満点、二つで
+        // 半分、四つで四分の一。境目を作らないのは、境目を作った
+        // 最初の版がまさにそこで外したからである。二つ以下だけを
+        // 数えていたら、いま降りてきたばかりの — ダメ四つの —
+        // 侵入の石には一点もつかず、engine は敵がアタリになるまで
+        // 触れず、そのときにはもう根を張っている。追うのは、
+        // 追える間だけである。
+        //
+        // EN: The score is divided by the liberties left — full at
+        // atari, half at two, a quarter at four. There is no cliff
+        // because the first version of this had one and missed exactly
+        // there: scoring only two-or-fewer gave nothing at all for
+        // approaching a stone that had just landed with four, so the
+        // engine never touched an invader until it was already in
+        // atari, by which time it had roots. A group is hunted while
+        // it can still be hunted.
+        //
+        // 取りそのものはこれより常に重い（重_取り は石一つに 100、
+        // 追討は 25）。だから「もっと大きな群を取りに行っている最中に
+        // 小さな石へ寄り道する」ことにはならない。順序はここで決めて
+        // いない。値打ちが決めている。
+        //
+        // 同じ連を二度数えない。隣り合う二点が同じ連のものであること
+        // は珍しくなく、大きさに比例する点数を二度足せば、その一手
+        // だけが不当に光る。
+        //
+        // EN: Layer 4 — hunting.
+        //
+        // What an atari is worth depends on what it threatens: a move
+        // that threatens one stone and a move that threatens a chain of
+        // twelve were both worth 40. An enemy inside our own sphere is
+        // worth more again — capturing it adds a stone AND gives back
+        // the territory it was breaking. Under area scoring a living
+        // invasion counts twice.
+        //
+        // Moves that bring a chain down to two liberties count too. A
+        // capture is not one move: if narrowing three liberties to two
+        // scores nothing, the engine never touches the enemy until the
+        // atari is already there, and by then it has run.
+        //
+        // The capture itself always outweighs this (重_取り is 100 a
+        // stone, hunting is 25), so this cannot pull the engine off a
+        // bigger group onto a smaller stone. Nothing here sequences
+        // that — the values do.
+        //
+        // No chain is counted twice: two neighbours often belong to one
+        // chain, and adding a size-proportional score twice would make
+        // that one move shine for no reason.
         掛けた = #0
+        既出 = []
         @ 隣点 : 盤::隣(路, 点) {
             ? 写[隣点] == 敵色 {
-                ? 盤::ダメ数上限(写, 路, 隣点, 2) == 1 {
-                    攻点 = 攻点 + 重_アタリ
-                    掛けた = #1
+                ? !(既出$? 隣点) {
+                    残 = 盤::ダメ数上限(写, 路, 隣点, 5)
+                    ? 残 <= 4 {
+                        敵群 = 盤::連(写, 路, 隣点)
+                        @ 石 : 敵群 { 既出 = 既出 $+ 石 }
+                        価 = _獲物価値(敵群, 路, 影響, 色)
+                        攻点 = 攻点 + 重_追討 * 価 / 残
+                        ? 残 == 1 {
+                            攻点 = 攻点 + 重_アタリ
+                            掛けた = #1
+                        }
+                    }
                 }
             }
         }
@@ -551,6 +666,26 @@
             終行 = 盤::行番(路, 最終手)
             終列 = 盤::列番(路, 最終手)
             ? _距離(行, 列, 終行, 終列) <= 2 { 攻点 = 攻点 + 重_接触 }
+
+            // ここには「相手の最後の一手が自陣の奥に降りたなら、その
+            // 隣に打つ手をさらに褒める」という項があった。急ぎを表す
+            // つもりの項である。測ったら否と出た — 梯子で八通り
+            // 試して、八通りとも無いほうが良いか同じだった（詳しくは
+            // BENCHMARK.md）。理由は後から見れば分かる。急ぎはもう
+            // 二度数えられていた。重_接触 が最後の一手の近くを褒め、
+            // 追討がその石の弱さを褒める。三度目は、盤の他の場所に
+            // ある もっと大きな手から engine を引き剥がすだけだった。
+            //
+            // EN: A term used to sit here: an extra bonus for playing
+            // beside the opponent's last stone when it landed deep in
+            // our own sphere — urgency, expressed as a score. The
+            // ladder said no, eight configurations out of eight, worse
+            // or equal without it (BENCHMARK.md has the table). In
+            // hindsight the reason is plain: urgency was already
+            // counted twice. 重_接触 rewards being near the last move
+            // and the hunting term rewards that stone's weakness. A
+            // third helping only pulled the engine off bigger moves
+            // elsewhere on the board.
         }
 
         // 第六層 — 勢力。自陣の安全な内側より、二つの勢力圏の

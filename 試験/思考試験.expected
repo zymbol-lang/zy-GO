@@ -40,4 +40,13 @@ invasion guard — 侵入の見張り
   ok    the same holds for White inside Black's wall
   ok    the white stone really is in atari
   ok    a capture is worth playing however deep it is
+hunting — 追討
+  ok    the invader really has four liberties
+  ok    approaching it beats playing far from it in the same area
+  ok    both chains are down to two liberties
+  ok    the big chain is three stones
+  ok    threatening three stones beats threatening one
+  ok    the stone to be taken has one liberty
+  ok    the other one still has two
+  ok    capturing outscores merely closing in
 PASS — the engine reads the position
