@@ -59,6 +59,7 @@
             "報せ.観戦中"        => "watching  ␣pause  ? keys"
             "報せ.休止"         => "paused  ␣resume  s step"
             "報せ.結果へ"        => "game over — ↵ result"
+            "報せ.棋譜へ"   => "↵ leave · k record"
             "報せ.投了"       => "resigned"
 
             "終局.表題"       => "Game over"

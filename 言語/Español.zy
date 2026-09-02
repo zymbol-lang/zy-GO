@@ -61,6 +61,7 @@
             "報せ.観戦中"        => "mirando  ␣pausa  ? teclas"
             "報せ.休止"         => "en pausa  ␣sigue  s paso"
             "報せ.結果へ"        => "fin — ↵ resultado"
+            "報せ.棋譜へ"   => "↵ salir · k registro"
             "報せ.投了"       => "abandono"
 
             "終局.表題"       => "Fin de la partida"
