@@ -7,7 +7,7 @@
 // ることは無い。文言はすべて鍵を通して 言語/ から来る。
 //
 // 配列の並び（同じ表が 表示/描画.zy にもある）。
-//   設定[1] 路   [2] 主題   [3] 級   [4] コミ   [5] 人色
+//   設定[1] 路   [2] 主題   [3] 級   [4] コミ   [5] 人色   [6] 版   [6] 版
 //   状況[1] 手番 [2] 手数   [3] 黒取 [4] 白取   [5] 最終手
 //        [6] コウ点         [7] 連続パス
 //
@@ -51,6 +51,7 @@
     <# ./核/規則 => 規則
     <# ./核/計算 => 計算
     <# ./核/思考 => 思
+    <# ./版/思考v1 => 思1
     <# ./表示/主題 => 主
     <# ./表示/描画 => 描
     <# ./表示/文字 => 文
@@ -168,6 +169,17 @@
     _設定画面(高, 幅, 手番既定) {
         路一覧 = _可能路盤(高, 幅)
         コミ一覧 = [0, 5.5, 6, 6.5, 7, 7.5]
+        // 対手の版。打つときは v1 か v2 のどちらか。観戦のときだけ
+        // 三つ目 — v1 対 v2 — が出る。人がいない席でしか意味を成さ
+        // ない値を、人が座っている品書に出しても仕方がない。
+        //
+        // EN: The opponent's version. Playing, it is v1 or v2; only
+        // while spectating does the third value — v1 against v2 —
+        // appear, since a value that means nothing when a person holds
+        // one of the seats has no business on the menu they are reading.
+        // 新しい版が先頭に立つ。既定はいまの engine である。
+        // EN: Newest first — the default is the current engine.
+        版一覧 = [2, 1]
         主題一覧 = 主::主題一覧()
         言語一覧 = 言::言語一覧()
         // 黒が先に打つ。だから 白 を選ぶことは AI が口火を切ることを
@@ -180,24 +192,41 @@
         路位 = 1
         級 = 2
         手番位 = 手番既定
+        黒位 = 1
+        白位 = 1
         コミ位 = 4
         主題位 = 1
         言語位 = _言語位置(言語一覧, 言::現在())
         選 = 1
-        行数 = 6
+        行数 = 8
+
 
         欄 = 38
-        上 = ##!((高 - 12) / 2 + 1)
+        // 箱の高さは行数から出す。枠が上下に一本ずつ、題と版と案内の
+        // ための仕切りが三本、その内側に品書の行。以前は 12 と書いて
+        // あって、品書が六行だった頃はそれで正しかった。行を足した
+        // 日に、箱は画面の下へずれた。
+        //
+        // EN: The box's height comes from the number of rows: a border
+        // top and bottom, three rules for the title, the version and
+        // the footer, and the menu rows inside. It used to be the
+        // literal 12, which was right while the menu had six rows and
+        // wrong the day one was added — the box slid down the screen.
+        箱高 = 行数 + 6
+        上 = ##!((高 - 箱高) / 2 + 1)
         左 = ##!((幅 - 欄 - 2) / 2 + 1)
         ? 上 < 1 { 上 = 1 }
         ? 左 < 1 { 左 = 1 }
 
         >>!
         @ {
+            人色 = 手番一覧[手番位]
             名一覧 = [
                 言::語("品書.路盤"),
                 言::語("品書.棋力"),
                 言::語("品書.手番"),
+                言::語("色.黒"),
+                言::語("色.白"),
                 言::語("品書.コミ"),
                 言::語("品書.主題"),
                 言::語("品書.言語")
@@ -214,10 +243,23 @@
             // EN: Interpolation takes {identifier} only, so the komi
             // value is bound before it can be turned into text.
             コミ値 = コミ一覧[コミ位]
+            // 人が持つ側には選ぶものが無い。その席に版の名を出すのは
+            // 嘘である。
+            //
+            // EN: There is nothing to choose for the side a person
+            // takes, and printing a version name in that seat would be
+            // a lie.
+            黒札 = _版名(版一覧[黒位])
+            白札 = _版名(版一覧[白位])
+            ? 人色 == 1 { 黒札 = 言::語("側.自分") }
+            ? 人色 == 2 { 白札 = 言::語("側.自分") }
+
             値一覧 = [
                 言::路盤名(路一覧[路位]),
                 級札,
                 手番札,
+                黒札,
+                白札,
                 "{コミ値}",
                 主題札,
                 言札
@@ -228,15 +270,15 @@
             ?? 打鍵 {
                 '↑' => { 選 = _回す(選, 行数, -1) }
                 '↓' => { 選 = _回す(選, 行数, 1) }
-                '←' => { _設定変更(選, -1, 路位<~, 級<~, 手番位<~, コミ位<~, 主題位<~, 言語位<~, 路一覧, 手番一覧, コミ一覧, 主題一覧, 言語一覧) }
-                '→' => { _設定変更(選, 1, 路位<~, 級<~, 手番位<~, コミ位<~, 主題位<~, 言語位<~, 路一覧, 手番一覧, コミ一覧, 主題一覧, 言語一覧) }
+                '←' => { _設定変更(選, -1, 路位<~, 級<~, 手番位<~, 黒位<~, 白位<~, コミ位<~, 主題位<~, 言語位<~, 路一覧, 版一覧, 手番一覧, コミ一覧, 主題一覧, 言語一覧, 人色) }
+                '→' => { _設定変更(選, 1, 路位<~, 級<~, 手番位<~, 黒位<~, 白位<~, コミ位<~, 主題位<~, 言語位<~, 路一覧, 版一覧, 手番一覧, コミ一覧, 主題一覧, 言語一覧, 人色) }
                 '\n' => { @! }
                 'q' || 'Q' => { <~ [] }
                 _ => { }
             }
         }
 
-        <~ [路一覧[路位], 主題一覧[主題位], 級, コミ一覧[コミ位], 手番一覧[手番位]]
+        <~ [路一覧[路位], 主題一覧[主題位], 級, コミ一覧[コミ位], 手番一覧[手番位], 版一覧[黒位], 版一覧[白位]]
     }
 
     // 添字は出力引数として渡り歩く。呼び出しの場に六つの枝を置く
@@ -246,13 +288,24 @@
     // EN: The indices travel as output parameters so the caller's
     // state moves with one call instead of six branches at the call
     // site.
-    _設定変更(選, 向き, 路位<~, 級<~, 手番位<~, コミ位<~, 主題位<~, 言語位<~, 路一覧, 手番一覧, コミ一覧, 主題一覧, 言語一覧) {
+    _設定変更(選, 向き, 路位<~, 級<~, 手番位<~, 黒位<~, 白位<~, コミ位<~, 主題位<~, 言語位<~, 路一覧, 版一覧, 手番一覧, コミ一覧, 主題一覧, 言語一覧, 人色) {
         ? 選 == 1 { 路位 = _回す(路位, 路一覧$#, 向き) }
         ? 選 == 2 { 級 = _回す(級, 3, 向き) }
         ? 選 == 3 { 手番位 = _回す(手番位, 手番一覧$#, 向き) }
-        ? 選 == 4 { コミ位 = _回す(コミ位, コミ一覧$#, 向き) }
-        ? 選 == 5 { 主題位 = _回す(主題位, 主題一覧$#, 向き) }
-        ? 選 == 6 {
+        // 人が持つ席は動かさない。見えないものを黙って変えるより、
+        // 動かないほうが正直である。
+        //
+        // EN: The seat a person takes does not move: not moving is
+        // more honest than silently changing something invisible.
+        ? 選 == 4 {
+            ? 人色 <> 1 { 黒位 = _回す(黒位, 版一覧$#, 向き) }
+        }
+        ? 選 == 5 {
+            ? 人色 <> 2 { 白位 = _回す(白位, 版一覧$#, 向き) }
+        }
+        ? 選 == 6 { コミ位 = _回す(コミ位, コミ一覧$#, 向き) }
+        ? 選 == 7 { 主題位 = _回す(主題位, 主題一覧$#, 向き) }
+        ? 選 == 8 {
             言語位 = _回す(言語位, 言語一覧$#, 向き)
             言::設定(言語一覧[言語位])
         }
@@ -269,6 +322,43 @@
         名 = 言::語("言語.名前")
         言::設定(前)
         <~ 名
+    }
+
+    // ---- 版 -------------------------------------------------
+    // どの engine に訊くか。設定[6] が 1 なら凍らせた第一版、2 なら
+    // いまの版、0 なら「v1 対 v2」— 観戦のときだけ意味を持ち、黒が
+    // v1、白が v2 である。
+    //
+    // 版が違うのは読み方だけである。盤も規則も一つきりで、どちらの
+    // engine も同じ 核/盤 と 核/規則 を通る。石の振る舞いまで版ごとに
+    // 分かれたら、遊んでいるのは二つの碁になる。
+    //
+    // EN: which engine to ask. 設定[6] is 1 for the frozen first
+    // engine, 2 for the current one, 0 for "v1 against v2" — which
+    // only means anything while spectating, and puts v1 on black.
+    //
+    // A version differs in how it reads a position, never in what is
+    // legal: both engines go through the same 核/盤 and 核/規則. Let
+    // the stones behave differently per version and you are playing
+    // two different games.
+    _版選び(設定, 色) {
+        版 = 設定[6]
+        ? 版 == 0 {
+            ? 色 == 1 { <~ 1 }
+            <~ 2
+        }
+        <~ 版
+    }
+
+    _版着手選択(版, 局面, 路, 色, 級, コウ点, 最終手, 手数) {
+        ? 版 == 1 { <~ 思1::着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数) }
+        <~ 思::着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数)
+    }
+
+    _版名(版) {
+        ? 版 == 1 { <~ "v1" }
+        ? 版 == 0 { <~ "v1-v2" }
+        <~ "v2"
     }
 
     // ---- 棋譜 -----------------------------------------------
@@ -300,13 +390,30 @@
         人 = "none"
         ? 人色 == 1 { 人 = "B" }
         ? 人色 == 2 { 人 = "W" }
-        <~ "# zy-GO kifu v1
+        黒名 = _版名(設定[6])
+        白名 = _版名(設定[7])
+
+        // 名前へ束ねてから返す。`<~` に行をまたぐ literal を直に
+        // 書くと、browser の engine では Unit が返る（HLZ-013）。
+        // Rust の二つは文字列を返すので、この記録は端末では出て
+        // browser では消えていた。局所の名前を一つ挟めば、三つの
+        // engine とも同じものを返す。
+        //
+        // EN: Bound to a name before it is returned. A string literal
+        // that spans lines, written directly after `<~`, comes back as
+        // Unit in the browser engine (HLZ-013) — so this record printed
+        // in a terminal and vanished in a browser. One local name and
+        // all three engines return the same thing.
+        頭 = "# zy-GO kifu v1
 board {路}
 komi {コミ}
 level {級}
 human {人}
+engine_black {黒名}
+engine_white {白名}
 ---
 "
+        <~ 頭
     }
 
     _色字(色) {
@@ -567,7 +674,7 @@ captures black={黒取} white={白取}
         級 = 設定[3]
         色 = 状況[1]
 
-        点 = 思::着手選択(局面, 路, 色, 級, 状況[6], 状況[5], 状況[2])
+        点 = _版着手選択(_版選び(設定, 色), 局面, 路, 色, 級, 状況[6], 状況[5], 状況[2])
 
         // 取 は枝の外で立てる。棋譜はどちらの枝を通っても書くので、
         // 枝の中だけの名前では届かない。
