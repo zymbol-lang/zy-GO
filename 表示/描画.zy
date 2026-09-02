@@ -181,7 +181,7 @@
         >>~ (行, 左, 1, 色_強) > "│{題}│"
 
         行 = ##!(行 + 1)
-        版 = 文::中央("Zymbol v0.0.8", 欄)
+        版 = 文::中央("Zymbol v0.0.9", 欄)
         >>~ (行, 左, 0, 色_札) > "│{版}│"
 
         行 = ##!(行 + 1)
@@ -294,11 +294,13 @@
         }
     }
 
-    // 手番が誰か。両者とも人なら色を、片方が人でなければ
-    // 打ち手か AI かを示す。
+    // 手番が誰か。人がいなければ色を、いれば打ち手か AI かを示す。
+    // 観戦では「自分」も「機械」も意味を成さない。どちらも機械
+    // だからである。
     //
-    // EN: Who is to move: the colour when both sides are human, the
-    // player or the AI when one of them is not.
+    // EN: Who is to move: the colour when there is no human — in
+    // spectating neither "you" nor "machine" says anything, since
+    // both sides are the machine — and otherwise the player or the AI.
     _手番名(手番, 人色) {
         ? 人色 == 0 {
             ? 手番 == 1 { <~ 言::語("色.黒") }
@@ -325,16 +327,14 @@
         黒 = 主::石字(主題, 1)
         白 = 主::石字(主題, 2)
 
-        // AI の級を告げるのは、それを当てはめる AI がいるときだけ。
-        // 人どうしの対局では盤の名前だけが立つ。
+        // 級はどちらの様式でも告げる。人と打つときは相手の級であり、
+        // 観戦のときは両方の級である。どちらでも AI はいる。
         //
-        // EN: The AI level is only announced when there is an AI to
-        // apply it to; in hot-seat the board name stands alone.
-        題 = 盤名
-        ? 人色 <> 0 {
-            級名 = 言::語("棋力.{級}")
-            題 = "{盤名} · {級名}"
-        }
+        // EN: The level is announced in both modes: playing, it is
+        // the opponent's; spectating, it is both sides'. Either way
+        // there is an AI it applies to.
+        級名 = 言::語("棋力.{級}")
+        題 = "{盤名} · {級名}"
 
         行 = 上
         >>~ (行, 左, 0, 色_縁) > _横線("╭", "╮")

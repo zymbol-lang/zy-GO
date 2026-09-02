@@ -23,6 +23,7 @@
             "品書.コミ"       => "Komi"
             "品書.主題"       => "Theme"
             "品書.言語"       => "Language"
+            "品書.観戦"       => "watch"
             "品書.案内"       => "↑↓ select   ←→ change   ↵ start"
             "品書.不可"       => "screen too small"
 
@@ -55,6 +56,9 @@
             "報せ.待った不可" => "nothing left to undo"
             "報せ.考慮中"     => "thinking…"
             "報せ.打つ手無し" => "nothing useful left — press p to pass"
+            "報せ.観戦中"        => "AI vs AI — space pause · s step · t theme · q quit"
+            "報せ.休止"         => "paused — space resume · s step · q quit"
+            "報せ.結果へ"        => "game over — ↵ for the result"
             "報せ.投了"       => "resigned"
 
             "終局.表題"       => "Game over"
