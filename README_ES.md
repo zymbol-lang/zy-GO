@@ -217,6 +217,48 @@ No se escribe nada en disco ni hace falta intérprete de órdenes, así que este
 el modo que corre en el navegador — al contrario que `棋戦.zy`, que es un
 instrumento: necesita un reloj de `BashExec` y escribe sus registros en `棋譜/`.
 
+### El registro — 棋譜
+
+Pulsa `k` en la pantalla final, después del resultado, y la partida se imprime
+como registro al cerrarse la pantalla alterna: en el historial de la terminal, o
+en el panel bajo el lienzo del playground, de donde se puede copiar.
+
+```
+# zy-GO kifu v1
+board 9
+komi 6.5
+level 2
+human B
+---
+1 B E5 caps=0
+2 W G7 caps=0
+3 B G5 caps=0
+4 W C3 caps=0
+undo 4
+5 B pass caps=0
+6 W G3 caps=0
+---
+result W+R
+moves 6
+score black=2 white=9.5
+captures black=0 white=0
+```
+
+La misma forma que los registros que escribe `棋戦.zy`, y sin traducir sea cual
+sea el idioma en pantalla, porque un conjunto de datos partido en dos idiomas
+son dos conjuntos de datos. No se escribe nada en disco: el navegador no tiene
+disco, y un registro que solo existe en una de las dos plataformas es un
+registro que nadie recoge.
+
+**Los deshacer están dentro.** `undo 4` dice que quien jugaba rebobinó a cuatro
+jugadas. Habría sido fácil quitarlos —no son parte de la partida que se jugó— y
+son las líneas más interesantes del fichero: lo que una persona *des*juega dice
+tanto de cómo juega como lo que juega.
+
+Se guarda porque el autojuego no lo puede producir. `対戦.zy` puede jugar diez
+mil partidas de motor contra motor y no enseñar nunca lo único que importa aquí:
+cómo le gana una persona a este motor. Eso es lo que guardan estos registros.
+
 ### La misma partida en otro idioma
 
 `围棋.zy` en una terminal clásica de 80 × 24 — el 19 × 19 cabe con el panel al
@@ -350,7 +392,7 @@ del nivel:
 | 1 | 合法手 | Legalidad: sin suicidio, sin ko, nunca rellenar un ojo propio |
 | 2 | 取り | Capturar — ponderado por cuántas piedras se llevan |
 | 3 | アタリ逃げ | Escapar del atari, pero solo cuando la fuga gana libertades de verdad |
-| 4 | アタリ | Poner en atari una cadena rival |
+| 4 | アタリ · 追討 | Poner en atari una cadena rival, y apretar a una vecina — pesado por lo que vale y por las pocas libertades que le quedan |
 | 5 | 形 | Patrones de forma 3 × 3 alrededor de la última jugada rival (hane, extensión, conexión, corte) |
 | 6 | 勢力 | Un mapa de influencia, favoreciendo la frontera entre ambas esferas |
 | 6b | 侵入 | El mismo mapa leído del otro lado: penaliza jugar en lo hondo de la esfera del rival sin razón táctica |
@@ -394,6 +436,16 @@ con guarda ganó 86 (el control sin guarda quedó 99–101). Contra una persona 
 sí captura la invasión, es al revés. La guarda se valida con pruebas de posición
 en `試験/思考試験.zy`, no con la escalera.
 
+**¿Está mejorando?** `対戦.zy` responde a eso y a nada más: juega el motor de
+ahora contra `版/思考v1.zy` —el motor de v0.0.8, congelado y nunca más
+editado—, cambiando de color cada partida desde una semilla que se pasa como
+argumento. El motor de hoy gana **263 de 400** en 9×9 y **122 de 200** en 13×13,
+por unos once puntos y medio de media, y captura como un 50% más de piedras.
+Añadir un v3 mañana es: congelar el fichero de hoy como 版/思考v3.zy, escribir el
+nuevo, y añadir una línea a la tabla de 対戦.zy. Ver BENCHMARK.md — incluidas las
+dos cosas que dijo la escalera y que no eran obvias, una de ellas que una idea de
+la que estábamos seguros no valía absolutamente nada.
+
 El nivel es un solo número — cuánto por debajo de la mejor puede puntuar una
 jugada y aun así elegirse (60 / 25 / 5 puntos). Un principiante no es un programa
 que juega mal a propósito: es uno que no distingue la mejor jugada de una casi
@@ -412,6 +464,8 @@ zy-GO/
 ├── 観戦.zy              punto de entrada, observar — el motor juega los dos lados
 ├── 対局.zy              controlador de partida — turnos, historial, deshacer
 ├── 棋戦.zy              IA contra IA, instrumentado — ver BENCHMARK.md
+├── 対戦.zy              versión contra versión — la escalera, ver BENCHMARK.md
+├── 版/思考v1.zy         el motor de v0.0.8, congelado: contra quien juega la escalera
 ├── 集計.zy              suma todas las tandas en un solo juego de matrices
 │                       los registros van a zy-GO-kifu (ZYGO_KIFU para redirigir)
 ├── 核/                  motor

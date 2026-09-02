@@ -218,6 +218,47 @@ Nothing is written to disk and nothing needs a shell, so this is the mode that
 runs in the browser — unlike `棋戦.zy`, which is an instrument: it needs a clock
 from `BashExec` and writes its records to `棋譜/`.
 
+### The record — 棋譜
+
+Press `k` on the final screen, after the result, and the game is printed as a
+record when the alternate screen closes — in the terminal's scrollback, or in
+the panel under the playground's canvas, where it can be copied.
+
+```
+# zy-GO kifu v1
+board 9
+komi 6.5
+level 2
+human B
+---
+1 B E5 caps=0
+2 W G7 caps=0
+3 B G5 caps=0
+4 W C3 caps=0
+undo 4
+5 B pass caps=0
+6 W G3 caps=0
+---
+result W+R
+moves 6
+score black=2 white=9.5
+captures black=0 white=0
+```
+
+Same shape as the records `棋戦.zy` writes, and untranslated whatever the
+display language is, because a dataset split across two languages is two
+datasets. Nothing is written to disk: the browser has no disk, and a record that
+only exists on one of the two platforms is a record nobody collects.
+
+**Takebacks are in it.** `undo 4` says the player rewound to four moves. It
+would have been easy to drop them — they are not part of the game that was
+played — and they are the most interesting lines in the file: what a person
+unplays says as much about how they play as what they play.
+
+The point of keeping it is that self-play cannot produce it. `対戦.zy` can play
+ten thousand games of engine against engine and never show the one thing that
+matters here — how a person beats this engine. That is what these records hold.
+
 ### The same game in another language
 
 `围棋.zy` on a classic 80 × 24 terminal — 19 × 19 fits side by side with the
@@ -347,7 +388,7 @@ the best one — with an amount of randomness that depends on the level:
 | 1 | 合法手 | Legality: no suicide, no ko, never fill your own eye |
 | 2 | 取り | Capturing — weighted by how many stones come off |
 | 3 | アタリ逃げ | Escaping atari, but only when the escape actually gains liberties |
-| 4 | アタリ | Putting an opponent chain in atari |
+| 4 | アタリ · 追討 | Putting an opponent chain in atari, and pressing a neighbouring one — weighted by what it is worth and by how few liberties it has left |
 | 5 | 形 | 3 × 3 shape patterns around the opponent's last move (hane, extension, connection, cut) |
 | 6 | 勢力 | An influence map, favouring the boundary between the two spheres |
 | 6b | 侵入 | The same map read from the other side: a penalty for playing deep in the opponent's sphere with no tactical reason |
@@ -390,6 +431,16 @@ won 86 (the unguarded control split 99–101). Against a person who does capture
 the invasion, it is the opposite. The guard is validated by position tests in
 `試験/思考試験.zy`, not by the ladder.
 
+**Is it getting better?** `対戦.zy` answers that and nothing else: it plays the
+current engine against `版/思考v1.zy` — the v0.0.8 engine, frozen and never
+edited again — swapping colours every game from a seed given as an argument.
+Today's engine wins **263 of 400** on 9×9 and **122 of 200** on 13×13, by about
+eleven points and a half on average, and captures some 50% more stones. Adding a
+v3 tomorrow is: freeze today's file as 版/思考v3.zy, write the new one, add one
+line to the table in 対戦.zy. See BENCHMARK.md — including the two things the
+ladder said that were not obvious, one of which was that an idea we were sure
+about was worth nothing at all.
+
 The level is a single number — how far below the best a move may score and still
 be picked (60 / 25 / 5 points). A beginner is not a program that plays badly on
 purpose; it is one that cannot tell a good move from a nearly-good one.
@@ -407,6 +458,8 @@ zy-GO/
 ├── 観戦.zy              entry point, spectating — the engine plays both sides
 ├── 対局.zy              match controller — turn loop, history, undo
 ├── 棋戦.zy              AI vs AI, instrumented — see BENCHMARK.md
+├── 対戦.zy              version against version — the ladder, see BENCHMARK.md
+├── 版/思考v1.zy         the v0.0.8 engine, frozen: what the ladder plays against
 ├── 集計.zy              sums every run into one set of matrices
 │                       records go to zy-GO-kifu (ZYGO_KIFU to redirect)
 ├── 核/                  engine

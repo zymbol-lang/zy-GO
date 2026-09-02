@@ -1,18 +1,18 @@
 囲碁 — i18n verification
-keys: 59   locales: 5
-  [ja] 日本語        59/59  OK
-  [ko] 한국어        59/59  OK
-  [zh] 中文          59/59  OK
-  [en] English       59/59  OK
-  [es] Español       59/59  OK
+keys: 60   locales: 5
+  [ja] 日本語        60/60  OK
+  [ko] 한국어        60/60  OK
+  [zh] 中文          60/60  OK
+  [en] English       60/60  OK
+  [es] Español       60/60  OK
 composed messages
   [ja] 九路盤 · 十九路盤
   [ko] 9줄 바둑판 · 19줄 바둑판
   [zh] 九路棋盘 · 十九路棋盘
   [en] 9×9 · 19×19
   [es] 9×9 · 19×19
-instrument keys: 52   locales: 3
-  [ja] 道具          52/52  OK
-  [en] 道具          52/52  OK
-  [es] 道具          52/52  OK
+instrument keys: 65   locales: 3
+  [ja] 道具          65/65  OK
+  [en] 道具          65/65  OK
+  [es] 道具          65/65  OK
 PASS — every key resolves in every locale
