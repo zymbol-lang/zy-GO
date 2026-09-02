@@ -193,8 +193,13 @@ tecla.
  espacio  pausa / seguir
  s        una jugada y pausa
  t        cambia el tema
+ ?        las teclas, en un panel
  q        salir
 ```
+
+La línea de estado bajo el tablero lleva el estado — `mirando` o `en pausa` — y
+mide 25 columnas en un tablero de nueve, que es la razón de que la lista entera
+viva detrás de `?` y no dentro de ella.
 
 Mientras juega, la tecla se lee **sin bloquear**: la partida avanza sola y la
 tecla solo cambia su ritmo; en pausa la lectura sí bloquea, que es lo que hace
@@ -404,6 +409,7 @@ zy-GO/
 ├── 바둑.zy              punto de entrada, coreano      │ el mismo juego,
 ├── 围棋.zy              punto de entrada, mandarín     │ con el idioma
 ├── go.zy                punto de entrada, menú         ┘ preseleccionado
+├── 観戦.zy              punto de entrada, observar — el motor juega los dos lados
 ├── 対局.zy              controlador de partida — turnos, historial, deshacer
 ├── 棋戦.zy              IA contra IA, instrumentado — ver BENCHMARK.md
 ├── 集計.zy              suma todas las tandas en un solo juego de matrices
@@ -442,6 +448,13 @@ zy-GO/
 Cuatro puntos de entrada, un solo juego. `囲碁.zy`, `바둑.zy` y `围棋.zy` solo se
 diferencian en el idioma que preseleccionan; `go.zy` abre en el menú de idiomas y
 existe para la terminal donde escribir CJK es incómodo.
+
+`観戦.zy` es un quinto, y lo que preselecciona es el **modo**, no el idioma: abre
+la misma pantalla de configuración con 手番 puesto en 観戦. Existe porque un punto
+de entrada es lo que una lista de scripts puede enseñar — el selector del
+playground, el `zyp.toml` —, y un modo al que solo se llega recorriendo un menú
+con las flechas es un modo que casi nadie encuentra. Devuelve 手番 a 黒 o 白 en esa
+pantalla y vuelve a ser una partida normal.
 
 El tablero es un **array plano de `N × N` puntos**, indexado desde 1, con
 valores `0` vacío, `1` negras, `2` blancas. El punto `(fila, columna)` vive en

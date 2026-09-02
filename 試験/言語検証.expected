@@ -1,10 +1,10 @@
 囲碁 — i18n verification
-keys: 56   locales: 5
-  [ja] 日本語        56/56  OK
-  [ko] 한국어        56/56  OK
-  [zh] 中文          56/56  OK
-  [en] English       56/56  OK
-  [es] Español       56/56  OK
+keys: 59   locales: 5
+  [ja] 日本語        59/59  OK
+  [ko] 한국어        59/59  OK
+  [zh] 中文          59/59  OK
+  [en] English       59/59  OK
+  [es] Español       59/59  OK
 composed messages
   [ja] 九路盤 · 十九路盤
   [ko] 9줄 바둑판 · 19줄 바둑판
