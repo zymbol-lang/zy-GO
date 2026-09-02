@@ -11,8 +11,8 @@ composed messages
   [zh] 九路棋盘 · 十九路棋盘
   [en] 9×9 · 19×19
   [es] 9×9 · 19×19
-instrument keys: 65   locales: 3
-  [ja] 道具          65/65  OK
-  [en] 道具          65/65  OK
-  [es] 道具          65/65  OK
+instrument keys: 66   locales: 3
+  [ja] 道具          66/66  OK
+  [en] 道具          66/66  OK
+  [es] 道具          66/66  OK
 PASS — every key resolves in every locale

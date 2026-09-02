@@ -403,7 +403,7 @@ del nivel:
 |------|---------|------------|
 | 1 | 合法手 | Legalidad: sin suicidio, sin ko, nunca rellenar un ojo propio |
 | 2 | 取り | Capturar — ponderado por cuántas piedras se llevan |
-| 3 | アタリ逃げ | Escapar del atari, pero solo cuando la fuga gana libertades de verdad |
+| 3 | アタリ逃げ · 守り | Escapar del atari cuando la fuga gana libertades de verdad, y dar una libertad más a la cadena que se ha quedado con dos — antes de que se cierre la red |
 | 4 | アタリ · 追討 | Poner en atari una cadena rival, y apretar a una vecina — pesado por lo que vale y por las pocas libertades que le quedan |
 | 5 | 形 | Patrones de forma 3 × 3 alrededor de la última jugada rival (hane, extensión, conexión, corte) |
 | 6 | 勢力 | Un mapa de influencia, favoreciendo la frontera entre ambas esferas |
@@ -477,7 +477,8 @@ zy-GO/
 ├── 対局.zy              controlador de partida — turnos, historial, deshacer
 ├── 棋戦.zy              IA contra IA, instrumentado — ver BENCHMARK.md
 ├── 対戦.zy              versión contra versión — la escalera, ver BENCHMARK.md
-├── 版/思考v1.zy         el motor de v0.0.8, congelado: contra quien juega la escalera
+├── 版/思考v1.zy         el motor de v0.0.8, congelado — sin guarda ni caza
+├── 版/思考v2.zy         el primer motor de v0.0.9, congelado — guarda y caza
 ├── 集計.zy              suma todas las tandas en un solo juego de matrices
 │                       los registros van a zy-GO-kifu (ZYGO_KIFU para redirigir)
 ├── 核/                  motor

@@ -399,7 +399,7 @@ the best one — with an amount of randomness that depends on the level:
 |-------|----------|-----------------|
 | 1 | 合法手 | Legality: no suicide, no ko, never fill your own eye |
 | 2 | 取り | Capturing — weighted by how many stones come off |
-| 3 | アタリ逃げ | Escaping atari, but only when the escape actually gains liberties |
+| 3 | アタリ逃げ · 守り | Escaping atari when the escape actually gains liberties, and giving a chain that is down to two liberties another one — before the net closes |
 | 4 | アタリ · 追討 | Putting an opponent chain in atari, and pressing a neighbouring one — weighted by what it is worth and by how few liberties it has left |
 | 5 | 形 | 3 × 3 shape patterns around the opponent's last move (hane, extension, connection, cut) |
 | 6 | 勢力 | An influence map, favouring the boundary between the two spheres |
@@ -444,14 +444,25 @@ the invasion, it is the opposite. The guard is validated by position tests in
 `試験/思考試験.zy`, not by the ladder.
 
 **Is it getting better?** `対戦.zy` answers that and nothing else: it plays the
-current engine against `版/思考v1.zy` — the v0.0.8 engine, frozen and never
-edited again — swapping colours every game from a seed given as an argument.
-Today's engine wins **263 of 400** on 9×9 and **122 of 200** on 13×13, by about
-eleven points and a half on average, and captures some 50% more stones. Adding a
-v3 tomorrow is: freeze today's file as 版/思考v3.zy, write the new one, add one
-line to the table in 対戦.zy. See BENCHMARK.md — including the two things the
-ladder said that were not obvious, one of which was that an idea we were sure
-about was worth nothing at all.
+current engine against the frozen ones under `版/`, swapping colours every game
+from a seed given as an argument.
+
+| | what it added | vs the one before |
+|---|---|---|
+| v1 | the v0.0.8 engine | — |
+| v2 | invasion guard · hunting weighted by the prey | 263 of 400 |
+| v3 | defence at two liberties | 342 of 600 |
+
+v3 beats v1 **275 of 400**. Adding v4 tomorrow is: freeze today's file as
+版/思考v4.zy, write the new one, add one line each to 選ぶ() and 版名(). See
+BENCHMARK.md — including the two things the ladder said that were not obvious,
+one of which was that an idea we were sure about was worth nothing at all, and
+the time the ladder measured the wrong thing and a position test caught it.
+
+**Before concluding anything about the engine, try 上級.** Same engine on both
+sides, one at advanced and one at intermediate: 179 to 121 over 300 games. A
+level is how far below the best a move may score and still be picked, so 中級
+gives away about a version's worth of strength on purpose.
 
 The level is a single number — how far below the best a move may score and still
 be picked (60 / 25 / 5 points). A beginner is not a program that plays badly on
@@ -471,7 +482,8 @@ zy-GO/
 ├── 対局.zy              match controller — turn loop, history, undo
 ├── 棋戦.zy              AI vs AI, instrumented — see BENCHMARK.md
 ├── 対戦.zy              version against version — the ladder, see BENCHMARK.md
-├── 版/思考v1.zy         the v0.0.8 engine, frozen: what the ladder plays against
+├── 版/思考v1.zy         the v0.0.8 engine, frozen — no guard, no hunting
+├── 版/思考v2.zy         the first v0.0.9 engine, frozen — guard and hunting
 ├── 集計.zy              sums every run into one set of matrices
 │                       records go to zy-GO-kifu (ZYGO_KIFU to redirect)
 ├── 核/                  engine

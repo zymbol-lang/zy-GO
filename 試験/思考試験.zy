@@ -534,6 +534,49 @@
 
 // ------------------------------------------------------------
 >> "" ¶
+>> "defence — 守り" ¶
+
+// 追討を裏返したもの。相手の連のダメを数えて追うのと同じ目盛りで、
+// 自分の連も見る。人はこうやって囲む — 四つを三つに、三つを二つに、
+// そして取る。アタリになってから気づく engine は、囲みの最後の
+// 一手まで気づかない engine である。
+//
+// EN: Hunting, turned around. A person surrounds a group by steps —
+// four liberties to three, three to two, then the capture — and an
+// engine that only notices at atari notices nothing until the last
+// move of the encirclement.
+
+// 黒の二石はダメが二つ。次の白の一手でアタリになる。
+// EN: The two black stones have two liberties; White's next move puts
+// them in atari.
+局面 = 図::読図([
+    ".........",
+    ".........",
+    "..OO.....",
+    "..OXXO...",
+    "..OO.....",
+    ".........",
+    ".....O...",
+    ".........",
+    "........."
+])
+影響 = 思::影響図(局面, 9)
+味方 = 盤::位置(9, 4, 4)
+確認("the friendly chain is down to two liberties", 盤::ダメ数(局面, 9, 味方), 2, 失敗<~)
+
+// 伸びれば三つになる。余所 は白の一石の隣で、追討の点がつく手
+// である。守りが追いより先に来ることを訊いている。
+//
+// EN: Extending gives it three. 余所 is beside White's lone stone and
+// scores for hunting — the question is whether defence comes first.
+伸ばす = 盤::位置(9, 3, 5)
+余所 = 盤::位置(9, 8, 6)
+確認("giving it another liberty beats playing elsewhere",
+     (思::評価(局面, 9, 伸ばす, 1, 2, 0, 40, 影響, 0)) > (思::評価(局面, 9, 余所, 1, 2, 0, 40, 影響, 0)),
+     #1, 失敗<~)
+
+// ------------------------------------------------------------
+>> "" ¶
 ? 失敗 == 0 {
     >> "PASS — the engine reads the position" ¶
 } _ {

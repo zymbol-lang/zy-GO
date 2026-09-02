@@ -1,4 +1,35 @@
 // ============================================================
+// 版/思考v2.zy — 凍結した engine、第二版
+//
+// 核/思考.zy を v0.0.9 の姿のまま写し取ったもの。**もう変えない。**
+// 手を入れるべき engine は 核/思考.zy であって、こちらではない。
+//
+// 第一版との違いは二つ。侵入の見張り（第六層の裏）と、獲物の
+// 値打ちで測る追討（第四層）である。梯子では第一版に九路で
+// 400 局中 263 勝、十三路で 200 局中 122 勝した。
+//
+// 凍らせたのは、次の版がこれに勝ったと言えるようにするためで
+// ある。比べる相手が動いていたら、比べたことにならない。
+//
+// EN: 版/思考v2.zy — the second engine, frozen
+//
+// A copy of 核/思考.zy exactly as it stood at v0.0.9. **It is never
+// edited again**; the engine to improve is 核/思考.zy.
+//
+// Two things separate it from the first: the invasion guard (the far
+// side of layer 6) and hunting weighted by what the prey is worth
+// (layer 4). On the ladder it beat the first engine 263 of 400 on
+// 9×9 and 122 of 200 on 13×13.
+//
+// It is frozen so that the next engine can be said to have beaten it.
+// A yardstick that moves is not one.
+//
+// 変えたのは名と import だけ。論理には一行も触れていない。
+// Only the module name and the imports changed; not one line of the
+// logic was touched.
+// ============================================================
+
+// ============================================================
 // 核/思考.zy — 局面を読む
 //
 // このモジュールはやがて AI そのものに育つ。まずは他のすべてが
@@ -29,10 +60,10 @@
 // out of it for free.
 // ============================================================
 
-# .核_思考 {
+# .版_思考v2 {
 
-    <# ./盤 => 盤
-    <# ./規則 => 規則
+    <# ../核/盤 => 盤
+    <# ../核/規則 => 規則
     <# ../標準/乱数 => 乱源
 
     #> {
@@ -73,7 +104,6 @@
     重_取り   := 100
     重_追討   := 15
     重_逃げ   := 80
-    重_守り   := 30
     重_自殺   := 70
     重_アタリ := 40
     重_接続   := 25
@@ -534,70 +564,15 @@
         // EN: Two liberties is as far as this needs to count: 0 is
         // captured, 1 is atari, 2 or more is alive for now. The chain
         // itself is only collected when the score needs its size.
-        // 逃げるのはアタリになってからでは遅い。追討が相手の連の
-        // ダメを数えて追うのと同じ目盛りで、自分の連も見る。ダメが
-        // 二つに減った連は、次の一手でアタリになる連である。人は
-        // ちょうどそうやって囲む — 四つを三つに、三つを二つに、
-        // そして取る。engine がアタリまで気づかないなら、囲みの
-        // 最後の一手までずっと気づかないということである。
-        //
-        // 点数は追討と同じ形にしてある。連の値打ちを、残ったダメで
-        // 割る。逃げ切り（重_逃げ）はそのまま残す。あちらは「取ら
-        // れる寸前を実際に救った」ことへの褒美で、こちらは「そこ
-        // まで行かせない」ことへの褒美である。
-        //
-        // EN: Running once you are in atari is late. The same measure
-        // hunting uses on the opponent's chains is turned on our own:
-        // a chain down to two liberties is a chain that is in atari
-        // after the opponent's next move. That is exactly how a person
-        // surrounds a group — four liberties to three, three to two,
-        // then the capture — and an engine that only notices at atari
-        // is an engine that notices nothing until the last move of the
-        // encirclement.
-        //
-        // Scored the way hunting is: the chain's worth over the
-        // liberties it has left. The escape bonus (重_逃げ) stays as
-        // it was — that one rewards actually saving a chain from
-        // capture, this one rewards not letting it get there.
-        // 三つまで数える。二つで止めると、ダメ二つの連を三つに伸ばす
-        // 手が「増えていない」と見える。上限は呼び手が書くもので、
-        // 呼び手が何を訊いているかで決まる。
-        //
-        // EN: Counted to three. Stopping at two makes a move that
-        // takes a two-liberty chain to three look like no gain at all
-        // — the bound is the caller's to write, and it follows from
-        // what the caller is asking.
-        自ダメ = 盤::ダメ数上限(写, 路, 点, 3)
+        自ダメ = 盤::ダメ数上限(写, 路, 点, 2)
         逃げ切った = #0
-        守既出 = []
         @ 隣点 : 盤::隣(路, 点) {
             ? 局面[隣点] == 色 {
-                ? !(守既出$? 隣点) {
-                    前ダメ = 盤::ダメ数上限(局面, 路, 隣点, 3)
-                    ? 前ダメ <= 2 {
-                        味群 = 盤::連(局面, 路, 隣点)
-                        @ 石 : 味群 { 守既出 = 守既出 $+ 石 }
-                        // ダメ一つは 重_逃げ の領分である。ここが見るのは
-                        // その一手前 — まだアタリではないが、次に
-                        // アタリになる連。二つの項が同じ場面を二重に
-                        // 数えないよう、境目で分けてある。
-                        //
-                        // EN: One liberty belongs to 重_逃げ. This
-                        // watches the move before that — not yet in
-                        // atari, in atari next. Split at the boundary
-                        // so the two terms never score the same thing
-                        // twice.
-                        ? 前ダメ == 2 {
-                            ? 自ダメ > 2 {
-                                守点 = 守点 + 重_守り * (味群$#) / 2
-                            }
-                        }
-                        ? 前ダメ == 1 {
-                            ? 自ダメ >= 2 {
-                                守点 = 守点 + 重_逃げ * (味群$#)
-                                逃げ切った = #1
-                            }
-                        }
+                ? 盤::ダメ数上限(局面, 路, 隣点, 2) == 1 {
+                    ? 自ダメ >= 2 {
+                        旧 = 盤::連(局面, 路, 隣点)
+                        守点 = 守点 + 重_逃げ * (旧$#)
+                        逃げ切った = #1
                     }
                 }
             }

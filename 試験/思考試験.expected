@@ -49,4 +49,7 @@ hunting — 追討
   ok    the stone to be taken has one liberty
   ok    the other one still has two
   ok    capturing outscores merely closing in
+defence — 守り
+  ok    the friendly chain is down to two liberties
+  ok    giving it another liberty beats playing elsewhere
 PASS — the engine reads the position
