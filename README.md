@@ -122,6 +122,8 @@ value, `↵` starts the game.
      │ ► 路盤        ‹    九路盤    ›       │
      │   棋力        ‹     中級     ›       │
      │   手番        ‹      黒      ›       │
+     │   黒          ‹    あなた    ›       │
+     │   白          ‹      v2      ›       │
      │   コミ        ‹     6.5      ›       │
      │   主題        ‹      石      ›       │
      │   言語        ‹    日本語    ›       │
@@ -137,6 +139,16 @@ the default 6.5 makes it impossible.
 **手番 — which side you take.** 黒 opens, so choosing 白 means the AI plays
 first. The third value, **観戦**, means you take neither: both sides are played
 by the engine and you watch. See [Spectating](#spectating--観戦).
+
+**黒 and 白 — which engine plays each colour.** The seat you take reads `あなた`
+(you) and does not turn; the other one picks between the engine versions —
+`v2` is the current one, `v1` is the v0.0.8 engine kept frozen under `版/`.
+Watching, both rows are yours to set, so `v1` against `v2` is a game you can sit
+and watch rather than a table of numbers.
+
+There are two rows rather than one "opponent" because one row stops being enough
+the moment there are more than two versions: with a v3 there is v1 against v3 and
+v2 against v3 to look at as well. Per colour, every pairing is already there.
 
 ### Board — 対局
 

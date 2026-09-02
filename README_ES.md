@@ -120,6 +120,8 @@ cambian el valor, `↵` empieza la partida.
      │ ► 路盤        ‹    九路盤    ›       │
      │   棋力        ‹     中級     ›       │
      │   手番        ‹      黒      ›       │
+     │   黒          ‹    あなた    ›       │
+     │   白          ‹      v2      ›       │
      │   コミ        ‹     6.5      ›       │
      │   主題        ‹      石      ›       │
      │   言語        ‹    日本語    ›       │
@@ -135,6 +137,16 @@ empate técnico —; el 6.5 por defecto lo hace imposible.
 **手番 — con qué color juegas.** Abre 黒, así que elegir 白 significa que el
 motor abre. El tercer valor, **観戦**, significa que no juegas ninguno de los
 dos: el motor juega ambos y tú miras. Ver [Observar](#observar--観戦).
+
+**黒 y 白 — qué motor juega cada color.** El asiento que ocupas pone `あなた`
+(tú) y no gira; el otro elige entre las versiones del motor: `v2` es el de ahora
+y `v1` el de v0.0.8, congelado bajo `版/`. Observando, las dos filas son tuyas,
+así que v1 contra v2 es una partida que puedes ver jugarse en vez de una tabla
+de números.
+
+Son dos filas y no un solo «rival» porque una fila deja de bastar en cuanto hay
+más de dos versiones: con un v3 también querrás ver v1 contra v3 y v2 contra v3.
+Por color, todas las parejas están ya ahí.
 
 ### Tablero — 対局
 

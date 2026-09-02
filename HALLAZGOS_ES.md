@@ -28,6 +28,7 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 | [HLZ-010](#hlz-010--la-vm-convertía-una-constante-interpolada-en-texto-literal) | **Bug grave** | En `--vm`, `"{CONST}"` dentro de una función producía las llaves literales | **Corregido** |
 | [HLZ-011](#hlz-011--una-variable-usada-solo-como-cota-de-rango-se-marcaba-como-no-usada) | Bug (aviso) | `総 = 名一覧$#` usado solo en `@ i:1..総` se marcaba «unused variable» | **Corregido** |
 | [HLZ-012](#hlz-012--en-el-tree-walker-leer-ai-copia-la-colección-entera) | **Bug de rendimiento** | En el tree-walker, `a[i]` clona el array completo en cada lectura: O(n) por lectura, y el tablero son 361 celdas | Abierto (v0.0.9) |
+| [HLZ-013](#hlz-013--en-el-motor-del-navegador-devolver-una-cadena-multilínea-da-unit) | **Bug grave** | En zyjs, `<~ "línea1⏎línea2"` devuelve Unit en vez de la cadena; los dos motores Rust la devuelven | Abierto (v0.0.9) |
 | [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | Propuesta |
 | [IDEA-002](#idea-002--el-coste-numérico-decide-la-arquitectura-de-la-ia) | Medición | Números que descartan MCTS y redes neuronales en Zymbol actual | Aplicada |
 
@@ -471,6 +472,59 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
   lenguaje, no de la aplicación; 囲碁 no lo puede arreglar, solo esquivarlo (y
   esquivarlo es exactamente lo que hicieron las optimizaciones de v0.0.9: menos
   lecturas del tablero, no lecturas más baratas).
+
+---
+
+## HLZ-013 · En el motor del navegador, devolver una cadena multilínea da Unit
+
+- **Archivo:** cualquiera. Se encontró en `対局.zy`, en la cabecera del 棋譜.
+- **Descripción:** una función cuyo `<~` lleva **directamente** un literal de
+  cadena que ocupa varias líneas devuelve `Unit` en zyjs. Los dos motores Rust
+  devuelven la cadena. No hay error ni aviso: el valor sale vacío.
+
+  ```zymbol
+  # mod2 {
+      #> { a1, a2 }
+      a1() { <~ "sin salto" }
+      a2() {
+          <~ "con
+  salto"
+      }
+  }
+  ```
+
+  ```
+  tw / vm:   a1=[sin salto]   a2=[con\nsalto]
+  zyjs:      a1=[sin salto]   a2=[]
+  ```
+
+  Alcance medido con sondas:
+
+  | forma | tw | vm | zyjs |
+  |---|---|---|---|
+  | `<~ "una línea"` | ok | ok | ok |
+  | `<~ "dos⏎líneas"` | ok | ok | **Unit** |
+  | `<~ "con {x}⏎interpolación"` | ok | ok | **Unit** |
+  | `<~ "con\nsalto escapado"` | ok | ok | ok |
+  | `t = "dos⏎líneas"` y luego `<~ t` | ok | ok | ok |
+
+  Pasa igual en una función de módulo y en una de guion suelto, así que no es
+  el problema de alcance de los nombres con guion bajo (§4 del brief).
+
+- **Por qué importa:** el valor no falla, sale vacío, y el programa sigue. En
+  囲碁 la cabecera del 棋譜 —`# zy-GO kifu v1 / board 9 / …`— se construye así,
+  y el registro salía completo en la terminal y **sin cabecera** en el
+  navegador. Un registro sin cabecera no dice ni de qué tablero es.
+- **Alcance:** solo el motor del navegador. Lo esquivamos atando el literal a un
+  nombre local antes de devolverlo (`頭 = "…"` y `<~ 頭`), que funciona en los
+  tres.
+- **Por qué el gate no lo veía:** el corpus no tiene ningún caso de
+  `<~` con literal multilínea. Es un hueco de cobertura, no un fallo del
+  comparador: `zyq consensus` compara lo que se le da.
+- **Estado:** **abierto**. El arreglo va en el parser de `zymbol.js` (la
+  sentencia `<~` termina en el salto de línea antes de que el literal se cierre);
+  vale la pena añadir además el caso al corpus, que es donde debería haber
+  saltado.
 
 ---
 

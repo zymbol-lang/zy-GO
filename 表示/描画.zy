@@ -12,6 +12,7 @@
 //
 //   設定[1] 路      盤の大きさ        設定[4] コミ  コミ
 //   設定[2] 主題    主題の符号        設定[5] 人色  人の色
+//   設定[6] 黒版    黒を打つ engine の版      設定[7] 白版
 //   設定[3] 級      AI の級 1..3
 //
 //   状況[1] 手番    手番の色          状況[5] 最終手  最後の点
@@ -35,6 +36,7 @@
 //
 //   設定[1] 路      board size          設定[4] コミ  komi
 //   設定[2] 主題    theme code          設定[5] 人色  human's colour
+//   設定[6] 黒版    version of the engine playing black   設定[7] 白版
 //   設定[3] 級      AI level 1..3
 //
 //   状況[1] 手番    side to move        状況[5] 最終手  last point
@@ -333,13 +335,37 @@
     // EN: Who is to move: the colour when there is no human — in
     // spectating neither "you" nor "machine" says anything, since
     // both sides are the machine — and otherwise the player or the AI.
-    _手番名(手番, 人色) {
+    _手番名(手番, 設定) {
+        人色 = 設定[5]
+        版 = 設定[6]
+        ? 手番 == 2 { 版 = 設定[7] }
+
         ? 人色 == 0 {
+            // 版どうしの一局では、どちらの色かより、どちらの engine
+            // かを知りたい。それがその一局を見ている理由だからで
+            // ある。両者が同じ版なら、色のほうが知りたいことである。
+            //
+            // EN: In a version-against-version game the interesting
+            // half is which engine is to move, not which colour —
+            // that is the reason for watching. With the same version
+            // on both sides, the colour is what one wants to know.
+            ? 設定[6] <> 設定[7] { <~ "v{版}" }
             ? 手番 == 1 { <~ 言::語("色.黒") }
             <~ 言::語("色.白")
         }
         ? 手番 == 人色 { <~ 言::語("側.自分") }
-        <~ 言::語("側.機械")
+
+        // 古い版と打っているなら、そう出す。区画が黙っていると、
+        // 打ち手は自分が何を相手にしているのか分からない。いまの版は
+        // 既定なので名札はいらない。
+        //
+        // EN: Playing an older engine, say so — a panel that keeps
+        // quiet leaves the player not knowing what they are up
+        // against. The current engine is the default and needs no
+        // label.
+        機 = 言::語("側.機械")
+        ? 版 <> 2 { <~ "{機} v{版}" }
+        <~ 機
     }
 
     側面描画(局面, 設定, 状況, 上, 左) {
@@ -384,7 +410,7 @@
         // labels no longer need an intermediate variable each just
         // to interpolate.
         行 = ##!(行 + 1)
-        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("区画.手番"), 10) 主::石字(主題, 手番) " " _手番名(手番, 人色))
+        >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("区画.手番"), 10) 主::石字(主題, 手番) " " _手番名(手番, 設定))
 
         行 = ##!(行 + 1)
         >>~ (行, 左, 0, 色_文) > 側面行(" " 文::右詰(言::語("区画.手数"), 10) 手数)
@@ -450,7 +476,7 @@
         最終手 = 状況[5]
 
         手石 = 主::石字(主題, 手番)
-        誰 = _手番名(手番, 人色)
+        誰 = _手番名(手番, 設定)
         黒 = 主::石字(主題, 1)
         白 = 主::石字(主題, 2)
         座 = 座標名(路, 最終手)
