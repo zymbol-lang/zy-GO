@@ -330,6 +330,7 @@ without touching the logic:
 | Stones captured by this move | `重_取り` | `100 × captured` |
 | Own chain escaping atari, resulting liberties ≥ 2 | `重_逃げ` | `80 × chain size` |
 | Puts an opponent chain in atari | `重_アタリ` | `40` |
+| Hunting: pressure on a neighbouring enemy chain | `重_追討` | `15 × prey / liberties left` |
 | 3 × 3 shape pattern match near the opponent's last move | `重_形` | `10 … 30` per pattern |
 | Influence map value at the point | `重_勢力` | `0 … 20` |
 | Deep in the opponent's sphere with no tactical reason | `重_侵入` | `-10 × (depth - 12)` |
@@ -347,6 +348,24 @@ and doing so is an acceptable failure for a beginner-level engine.
 neighbourhood, black positive and white negative. Points with a near-zero sum
 are the contested boundary, which is where the AI wants to play. The map is
 computed once per turn, not per candidate.
+
+**Hunting** (layer 4) is the invasion guard's counterpart: the guard says do not
+give your stones away, and hunting says take the ones the opponent gave you. An
+atari used to be worth a flat 40 whether it threatened one stone or twelve. It
+is now worth `重_追討 × prey ÷ liberties left`, where the prey is the chain's
+size, doubled when it sits inside our own sphere — capturing an invader gives
+back the territory it was breaking as well as the stone, because under area
+scoring an empty region touching both colours belongs to nobody.
+
+Dividing by the liberties left rather than cutting off at some number of them is
+the whole design. The first version scored only chains down to two liberties,
+and a stone that has just invaded has four: the engine never touched an invader
+until it was already in atari, by which time it had roots. Measured on the
+ladder, that version was worth nothing at all (see BENCHMARK.md).
+
+The capture itself always outweighs the hunt — `重_取り` is 100 a stone against
+15 — so this cannot pull the engine off a bigger group onto a smaller one.
+Nothing sequences that; the values do.
 
 **The invasion guard** reads the same map from the other side. The engine does
 not search, so the self-atari check (layer 3) only ever looks at the liberties a

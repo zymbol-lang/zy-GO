@@ -1,4 +1,55 @@
 // ============================================================
+// 版/思考v1.zy — 凍結した engine、第一版
+//
+// これは 核/思考.zy を v0.0.8 の姿のまま写し取ったものである
+// （zy-GO の da936dc）。**もう変えない。** 手を入れるべき engine は
+// 核/思考.zy であって、こちらではない。
+//
+// なぜ在るのか。改良したと言うためには、改良する前と打ち合わせて
+// みるしかないからである。梯子（対戦.zy）は 核/ の今の engine と
+// ここに凍らせた古い engine を同じ盤で戦わせる。両方とも 核/盤 と
+// 核/規則 を使う。版が違うのは「どう読むか」だけで、「何が合法か」
+// ではない。石の振る舞いまで版ごとに分かれたら、比べているものが
+// 二つになる。
+//
+// 明日また改良するときは、いまの 核/思考.zy をここへ 思考v2.zy と
+// して凍らせ、新しいものを 核/ に書き、対戦.zy の表に一行足す。
+// 凍った版は goldens と同じで、記録であって作業場ではない。
+//
+// 遅いのはそのままにしてある。この版は ダメ数上限 を知らず、
+// 塗り潰しごとに 新規(路) を確保する。それは測るべき差の一部で
+// あって、直すべき欠陥ではない。
+//
+// EN: 版/思考v1.zy — the first engine, frozen
+//
+// A copy of 核/思考.zy exactly as it stood at v0.0.8 (zy-GO da936dc).
+// **It is never edited again.** The engine to improve is 核/思考.zy.
+//
+// Why it exists: the only way to say an engine got better is to play
+// it against the engine it replaced. The ladder (対戦.zy) plays the
+// current 核/ engine against the ones frozen here, on the same board.
+// Both use 核/盤 and 核/規則 — a version differs in how it *reads* a
+// position, never in what is legal. Let the stones behave differently
+// per version and you are comparing two things at once.
+//
+// Tomorrow's improvement freezes today's 核/思考.zy here as 思考v2.zy,
+// writes the new one in 核/, and adds one row to 対戦.zy's table. A
+// frozen version is like a golden: a record, not a workbench.
+//
+// It is left slow on purpose. This version knows nothing of ダメ数上限
+// and allocates 新規(路) per flood fill; that is part of the
+// difference being measured, not a defect to repair.
+//
+// 当時のまま。変えたのは三つ — 名（路に合わせるため）、上の三つの
+// import（この file が 核/ から 版/ へ移ったため）、そしてこの
+// 前書きである。論理には一行も触れていない。
+//
+// Unchanged except for three things: the module name (it has to match
+// the path), the three imports above (the file moved from 核/ to 版/),
+// and this preamble. Not one line of the logic was touched.
+// ============================================================
+
+// ============================================================
 // 核/思考.zy — 局面を読む
 //
 // このモジュールはやがて AI そのものに育つ。まずは他のすべてが
@@ -29,10 +80,10 @@
 // out of it for free.
 // ============================================================
 
-# .核_思考 {
+# .版_思考v1 {
 
-    <# ./盤 => 盤
-    <# ./規則 => 規則
+    <# ../核/盤 => 盤
+    <# ../核/規則 => 規則
     <# ../標準/乱数 => 乱源
 
     #> {
@@ -71,7 +122,6 @@
     // EN: Evaluation weights. Constants so they can be tuned without
     // touching the logic that applies them.
     重_取り   := 100
-    重_追討   := 15
     重_逃げ   := 80
     重_自殺   := 70
     重_アタリ := 40
@@ -81,27 +131,6 @@
     重_勢力   := 20
     重_布石   := 50
     重_辺     := 30
-
-    // 侵入の見張り。相手の勢力の奥に、戦術の口実も無く打つ手への
-    // 減点である。
-    //
-    // 侵入閾値 は 重_勢力 とは別の定数でなければならない。値が
-    // 近いのは偶然ではないが、意味が違う。重_勢力 は「境目はどこ
-    // までか」を言い、侵入閾値 は「どこからが相手の奥か」を言う。
-    // 一つの定数に兼ねさせると、境目の褒美を調整したつもりで
-    // 侵入の罰も動かしてしまう。
-    //
-    // EN: the invasion guard — a penalty for playing deep inside the
-    // opponent's sphere with no concrete tactical reason.
-    //
-    // 侵入閾値 has to be its own constant and not 重_勢力. Their
-    // values being close is not a coincidence, but they mean
-    // different things: 重_勢力 says how wide the contested boundary
-    // is, 侵入閾値 says where the opponent's interior begins. Fold
-    // them into one and tuning the frontier bonus silently moves the
-    // invasion penalty too.
-    重_侵入   := 10
-    侵入閾値  := 12
 
     // 最善からどれだけ下まで選ばれうるか。これが「級」のすべてで
     // ある。幅が広いほど弱く打つ。悪い手をわざと選ぶからではなく、
@@ -236,35 +265,17 @@
                 上行 = 行 + 3
                 ? 下行 < 1 { 下行 = 1 }
                 ? 上行 > 路 { 上行 = 路 }
-
-                // 行ごとに、届く列の幅を先に縮める。マンハッタン
-                // 距離 3 の球とは、行が離れるにつれて狭くなる連続
-                // した区間の重なりであって、四角ではない。四角を
-                // 走査して距離で落としていたときは、この輪が一局
-                // あたり六十万回まわり、その一回ごとに距離を測る
-                // 呼び出しと添字を組む呼び出しがあった。
-                //
-                // EN: Narrow the column span per row first. A ball of
-                // Manhattan radius 3 is a stack of contiguous runs
-                // that shorten as the row moves away — it is not a
-                // square. Scanning the square and dropping cells by
-                // distance ran this loop six hundred thousand times
-                // in one game, each with a call to measure the
-                // distance and another to build the index.
                 @ 各行:下行..上行 {
-                    縦 = 各行 - 行
-                    ? 縦 < 0 { 縦 = 0 - 縦 }
-                    残 = 3 - 縦
-                    下列 = 列 - 残
-                    上列 = 列 + 残
+                    下列 = 列 - 3
+                    上列 = 列 + 3
                     ? 下列 < 1 { 下列 = 1 }
                     ? 上列 > 路 { 上列 = 路 }
-                    基 = (各行 - 1) * 路
                     @ 各列:下列..上列 {
-                        横 = 各列 - 列
-                        ? 横 < 0 { 横 = 0 - 横 }
-                        対象 = 基 + 各列
-                        図[対象]$~ (図[対象] + 符 * (4 - 縦 - 横))
+                        距離 = _距離(行, 列, 各行, 各列)
+                        ? 距離 <= 3 {
+                            対象 = 盤::位置(路, 各行, 各列)
+                            図[対象]$~ (図[対象] + 符 * (4 - 距離))
+                        }
                     }
                 }
             }
@@ -278,56 +289,6 @@
         横差 = 列甲 - 列乙
         ? 横差 < 0 { 横差 = 0 - 横差 }
         <~ 縦差 + 横差
-    }
-
-    // 取ったときに何が手に入るか。石の数がまず立ち、その連が自分の
-    // 勢力の中にいるなら倍になる。中国式の目算では、生きている侵入の
-    // 石は相手の一目であるうえに、こちらの地を地でなくしている
-    // ——両方の色に接する空点は誰の地でもない。取ればその両方が戻る。
-    //
-    // 勢力は連の最初の一点で見る。連は繋がっているので、どの石を
-    // 見ても同じ側にいる。
-    //
-    // EN: What capturing this chain would be worth. Its size first,
-    // doubled when it sits inside our own sphere: under area scoring a
-    // living invasion is a point for the opponent AND stops our
-    // territory from being territory, since an empty region touching
-    // both colours belongs to nobody. Capturing gives back both.
-    //
-    // The sphere is read at the chain's first point — a chain is
-    // connected, so any stone of it is on the same side.
-    _獲物価値(群, 路, 影響, 色) {
-        大きさ = 群$#
-        ? 大きさ == 0 { <~ 0 }
-        点 = 群[1]
-        勢 = 影響[点]
-        ? 色 == 2 { 勢 = 0 - 勢 }
-        勢 = 勢 + _自寄与(群, 路, 点)
-        ? 勢 > 0 { <~ 大きさ * 2 }
-        <~ 大きさ
-    }
-
-    // 影響図には獲物自身の重みも入っている。石は自分の点に 4 を
-    // 放つので、地の真ん中に降りた一つきりの侵入の石は「ここは
-    // 中立だ」と自分で宣言できてしまう。深く降りるほど正確にそう
-    // なる。訊いているのは「ここは誰の懐か」なのだから、訊かれて
-    // いる当人の票は抜く。
-    //
-    // EN: The influence map includes the prey's own weight — a stone
-    // radiates 4 onto its own point — so a lone stone dropped in the
-    // middle of a territory can declare its own square neutral, and
-    // the deeper it lands the more exactly it does. The question is
-    // whose interior this is, and the one being asked about does not
-    // get a vote.
-    _自寄与(群, 路, 点) {
-        行 = 盤::行番(路, 点)
-        列 = 盤::列番(路, 点)
-        寄 = 0
-        @ 石 : 群 {
-            距 = _距離(行, 列, 盤::行番(路, 石), 盤::列番(路, 石))
-            ? 距 <= 3 { 寄 = 寄 + (4 - 距) }
-        }
-        <~ 寄
     }
 
     _絶対(値) {
@@ -387,10 +348,11 @@
     // about evaluation cost, not legality. On an empty board the
     // candidate set is the opening book alone.
     候補(局面, 路, 色, コウ点, 手数, 級) {
+        全 = 有用手(局面, 路, 色, コウ点)
+        ? (全$#) == 0 { <~ [] }
+
         石数 = 盤::石数(局面, 1) + 盤::石数(局面, 2)
         ? 石数 == 0 {
-            全 = 有用手(局面, 路, 色, コウ点)
-            ? (全$#) == 0 { <~ [] }
             開 = []
             @ 点 : 全 {
                 ? 布石点(路, 点) { 開 = 開 $+ 点 }
@@ -404,50 +366,19 @@
         半径 = 2
         ? 級 >= 3 { 半径 = 3 }
 
-        // 遠さで先に落とし、合法性はそのあとで訊く。集合は同じ
-        // ものになる — 「近くて、眼でなくて、合法」は、掛ける
-        // 順を変えても同じ積である。変わるのは、遠い点について
-        // 眼の判別と 規則::判定 を呼ばずに済むことで、19 路盤の
-        // 中盤では空点の大半が遠い点である。
-        //
-        // EN: Drop by distance first and ask about legality after.
-        // The set is the same — "near AND not an eye AND legal" is
-        // one product however it is ordered — and what changes is
-        // that eye detection and 規則::判定 are never asked about a
-        // far point, which on a 19-road board in the middlegame is
-        // most of the empty ones.
         近 = []
-        総 = 路 * 路
-        @ 点:1..総 {
-            ? 局面[点] == 0 {
-                寄 = _近い(局面, 路, 点, 半径)
-                ? 寄 == #0 {
-                    ? 手数 < 12 { 寄 = 布石点(路, 点) }
-                }
-                ? 寄 {
-                    ? 眼(局面, 路, 点, 色) == #0 {
-                        ? 規則::判定(局面, 路, 点, 色, コウ点) == 0 { 近 = 近 $+ 点 }
-                    }
+        @ 点 : 全 {
+            ? _近い(局面, 路, 点, 半径) { 近 = 近 $+ 点 }
+            _ {
+                ? 手数 < 12 {
+                    ? 布石点(路, 点) { 近 = 近 $+ 点 }
                 }
             }
         }
-        ? (近$#) > 0 { <~ 近 }
-
-        // 近くに一つも無ければ、盤ぜんたいに訊き直す。空の盤と、
-        // 石が遠く離れているだけの局面のためにある道である。
-        //
-        // EN: Nothing near: ask the whole board again. This is the
-        // path for an empty board, and for a position whose stones
-        // are all far from anywhere legal.
-        <~ 有用手(局面, 路, 色, コウ点)
+        ? (近$#) == 0 { <~ 全 }
+        <~ 近
     }
 
-    // 半径 以内に石があるか。影響図 と同じで、四角ではなく球を
-    // 走る。距離を測る呼び出しも添字を組む呼び出しも要らない。
-    //
-    // EN: Is there a stone within 半径? Like 影響図, this walks the
-    // ball and not the square, so neither the distance nor the index
-    // needs a call to build it.
     _近い(局面, 路, 点, 半径) {
         行 = 盤::行番(路, 点)
         列 = 盤::列番(路, 点)
@@ -456,16 +387,14 @@
         ? 下行 < 1 { 下行 = 1 }
         ? 上行 > 路 { 上行 = 路 }
         @ 各行:下行..上行 {
-            縦 = 各行 - 行
-            ? 縦 < 0 { 縦 = 0 - 縦 }
-            残 = 半径 - 縦
-            下列 = 列 - 残
-            上列 = 列 + 残
+            下列 = 列 - 半径
+            上列 = 列 + 半径
             ? 下列 < 1 { 下列 = 1 }
             ? 上列 > 路 { 上列 = 路 }
-            基 = (各行 - 1) * 路
             @ 各列:下列..上列 {
-                ? 局面[基 + 各列] <> 0 { <~ #1 }
+                ? _距離(行, 列, 各行, 各列) <= 半径 {
+                    ? 局面[盤::位置(路, 各行, 各列)] <> 0 { <~ #1 }
+                }
             }
         }
         <~ #0
@@ -526,23 +455,13 @@
         // EN: Layer 3 — escaping atari, but only when it works: the
         // chain must come out with more than one liberty, or the
         // move is just feeding a second stone to the same capture.
-        // ダメの数は二つまでしか要らない。0 なら取られ、1 なら
-        // アタリ、2 以上なら当座は生きている。連そのものは、点数に
-        // 石の数が要るときだけ組み立てる。
-        //
-        // EN: Two liberties is as far as this needs to count: 0 is
-        // captured, 1 is atari, 2 or more is alive for now. The chain
-        // itself is only collected when the score needs its size.
-        自ダメ = 盤::ダメ数上限(写, 路, 点, 2)
-        逃げ切った = #0
+        自群 = 盤::連(写, 路, 点)
+        自ダメ = 盤::群ダメ数(写, 路, 自群)
         @ 隣点 : 盤::隣(路, 点) {
             ? 局面[隣点] == 色 {
-                ? 盤::ダメ数上限(局面, 路, 隣点, 2) == 1 {
-                    ? 自ダメ >= 2 {
-                        旧 = 盤::連(局面, 路, 隣点)
-                        守点 = 守点 + 重_逃げ * (旧$#)
-                        逃げ切った = #1
-                    }
+                旧 = 盤::連(局面, 路, 隣点)
+                ? 盤::群ダメ数(局面, 路, 旧) == 1 {
+                    ? 自ダメ >= 2 { 守点 = 守点 + 重_逃げ * (旧$#) }
                 }
             }
         }
@@ -555,84 +474,16 @@
         // place: without it the engine walks into capture cheerfully
         // and every other layer is wasted.
         ? 自ダメ == 1 {
-            ? 取 == 0 {
-                自群 = 盤::連(写, 路, 点)
-                守点 = 守点 - 重_自殺 * (自群$#)
-            }
+            ? 取 == 0 { 守点 = 守点 - 重_自殺 * (自群$#) }
         }
 
         // 第四層 — 相手へのアタリ。
         // EN: Layer 4 — atari against the opponent.
-        // アタリの値打ちは、それが何を脅かしているかで決まる。石一つを
-        // 脅す手と十二の連を脅す手が同じ 40 点であってはならなかった。
-        // そして自分の勢力の中にいる敵ほど重い。取れば石が一つ増える
-        // だけでなく、その石が壊していた地が戻るからである。中国式の
-        // 目算では、生きている侵入の石は二重に効いている。
-        //
-        // 点数は残ったダメで割る。アタリ（残り一つ）で満点、二つで
-        // 半分、四つで四分の一。境目を作らないのは、境目を作った
-        // 最初の版がまさにそこで外したからである。二つ以下だけを
-        // 数えていたら、いま降りてきたばかりの — ダメ四つの —
-        // 侵入の石には一点もつかず、engine は敵がアタリになるまで
-        // 触れず、そのときにはもう根を張っている。追うのは、
-        // 追える間だけである。
-        //
-        // EN: The score is divided by the liberties left — full at
-        // atari, half at two, a quarter at four. There is no cliff
-        // because the first version of this had one and missed exactly
-        // there: scoring only two-or-fewer gave nothing at all for
-        // approaching a stone that had just landed with four, so the
-        // engine never touched an invader until it was already in
-        // atari, by which time it had roots. A group is hunted while
-        // it can still be hunted.
-        //
-        // 取りそのものはこれより常に重い（重_取り は石一つに 100、
-        // 追討は 25）。だから「もっと大きな群を取りに行っている最中に
-        // 小さな石へ寄り道する」ことにはならない。順序はここで決めて
-        // いない。値打ちが決めている。
-        //
-        // 同じ連を二度数えない。隣り合う二点が同じ連のものであること
-        // は珍しくなく、大きさに比例する点数を二度足せば、その一手
-        // だけが不当に光る。
-        //
-        // EN: Layer 4 — hunting.
-        //
-        // What an atari is worth depends on what it threatens: a move
-        // that threatens one stone and a move that threatens a chain of
-        // twelve were both worth 40. An enemy inside our own sphere is
-        // worth more again — capturing it adds a stone AND gives back
-        // the territory it was breaking. Under area scoring a living
-        // invasion counts twice.
-        //
-        // Moves that bring a chain down to two liberties count too. A
-        // capture is not one move: if narrowing three liberties to two
-        // scores nothing, the engine never touches the enemy until the
-        // atari is already there, and by then it has run.
-        //
-        // The capture itself always outweighs this (重_取り is 100 a
-        // stone, hunting is 25), so this cannot pull the engine off a
-        // bigger group onto a smaller stone. Nothing here sequences
-        // that — the values do.
-        //
-        // No chain is counted twice: two neighbours often belong to one
-        // chain, and adding a size-proportional score twice would make
-        // that one move shine for no reason.
-        掛けた = #0
-        既出 = []
         @ 隣点 : 盤::隣(路, 点) {
             ? 写[隣点] == 敵色 {
-                ? !(既出$? 隣点) {
-                    残 = 盤::ダメ数上限(写, 路, 隣点, 5)
-                    ? 残 <= 4 {
-                        敵群 = 盤::連(写, 路, 隣点)
-                        @ 石 : 敵群 { 既出 = 既出 $+ 石 }
-                        価 = _獲物価値(敵群, 路, 影響, 色)
-                        攻点 = 攻点 + 重_追討 * 価 / 残
-                        ? 残 == 1 {
-                            攻点 = 攻点 + 重_アタリ
-                            掛けた = #1
-                        }
-                    }
+                敵群 = 盤::連(写, 路, 隣点)
+                ? 盤::群ダメ数(写, 路, 敵群) == 1 {
+                    攻点 = 攻点 + 重_アタリ
                 }
             }
         }
@@ -666,26 +517,6 @@
             終行 = 盤::行番(路, 最終手)
             終列 = 盤::列番(路, 最終手)
             ? _距離(行, 列, 終行, 終列) <= 2 { 攻点 = 攻点 + 重_接触 }
-
-            // ここには「相手の最後の一手が自陣の奥に降りたなら、その
-            // 隣に打つ手をさらに褒める」という項があった。急ぎを表す
-            // つもりの項である。測ったら否と出た — 梯子で八通り
-            // 試して、八通りとも無いほうが良いか同じだった（詳しくは
-            // BENCHMARK.md）。理由は後から見れば分かる。急ぎはもう
-            // 二度数えられていた。重_接触 が最後の一手の近くを褒め、
-            // 追討がその石の弱さを褒める。三度目は、盤の他の場所に
-            // ある もっと大きな手から engine を引き剥がすだけだった。
-            //
-            // EN: A term used to sit here: an extra bonus for playing
-            // beside the opponent's last stone when it landed deep in
-            // our own sphere — urgency, expressed as a score. The
-            // ladder said no, eight configurations out of eight, worse
-            // or equal without it (BENCHMARK.md has the table). In
-            // hindsight the reason is plain: urgency was already
-            // counted twice. 重_接触 rewards being near the last move
-            // and the hunting term rewards that stone's weakness. A
-            // third helping only pulled the engine off bigger moves
-            // elsewhere on the board.
         }
 
         // 第六層 — 勢力。自陣の安全な内側より、二つの勢力圏の
@@ -695,70 +526,6 @@
         // two spheres over the safe middle of your own.
         差 = _絶対(影響[点])
         ? 差 < 重_勢力 { 他点 = 他点 + (重_勢力 - 差) }
-
-        // 同じ図の裏側 — 相手の勢力の奥。
-        //
-        // このエンジンは先を読まない。第三層が見るのは打った直後の
-        // ダメだけである。相手の地の真ん中の空点は、打った直後には
-        // ダメが二つも三つもあって、その検査を涼しい顔で通る。
-        // 数手のうちに囲まれて只で取られるのだが、それを見るには
-        // 読みが要る。読みの代わりに置くのがこの見張りである。
-        // 「取られるかどうか」ではなく「そこは誰の懐か」を訊く。
-        //
-        // ただし戦術の口実があるならば話は別で、そのときは深さを
-        // 咎めない。口実は具体的でなければならない。
-        //
-        //   取 > 0        この手が実際に石を取る
-        //   自数 >= 2     自分の連を二つ繋ぐ（打つ前の盤で数えた
-        //                 もの。局面 は写しではなく元のままなので、
-        //                 ここは打つ前の事実である）
-        //   掛けた        この手が実際に敵の連をアタリにした
-        //   逃げ切った    この手が実際にアタリの自軍を助け出した
-        //
-        // 「敵の石に二つ以上触れている」を口実にしてはならない。
-        // 深い侵入は定義からして敵の石に囲まれているので、その条件は
-        // ほとんど常に成り立ち、見張りは捕まえるべき手の上で黙って
-        // 無効になる。
-        //
-        // EN: the same map, seen from the other side — the opponent's
-        // interior.
-        //
-        // This engine does not read ahead: layer 3 only ever looks at
-        // the liberties a move has the instant it is played. A point
-        // in the middle of the opponent's territory has two or three
-        // of them right then, and walks through that check untouched
-        // — to be surrounded and taken for free a few moves later,
-        // which takes reading to see. This guard stands in for the
-        // reading it does not do: it asks not "will this be
-        // captured" but "whose interior is this".
-        //
-        // A concrete tactical reason excuses the depth:
-        //
-        //   取 > 0        the move actually captures
-        //   自数 >= 2     it connects two of our chains (counted on
-        //                 the board BEFORE the move — 局面 is the
-        //                 caller's board and 写 is the copy played
-        //                 on, so this is a pre-move fact)
-        //   掛けた        it actually put an enemy chain in atari
-        //   逃げ切った    it actually rescued a chain that was in atari
-        //
-        // "It touches two or more enemy stones" must NOT be one of
-        // them. A deep invasion is by definition surrounded by enemy
-        // stones, so that condition is nearly always true and the
-        // guard turns itself off in silence on exactly the moves it
-        // exists to catch.
-        敵勢 = 0 - 影響[点]
-        ? 色 == 2 { 敵勢 = 影響[点] }
-        ? 敵勢 > 侵入閾値 {
-            口実 = #0
-            ? 取 > 0 { 口実 = #1 }
-            ? 自数 >= 2 { 口実 = #1 }
-            ? 掛けた { 口実 = #1 }
-            ? 逃げ切った { 口実 = #1 }
-            ? 口実 == #0 {
-                守点 = 守点 - 重_侵入 * (敵勢 - 侵入閾値)
-            }
-        }
 
         // 第七層 — 定石と、盤にまだ余地があるうちエンジンを一線
         // 二線から遠ざける辺の減点。

@@ -115,6 +115,20 @@
             "集計.性格見出"   => "── 性格 ──"
             "集計.注意"       => "三十局に満たない枡は何も言っていない"
 
+            "対戦.表題"          => "対戦 — 版と版"
+            "対戦.版"           => "版"
+            "対戦.勝ち"          => "勝ち"
+            "対戦.黒番"          => "黒番"
+            "対戦.白番"          => "白番"
+            "対戦.平均差"         => "平均差"
+            "対戦.取石"          => "取った石"
+            "対戦.持碁"          => "持碁"
+            "対戦.平均手数"        => "平均手数"
+            "対戦.種"           => "種"
+            "対戦.打切"          => "安全弁で打切"
+            "対戦.版1"          => "第一版（v0.0.8）— 見張りも追討も無い"
+            "対戦.版2"          => "いまの版 — 侵入の見張りと、獲物の値打ちで測る追討"
+
             _                  => 鍵
         }
     }
@@ -176,6 +190,20 @@
             "集計.級見出"     => "── nivel: victorias de la fila contra la columna ──"
             "集計.性格見出"   => "── personalidad ──"
             "集計.注意"       => "las celdas con menos de 30 partidas no dicen nada"
+
+            "対戦.表題"          => "escalera — versión contra versión"
+            "対戦.版"           => "ver"
+            "対戦.勝ち"          => "ganadas"
+            "対戦.黒番"          => "de negras"
+            "対戦.白番"          => "de blancas"
+            "対戦.平均差"         => "dif. media"
+            "対戦.取石"          => "capturas"
+            "対戦.持碁"          => "tablas"
+            "対戦.平均手数"        => "jugadas de media"
+            "対戦.種"           => "semilla"
+            "対戦.打切"          => "cortadas por la válvula"
+            "対戦.版1"          => "el primer motor (v0.0.8) — sin guarda de invasión y sin caza"
+            "対戦.版2"          => "el motor de ahora — guarda de invasión y caza pesada por lo que vale la presa"
 
             _                  => 鍵
         }
@@ -239,6 +267,20 @@
             "集計.性格見出"   => "── personality ──"
             "集計.注意"       => "cells under 30 games say nothing"
 
+            "対戦.表題"          => "ladder — version against version"
+            "対戦.版"           => "ver"
+            "対戦.勝ち"          => "wins"
+            "対戦.黒番"          => "as black"
+            "対戦.白番"          => "as white"
+            "対戦.平均差"         => "avg margin"
+            "対戦.取石"          => "captures"
+            "対戦.持碁"          => "jigo"
+            "対戦.平均手数"        => "avg moves"
+            "対戦.種"           => "seed"
+            "対戦.打切"          => "cut by the safety valve"
+            "対戦.版1"          => "the first engine (v0.0.8) — no invasion guard, no hunting"
+            "対戦.版2"          => "the current engine — invasion guard, and hunting weighted by what the prey is worth"
+
             _                  => 鍵
         }
     }
@@ -264,7 +306,10 @@
             "棋戦.均衡短", "棋戦.攻短", "棋戦.守短",
             "棋戦.雑音", "棋戦.雑音対策", "棋戦.再演",
             "集計.表題", "集計.場所", "集計.回数", "集計.未了",
-            "集計.無し", "集計.級見出", "集計.性格見出", "集計.注意"
+            "集計.無し", "集計.級見出", "集計.性格見出", "集計.注意",
+            "対戦.表題", "対戦.版", "対戦.勝ち", "対戦.黒番", "対戦.白番",
+            "対戦.平均差", "対戦.取石", "対戦.持碁", "対戦.平均手数",
+            "対戦.種", "対戦.打切", "対戦.版1", "対戦.版2"
         ]
     }
 }
