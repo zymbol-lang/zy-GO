@@ -56,9 +56,9 @@
             "報せ.待った不可" => "nothing left to undo"
             "報せ.考慮中"     => "thinking…"
             "報せ.打つ手無し" => "nothing useful left — press p to pass"
-            "報せ.観戦中"        => "AI vs AI — space pause · s step · t theme · q quit"
-            "報せ.休止"         => "paused — space resume · s step · q quit"
-            "報せ.結果へ"        => "game over — ↵ for the result"
+            "報せ.観戦中"        => "watching  ␣pause  ? keys"
+            "報せ.休止"         => "paused  ␣resume  s step"
+            "報せ.結果へ"        => "game over — ↵ result"
             "報せ.投了"       => "resigned"
 
             "終局.表題"       => "Game over"
@@ -76,6 +76,9 @@
             "操作.待った"     => "undo"
             "操作.目算"       => "score estimate"
             "操作.主題切替"   => "cycle theme"
+            "操作.休止"        => "pause / resume"
+            "操作.一手"        => "one move"
+            "操作.離脱"        => "leave"
             "操作.投了"       => "resign / quit"
 
             "端末.狭い"       => "terminal too small"

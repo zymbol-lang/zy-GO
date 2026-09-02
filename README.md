@@ -194,8 +194,13 @@ changes is who decides the next move, and therefore what a keystroke is for.
  space   pause / resume
  s       one move, then pause
  t       cycle the theme
+ ?       the controls, in a panel
  q       leave
 ```
+
+The status line under the board carries the state — `watching` or `paused` — and
+is 25 columns wide on a 9-road board, which is why the full list lives behind
+`?` rather than in it.
 
 While it plays, the key is read **without blocking**, so the game advances on
 its own and a keystroke only changes its speed; while it is paused the read
@@ -399,6 +404,7 @@ zy-GO/
 ├── 바둑.zy              entry point, Korean            │ same game,
 ├── 围棋.zy              entry point, Mandarin          │ preselected
 ├── go.zy                entry point, language menu     ┘ language
+├── 観戦.zy              entry point, spectating — the engine plays both sides
 ├── 対局.zy              match controller — turn loop, history, undo
 ├── 棋戦.zy              AI vs AI, instrumented — see BENCHMARK.md
 ├── 集計.zy              sums every run into one set of matrices
@@ -441,6 +447,13 @@ zy-GO/
 Four entry points, one game. `囲碁.zy`, `바둑.zy` and `围棋.zy` differ only in the
 locale they preselect; `go.zy` opens on the language menu and is there for the
 terminal where typing CJK is inconvenient.
+
+`観戦.zy` is a fifth, and what it preselects is the **mode**, not the locale: the
+same setup screen opens with 手番 sitting on 観戦. It exists because an entry
+point is what a list of scripts can show — in the playground's picker, and in
+`zyp.toml` — and a mode reachable only by arrowing through a menu is a mode most
+people never find. Move 手番 back to 黒 or 白 on that screen and it is an
+ordinary game again.
 
 The board is a **flat array of `N × N` points**, 1-indexed, values `0` empty,
 `1` black, `2` white. Point `(row, col)` lives at index `(row - 1) × N + col`.

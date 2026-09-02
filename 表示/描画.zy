@@ -65,6 +65,7 @@
         側面行
         設定描画
         助言描画
+        観戦助言描画
         座標名
         盤描画
         升描画
@@ -214,6 +215,36 @@
         名 = 言::語(鍵)
         札 = 文::右詰(操作, 10)
         <~ " {札}{名}"
+    }
+
+    // 観戦の操作は対局の操作ではない。石を置く鍵も、待ったも、
+    // 投了も無い。同じ枠で、別の一覧である。
+    //
+    // EN: Spectating has its own controls: no key places a stone,
+    // nothing to take back, nothing to resign. Same frame, different
+    // list.
+    観戦助言描画(上, 左) {
+        欄 = 30
+        行 = 上
+        >>~ (行, 左, 0, 色_縁) > 枠上(欄)
+
+        行 = ##!(行 + 1)
+        題 = 文::中央(言::語("操作.表題"), 欄)
+        >>~ (行, 左, 1, 色_強) > "│{題}│"
+
+        行 = ##!(行 + 1)
+        >>~ (行, 左, 0, 色_縁) > 枠中(欄)
+
+        鍵一覧 = ["操作.休止", "操作.一手", "操作.主題切替", "操作.離脱"]
+        操作一覧 = ["␣", "s", "t", "q"]
+        総 = 鍵一覧$#
+        @ 添字:1..総 {
+            行 = ##!(行 + 1)
+            >>~ (行, 左, 0, 色_文) > 枠行(_助言行(鍵一覧[添字], 操作一覧[添字]), 欄)
+        }
+
+        行 = ##!(行 + 1)
+        >>~ (行, 左, 0, 色_縁) > 枠下(欄)
     }
 
     助言描画(上, 左) {
@@ -445,11 +476,26 @@
     // 盤の下の状態の行。塊の幅いっぱいまで詰めて消すので、長い
     // 文言が尾を残すことは決して無い。
     //
+    // 詰める前に切る。文::右詰 は長い文字列をそのまま返すので、
+    // 幅を超えた文言は消えずに残り、横並びの配置では右の区画の
+    // 枠を突き破っていた。九路盤でこの欄は 25 桁しかなく、
+    // 「nothing useful left — press p to pass」は 37 桁ある。
+    // 消すために詰めているのだから、消せない長さを断るのは
+    // この関数の仕事である。
+    //
     // EN: The status line under the board. Cleared by padding to the
     // full block width, so a long message never leaves a tail.
+    //
+    // Truncated before it is padded: 文::右詰 returns a longer string
+    // untouched, so a message past the width was never erased and, in
+    // the side-by-side layout, ran straight through the frame of the
+    // panel to its right. The field is 25 columns on a 9-road board
+    // and "nothing useful left — press p to pass" is 37. Padding is
+    // how this line clears itself, so refusing a length it cannot
+    // clear is this function's job.
     状態描画(文言, 行, 左, 路) {
         欄 = 主::区画幅(路)
-        線 = 文::右詰(文言, 欄)
+        線 = 文::右詰(文::切詰(文言, 欄), 欄)
         >>~ (行, 左, 0, 色_文) > 線
     }
 
