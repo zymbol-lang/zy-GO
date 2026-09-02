@@ -52,6 +52,7 @@
     <# ./核/計算 => 計算
     <# ./核/思考 => 思
     <# ./版/思考v1 => 思1
+    <# ./版/思考v2 => 思2
     <# ./表示/主題 => 主
     <# ./表示/描画 => 描
     <# ./表示/文字 => 文
@@ -169,17 +170,14 @@
     _設定画面(高, 幅, 手番既定) {
         路一覧 = _可能路盤(高, 幅)
         コミ一覧 = [0, 5.5, 6, 6.5, 7, 7.5]
-        // 対手の版。打つときは v1 か v2 のどちらか。観戦のときだけ
-        // 三つ目 — v1 対 v2 — が出る。人がいない席でしか意味を成さ
-        // ない値を、人が座っている品書に出しても仕方がない。
+        // 選べる engine の版。新しいものが先頭に立つので、既定は
+        // いまの engine である。版を足すのはここに一つと、
+        // _版着手選択 に一行。
         //
-        // EN: The opponent's version. Playing, it is v1 or v2; only
-        // while spectating does the third value — v1 against v2 —
-        // appear, since a value that means nothing when a person holds
-        // one of the seats has no business on the menu they are reading.
-        // 新しい版が先頭に立つ。既定はいまの engine である。
-        // EN: Newest first — the default is the current engine.
-        版一覧 = [2, 1]
+        // EN: The engine versions on offer, newest first, so the
+        // default is the current one. Adding a version is one entry
+        // here and one line in _版着手選択.
+        版一覧 = [3, 2, 1]
         主題一覧 = 主::主題一覧()
         言語一覧 = 言::言語一覧()
         // 黒が先に打つ。だから 白 を選ぶことは AI が口火を切ることを
@@ -355,11 +353,16 @@
         <~ 思::着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数)
     }
 
-    _版名(版) {
-        ? 版 == 1 { <~ "v1" }
-        ? 版 == 0 { <~ "v1-v2" }
-        <~ "v2"
-    }
+    // 版の名は番号そのものである。版が増えても、ここに行を足す
+    // 必要は無い。以前は枝で書いてあって、v3 を足した日にこの関数
+    // だけが v2 と言い続けた。数えられるものを数えずに並べると、
+    // こうなる。
+    //
+    // EN: A version's name is its number. Adding a version does not
+    // add a line here — it used to be a chain of branches, and the day
+    // v3 arrived this function alone went on saying v2. That is what
+    // listing something countable instead of counting it costs.
+    _版名(版) { <~ "v{版}" }
 
     // ---- 棋譜 -----------------------------------------------
     // 一手ずつの記録。打ち手が終局のあとで k を押したときだけ返す。

@@ -329,6 +329,7 @@ without touching the logic:
 |------|-----------------|-------|
 | Stones captured by this move | `重_取り` | `100 × captured` |
 | Own chain escaping atari, resulting liberties ≥ 2 | `重_逃げ` | `80 × chain size` |
+| Own chain at two liberties given a third | `重_守り` | `30 × chain size ÷ 2` |
 | Puts an opponent chain in atari | `重_アタリ` | `40` |
 | Hunting: pressure on a neighbouring enemy chain | `重_追討` | `15 × prey / liberties left` |
 | 3 × 3 shape pattern match near the opponent's last move | `重_形` | `10 … 30` per pattern |
@@ -348,6 +349,20 @@ and doing so is an acceptable failure for a beginner-level engine.
 neighbourhood, black positive and white negative. Points with a near-zero sum
 are the contested boundary, which is where the AI wants to play. The map is
 computed once per turn, not per candidate.
+
+**Defence** (layer 3) is hunting turned around, and it is split at the boundary
+so the two terms never score the same thing twice: one liberty belongs to
+`重_逃げ`, which rewards actually saving a chain from capture, and two liberties
+belong to `重_守り`, which rewards not letting it get there. A person surrounds a
+group by steps — four liberties to three, three to two, then the capture — so an
+engine that only reacts at atari reacts on the last move of the encirclement.
+
+Note what makes the term work at all: `自ダメ` is counted to **three**, not two.
+Stopping at two makes taking a two-liberty chain to three look like no gain, and
+the first version of this shipped that way — the ladder measured it at +5% and
+the measurement was of something else entirely (a louder escape bonus, since the
+only branch that could fire was the atari one). A position test caught it; the
+ladder could not, because both halves of the ladder had the same bug.
 
 **Hunting** (layer 4) is the invasion guard's counterpart: the guard says do not
 give your stones away, and hunting says take the ones the opponent gave you. An

@@ -128,6 +128,7 @@
             "対戦.打切"          => "安全弁で打切"
             "対戦.版1"          => "第一版（v0.0.8）— 見張りも追討も無い"
             "対戦.版2"          => "いまの版 — 侵入の見張りと、獲物の値打ちで測る追討"
+            "対戦.版3"       => "いまの版 — 二つダメになった自分の連を、囲まれきる前に守る"
 
             _                  => 鍵
         }
@@ -204,6 +205,7 @@
             "対戦.打切"          => "cortadas por la válvula"
             "対戦.版1"          => "el primer motor (v0.0.8) — sin guarda de invasión y sin caza"
             "対戦.版2"          => "el motor de ahora — guarda de invasión y caza pesada por lo que vale la presa"
+            "対戦.版3"       => "el motor de ahora — defiende sus cadenas a dos libertades, antes de que se cierre la red"
 
             _                  => 鍵
         }
@@ -280,6 +282,7 @@
             "対戦.打切"          => "cut by the safety valve"
             "対戦.版1"          => "the first engine (v0.0.8) — no invasion guard, no hunting"
             "対戦.版2"          => "the current engine — invasion guard, and hunting weighted by what the prey is worth"
+            "対戦.版3"       => "the current engine — defends its own chains at two liberties, before the net closes"
 
             _                  => 鍵
         }
@@ -309,7 +312,7 @@
             "集計.無し", "集計.級見出", "集計.性格見出", "集計.注意",
             "対戦.表題", "対戦.版", "対戦.勝ち", "対戦.黒番", "対戦.白番",
             "対戦.平均差", "対戦.取石", "対戦.持碁", "対戦.平均手数",
-            "対戦.種", "対戦.打切", "対戦.版1", "対戦.版2"
+            "対戦.種", "対戦.打切", "対戦.版1", "対戦.版2", "対戦.版3"
         ]
     }
 }

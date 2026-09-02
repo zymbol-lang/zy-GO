@@ -364,7 +364,7 @@
         // against. The current engine is the default and needs no
         // label.
         機 = 言::語("側.機械")
-        ? 版 <> 2 { <~ "{機} v{版}" }
+        ? 版 <> 3 { <~ "{機} v{版}" }
         <~ 機
     }
 

@@ -713,17 +713,58 @@ There is no clock here at all: speed is what the section above answers.
 module to match the path, point its imports at `../核/`), write the new engine
 in `核/`, and add one line each to `選ぶ()` and `版名()`.
 
-### What it said about v2
+### The versions so far
 
-| board | games | v1 | v2 | v2's margin | captures v1 / v2 |
-|-------|-------|----|----|-------------|------------------|
-| 9×9 | 400 | 137 | **263** (65.8%) | +11.6 | 4,759 / 7,478 |
-| 13×13 | 200 | 78 | **122** (61.0%) | +11.5 | 4,871 / 6,487 |
+| | what it added | vs the one before |
+|---|---|---|
+| **v1** | the v0.0.8 engine | — |
+| **v2** | invasion guard · hunting weighted by the prey | 263 of 400 (65.8%) |
+| **v3** | defence at two liberties | 342 of 600 (57.0%) |
 
-v2 is the invasion guard plus **hunting** (layer 4 rewritten): an atari is worth
-what it threatens rather than a flat 40, the score is divided by the liberties
-the chain has left, and a chain inside our own sphere counts double because
-capturing it gives back the territory it was breaking as well as the stone.
+| board | games | pairing | result | margin |
+|-------|-------|---------|--------|--------|
+| 9×9 | 400 | v1 · v2 | **263** for v2 (65.8%) | +11.6 |
+| 9×9 | 600 | v2 · v3 | **342** for v3 (57.0%) | +3.8 |
+| 9×9 | 400 | v1 · v3 | **275** for v3 (68.8%) | +12.9 |
+| 13×13 | 200 | v2 · v3 | **114** for v3 (57.0%) | +10.0 |
+
+**v2** is the invasion guard plus **hunting** (layer 4 rewritten): an atari is
+worth what it threatens rather than a flat 40, the score is divided by the
+liberties the chain has left, and a chain inside our own sphere counts double
+because capturing it gives back the territory it was breaking as well as the
+stone.
+
+**v3** turns that around: a chain of ours down to **two** liberties is one that
+is in atari after the opponent's next move, and a person surrounds a group
+exactly that way — four liberties to three, three to two, then the capture. An
+engine that only reacts at atari reacts on the last move of the encirclement.
+Swept at 400 games a point: 0 → 204, 15 → 220, 30 → 229, 50 → 227, so anything
+from 15 to 50 buys the same few points and `重_守り := 30` is the middle of it.
+
+### The ladder measured the wrong thing once, and a position test caught it
+
+The first version of that defence shipped with `自ダメ` — the liberties our chain
+has *after* the move — counted only as far as two. With the previous count also
+two, "did this move gain a liberty" could never be true, and the only branch that
+could fire was the atari one. The ladder reported **+5%** and it was real: it was
+measuring a louder escape bonus, not defence at two liberties.
+
+The ladder could not see this. Both halves of it had the same bug, so both halves
+agreed. What saw it was a position test asking the plain question — a chain with
+two liberties, a move that gives it a third, does that outscore playing elsewhere
+— which answered no. Counting to three fixed it.
+
+This is the argument for keeping both instruments. A ladder says which of two
+engines wins; only a position test says whether the engine does the thing you
+think you implemented.
+
+### The level is worth about as much as a version
+
+Same engine on both sides, one at 上級 and one at 中級, 300 games on 9×9:
+**179 to 121** — 59.7% for advanced. A level is how far below the best a move may
+score and still be picked (60 / 25 / 5 points), so 中級 is throwing away roughly
+one version's worth of strength on purpose. Anyone who finds the engine easy
+should try 上級 before concluding anything about the engine.
 
 ### Two things the ladder said that were not obvious
 
