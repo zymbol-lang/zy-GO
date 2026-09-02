@@ -1,6 +1,7 @@
 # Hallazgos del lenguaje — 囲碁 (zy-GO)
 
-Bugs, carencias e ideas encontrados al construir 囲碁 sobre Zymbol **v0.0.8**.
+Bugs, carencias e ideas encontrados al construir 囲碁 sobre Zymbol **v0.0.8**
+y, desde HLZ-012, **v0.0.9**.
 Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 [Hov veS](../klingon_galaxy/hallazgos_es.md).
 
@@ -26,6 +27,7 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 | [HLZ-009](#hlz-009--la-vm-no-puede-cortar-un-string-dentro-de-un-módulo) | Bug | En `--vm`, `s$[3..]` dentro de una función de módulo da «expected Array, Tuple, or NamedTuple» | **Corregido** |
 | [HLZ-010](#hlz-010--la-vm-convertía-una-constante-interpolada-en-texto-literal) | **Bug grave** | En `--vm`, `"{CONST}"` dentro de una función producía las llaves literales | **Corregido** |
 | [HLZ-011](#hlz-011--una-variable-usada-solo-como-cota-de-rango-se-marcaba-como-no-usada) | Bug (aviso) | `総 = 名一覧$#` usado solo en `@ i:1..総` se marcaba «unused variable» | **Corregido** |
+| [HLZ-012](#hlz-012--en-el-tree-walker-leer-ai-copia-la-colección-entera) | **Bug de rendimiento** | En el tree-walker, `a[i]` clona el array completo en cada lectura: O(n) por lectura, y el tablero son 361 celdas | Abierto (v0.0.9) |
 | [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | Propuesta |
 | [IDEA-002](#idea-002--el-coste-numérico-decide-la-arquitectura-de-la-ia) | Medición | Números que descartan MCTS y redes neuronales en Zymbol actual | Aplicada |
 
@@ -428,6 +430,47 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
   rango; una variable genuinamente sin usar sigue avisando. Regresión en
   `interpreter/crates/zymbol-semantic/tests/underscore_semantics.rs` (tres
   casos: cota superior, `inicio..fin:paso`, y el que debe seguir avisando).
+
+---
+
+## HLZ-012 · En el tree-walker, leer `a[i]` copia la colección entera
+
+- **Archivo:** cualquiera. Se encontró perfilando `核/盤.zy`, donde `局面[点]`
+  está en el camino de todo.
+- **Descripción:** `eval_index` evalúa la expresión de la colección con
+  `eval_expr`, y para un identificador eso es `get_variable(...).clone()`. La
+  lectura de **un** elemento clona el array entero antes de indexarlo. El coste
+  de `a[7]` crece con el tamaño de `a`, no con nada más.
+
+  Sonda (200.000 lecturas de `a[7]`, restando el coste de construir `a`):
+
+  | tamaño de `a` | zytw | zyvm | zyjs |
+  |---|---|---|---|
+  | 100 | 261 ms | 21 ms | ~226 ms* |
+  | 1.000 | 2.147 ms | 21 ms | ~234 ms* |
+  | 4.000 | 8.590 ms | 21 ms | ~260 ms* |
+
+  \* zyjs con 20.000 lecturas, no 200.000 — es un motor mucho más lento por
+  operación, y lo que importa aquí es la **pendiente**: plana en la VM y en el
+  navegador, lineal en el tree-walker.
+
+- **Por qué importa:** un programa que lleva su estado en un array — un tablero,
+  una rejilla, un buffer — paga el tamaño de ese estado en cada lectura. En 囲碁
+  el tablero de 19×19 son 361 celdas, así que cada `局面[点]` copia 361 valores
+  para leer uno. Es la razón principal de que el tree-walker fuera 21× más lento
+  que la VM en una partida de 19×19 (777 s frente a 36 s), y no es una diferencia
+  de diseño entre motores: es una copia que nadie pidió.
+- **Alcance:** solo el tree-walker. La VM y el motor del navegador leen en
+  tiempo constante.
+- **Arreglo propuesto:** en `eval_index`, cuando la expresión de la colección es
+  un identificador, tomarla prestada del entorno y clonar **el elemento**, no la
+  colección. Es un caso rápido dentro de una función, sin cambio de semántica:
+  la lectura ya devolvía una copia del elemento. Lo mismo vale para
+  `eval_member_access` sobre un diccionario.
+- **Estado:** **abierto**. Se reporta desde aquí porque es un hallazgo del
+  lenguaje, no de la aplicación; 囲碁 no lo puede arreglar, solo esquivarlo (y
+  esquivarlo es exactamente lo que hicieron las optimizaciones de v0.0.9: menos
+  lecturas del tablero, no lecturas más baratas).
 
 ---
 

@@ -534,6 +534,160 @@ Two things it taught while being written, both about `1..n`:
 
 ---
 
+## v0.0.9 — what got faster, and how it was measured
+
+The numbers further down this document were measured against the v0.0.8 engine.
+This section is the v0.0.9 rewrite of `核/盤.zy`, `核/規則.zy` and `核/思考.zy`,
+and it is deliberately separate: **`棋戦.zy` cannot measure a rewrite of the
+engine it drives.** Its seed comes from the clock, so two runs are two different
+games, and it also draws, times itself through `BashExec` and writes files —
+none of which the thing being measured is responsible for.
+
+What measures it is `試験/自戦試験.zy`: one whole game from a fixed seed, both
+sides at 中級, every move printed, no clock and no shell. It is an **oracle
+before it is a benchmark** — a pure refactor must produce the same game, and
+that listing changes if a single move changes. Every number in the table below
+was taken with the before and after games **byte-identical**.
+
+```bash
+zymbol run 試験/自戦試験.zy            # 9×9, seed 424242
+zymbol run --vm 試験/自戦試験.zy 19    # 19×19
+```
+
+| board | engine | v0.0.8 | v0.0.9 | |
+|-------|--------|--------|--------|---|
+| 9×9   | tree-walker | 7.2 s | 1.0 s | **7.3×** |
+| 13×13 | tree-walker | 51.2 s | 4.8 s | **10.7×** |
+| 19×19 | tree-walker | 777.7 s | 31.6 s | **24.6×** |
+| 9×9   | `--vm` | 0.65 s | 0.12 s | **5.3×** |
+| 13×13 | `--vm` | 3.6 s | 0.55 s | **6.6×** |
+| 19×19 | `--vm` | 35.9 s | 3.6 s | **10.1×** |
+| 9×9   | browser (zyjs) | 22.3 s | 3.6 s | **6.1×** |
+| 13×13 | browser (zyjs) | — | 14.1 s | |
+| 19×19 | browser (zyjs) | — | 65.8 s | |
+
+The browser row is the one that decides whether the game is playable on the web,
+and it is the reason this work happened at all. All three engines produce the
+same game, move for move.
+
+The invasion guard (layer 6b) landed after those measurements and it changes
+*which* moves are played, so its games are no longer the same games and the
+comparison above would stop being one. For the record, the shipped engine —
+refactor plus guard — runs the same fixed seed in 0.13 s / 0.64 s / 3.5 s under
+`--vm` at 9, 13 and 19, 0.98 s and 5.9 s under the tree-walker at 9 and 13, and
+3.7 s in the browser at 9×9.
+
+### What actually cost the time
+
+Four changes, each measured on its own, in the order they were made:
+
+Cumulative, each row measured with the game still byte-identical (`--vm`; a dash
+means that step was not timed separately on that board):
+
+| Change | 13×13 | 19×19 |
+|--------|-------|-------|
+| baseline | 3.60 s | 35.9 s |
+| flood fill: worklist, chain as the visited set (no `新規(路)` per call) | 1.41 s | 11.8 s |
+| `判定` without a board copy — three facts about the neighbours | 1.20 s | 9.9 s |
+| `候補` prunes by distance before asking about legality | 1.20 s | — |
+| `ダメ数上限` in `着手` and `判定` | 0.97 s | — |
+| `ダメ数上限` in `評価` | 0.73 s | — |
+| `影響図` and `_近い`: walk the ball, not the square | 0.55 s | 3.6 s |
+
+The call counts behind that, from one 13 × 13 game, before and after:
+
+| | before | after |
+|---|---|---|
+| `連` (full chain walks) | 40,232 | **451** |
+| `隣` | 710,702 | 131,406 |
+| flood-fill steps | 321,844 | 63,620 |
+| `影響図` inner iterations | 602,096 | ~300,000, with no calls inside |
+
+### Two things that were expected to pay and did not
+
+**Marking a neighbourhood per stone instead of asking per empty point.**
+`_近い` scans a ball around an empty point looking for a stone; the obvious
+improvement is to mark a ball around every stone once per turn and then just
+read the map. It is slower — 10.6 s against 9.9 s on a full 19×19 game —
+because asking stops at the first stone it finds, while marking always pays for
+the whole ball, and in the endgame there are more stones than empty points. The
+map version was written, measured, and thrown away.
+
+**Playing the move in place instead of on a copy.** `評価` copies the board per
+candidate, plays on the copy and throws it away; replacing that with play-in-
+place plus an undo is the change most likely to be proposed. Measured by adding
+one *extra* copy-and-play per candidate and reading the difference, the whole
+thing is worth **6 %** of a 13 × 13 game — 43 ms out of 731 ms. It is not worth
+what it costs: once a move is played on the caller's own board, every layer of
+the evaluation has to decide explicitly whether it reads the position before or
+after the move, and layer 5 (shape) reads `局面` around the point played. Get
+that wrong and every capture is scored against the wrong neighbours, unit tests
+stay green, and only a full fixed-seed game diff shows it. The 6 % is real; so
+is the trap, and this is why `評価` still plays on a copy.
+
+Why it is only 6 %: in both engines a function that mutates an array it received
+pays for a clone of it either way — `写 = 複製(局面)` costs nothing until
+`着手(写<~, …)` writes, and passing the caller's own board as an out-parameter
+costs the same clone at the same place. Value semantics move where the copy
+happens, not whether it happens.
+
+### Does the invasion guard make it stronger? — what a ladder can and cannot say
+
+Layer 6b penalises playing deep inside the opponent's sphere with no tactical
+reason. It exists because of a human game — a non-expert player won by taking
+territory while the engine dropped stones inside it — and the obvious way to
+check it is a ladder: the same engine against itself, guard on one side, off the
+other, colours alternating, seeds varied. That was run.
+
+| board | games | guard on | guard off |
+|-------|-------|----------|-----------|
+| 9×9 | 200 | **control (both off)** 94 | 106 |
+| 9×9 | 200 | 10/12 → 101 · 10/16 → 90 · 20/12 → 100 | 99 · 110 · 100 |
+| 13×13 | 200 | **control (both off)** 99 | 101 |
+| 13×13 | 200 | 10/12 → 86 · 10/16 → 94 · 20/12 → 92 | 114 · 106 · 108 |
+| 19×19 | 100 | **control (both off)** 54 | 46 |
+| 19×19 | 100 | 10/12 → 54 · 10/16 → 55 | 46 · 45 |
+
+Read the control rows first: with the guard off on **both** sides the two slots
+are the same engine, so the control is the noise floor of the whole method — 94
+against 106 in one place, 54 against 46 in another. Almost every guarded
+configuration sits inside it. The one that does not is 13 × 13 at 10/12, at 86
+of 200 (43 %, about two standard errors below even).
+
+**And the ladder cannot settle it anyway.** `核/計算.zy` is area scoring with
+**no dead-stone removal** — it counts the stones that are on the board. An
+invasion that neither side is strong enough to kill is therefore worth a point
+to the invader at the end, *and* it denies the surrounded region to its owner,
+because a region bordering both colours counts for nobody. Against that scorer,
+discouraging invasions can only look like a loss. Against a person who does
+capture the invasion, it is the other way round, and no amount of self-play will
+show it.
+
+So the weights (`重_侵入 := 10`, `侵入閾値 := 12`) are set from what the map
+actually holds rather than from a win rate. Over real midgame positions the
+depth `敵勢` of a candidate reaches 17 to 23 at most, and only three to seven
+candidates per turn exceed 12 — the threshold the brief originally proposed, 24,
+would never have fired at all. What validates the guard is
+`試験/思考試験.zy`: hand-built positions where it must fire, must not fire, and
+must be cancelled by a real tactical reason. Those tests fail if the guard is
+switched off, and one of them fails if anyone reintroduces "touches two enemy
+stones" as an excuse.
+
+### The 400-move ceiling
+
+`一局` used to run `@ 手数 < 上限手数` with `上限手数 := 400`, and 19 × 19 games
+do not end by then: the real second pass arrives around move 440 (measured: 443
+on average over 100 games). **Nearly every 19 × 19 game this harness ever
+reported was cut off mid-game**, counted as "400 moves", and fed into the
+per-move times, the results and the level tables as though it had finished.
+
+The ceiling is now `路 × 路 × 4` — a safety valve no endgame reaches — the game
+ends only on two passes, and reaching the valve is reported as 打切 in the
+summary and recorded as `truncated 1` in the kifu. An instrument that truncates
+in silence reports nonsense with a straight face.
+
+---
+
 ## Tree-walker versus VM
 
 The harness runs under both engines, and because a game replays from its seed,

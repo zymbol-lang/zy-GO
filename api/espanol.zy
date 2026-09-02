@@ -46,6 +46,7 @@
         盤::連         => cadena
         盤::ダメ点     => puntos_de_libertad
         盤::ダメ数     => libertades
+        盤::ダメ数上限 => libertades_hasta
         盤::群ダメ数   => libertades_de_cadena
         盤::除去       => retirar
         盤::着手       => jugar

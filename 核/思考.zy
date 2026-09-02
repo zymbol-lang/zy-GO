@@ -81,6 +81,27 @@
     重_布石   := 50
     重_辺     := 30
 
+    // 侵入の見張り。相手の勢力の奥に、戦術の口実も無く打つ手への
+    // 減点である。
+    //
+    // 侵入閾値 は 重_勢力 とは別の定数でなければならない。値が
+    // 近いのは偶然ではないが、意味が違う。重_勢力 は「境目はどこ
+    // までか」を言い、侵入閾値 は「どこからが相手の奥か」を言う。
+    // 一つの定数に兼ねさせると、境目の褒美を調整したつもりで
+    // 侵入の罰も動かしてしまう。
+    //
+    // EN: the invasion guard — a penalty for playing deep inside the
+    // opponent's sphere with no concrete tactical reason.
+    //
+    // 侵入閾値 has to be its own constant and not 重_勢力. Their
+    // values being close is not a coincidence, but they mean
+    // different things: 重_勢力 says how wide the contested boundary
+    // is, 侵入閾値 says where the opponent's interior begins. Fold
+    // them into one and tuning the frontier bonus silently moves the
+    // invasion penalty too.
+    重_侵入   := 10
+    侵入閾値  := 12
+
     // 最善からどれだけ下まで選ばれうるか。これが「級」のすべてで
     // ある。幅が広いほど弱く打つ。悪い手をわざと選ぶからではなく、
     // 最善が最善だと見分けきれないからである。
@@ -214,17 +235,35 @@
                 上行 = 行 + 3
                 ? 下行 < 1 { 下行 = 1 }
                 ? 上行 > 路 { 上行 = 路 }
+
+                // 行ごとに、届く列の幅を先に縮める。マンハッタン
+                // 距離 3 の球とは、行が離れるにつれて狭くなる連続
+                // した区間の重なりであって、四角ではない。四角を
+                // 走査して距離で落としていたときは、この輪が一局
+                // あたり六十万回まわり、その一回ごとに距離を測る
+                // 呼び出しと添字を組む呼び出しがあった。
+                //
+                // EN: Narrow the column span per row first. A ball of
+                // Manhattan radius 3 is a stack of contiguous runs
+                // that shorten as the row moves away — it is not a
+                // square. Scanning the square and dropping cells by
+                // distance ran this loop six hundred thousand times
+                // in one game, each with a call to measure the
+                // distance and another to build the index.
                 @ 各行:下行..上行 {
-                    下列 = 列 - 3
-                    上列 = 列 + 3
+                    縦 = 各行 - 行
+                    ? 縦 < 0 { 縦 = 0 - 縦 }
+                    残 = 3 - 縦
+                    下列 = 列 - 残
+                    上列 = 列 + 残
                     ? 下列 < 1 { 下列 = 1 }
                     ? 上列 > 路 { 上列 = 路 }
+                    基 = (各行 - 1) * 路
                     @ 各列:下列..上列 {
-                        距離 = _距離(行, 列, 各行, 各列)
-                        ? 距離 <= 3 {
-                            対象 = 盤::位置(路, 各行, 各列)
-                            図[対象]$~ (図[対象] + 符 * (4 - 距離))
-                        }
+                        横 = 各列 - 列
+                        ? 横 < 0 { 横 = 0 - 横 }
+                        対象 = 基 + 各列
+                        図[対象]$~ (図[対象] + 符 * (4 - 縦 - 横))
                     }
                 }
             }
@@ -297,11 +336,10 @@
     // about evaluation cost, not legality. On an empty board the
     // candidate set is the opening book alone.
     候補(局面, 路, 色, コウ点, 手数, 級) {
-        全 = 有用手(局面, 路, 色, コウ点)
-        ? (全$#) == 0 { <~ [] }
-
         石数 = 盤::石数(局面, 1) + 盤::石数(局面, 2)
         ? 石数 == 0 {
+            全 = 有用手(局面, 路, 色, コウ点)
+            ? (全$#) == 0 { <~ [] }
             開 = []
             @ 点 : 全 {
                 ? 布石点(路, 点) { 開 = 開 $+ 点 }
@@ -315,19 +353,50 @@
         半径 = 2
         ? 級 >= 3 { 半径 = 3 }
 
+        // 遠さで先に落とし、合法性はそのあとで訊く。集合は同じ
+        // ものになる — 「近くて、眼でなくて、合法」は、掛ける
+        // 順を変えても同じ積である。変わるのは、遠い点について
+        // 眼の判別と 規則::判定 を呼ばずに済むことで、19 路盤の
+        // 中盤では空点の大半が遠い点である。
+        //
+        // EN: Drop by distance first and ask about legality after.
+        // The set is the same — "near AND not an eye AND legal" is
+        // one product however it is ordered — and what changes is
+        // that eye detection and 規則::判定 are never asked about a
+        // far point, which on a 19-road board in the middlegame is
+        // most of the empty ones.
         近 = []
-        @ 点 : 全 {
-            ? _近い(局面, 路, 点, 半径) { 近 = 近 $+ 点 }
-            _ {
-                ? 手数 < 12 {
-                    ? 布石点(路, 点) { 近 = 近 $+ 点 }
+        総 = 路 * 路
+        @ 点:1..総 {
+            ? 局面[点] == 0 {
+                寄 = _近い(局面, 路, 点, 半径)
+                ? 寄 == #0 {
+                    ? 手数 < 12 { 寄 = 布石点(路, 点) }
+                }
+                ? 寄 {
+                    ? 眼(局面, 路, 点, 色) == #0 {
+                        ? 規則::判定(局面, 路, 点, 色, コウ点) == 0 { 近 = 近 $+ 点 }
+                    }
                 }
             }
         }
-        ? (近$#) == 0 { <~ 全 }
-        <~ 近
+        ? (近$#) > 0 { <~ 近 }
+
+        // 近くに一つも無ければ、盤ぜんたいに訊き直す。空の盤と、
+        // 石が遠く離れているだけの局面のためにある道である。
+        //
+        // EN: Nothing near: ask the whole board again. This is the
+        // path for an empty board, and for a position whose stones
+        // are all far from anywhere legal.
+        <~ 有用手(局面, 路, 色, コウ点)
     }
 
+    // 半径 以内に石があるか。影響図 と同じで、四角ではなく球を
+    // 走る。距離を測る呼び出しも添字を組む呼び出しも要らない。
+    //
+    // EN: Is there a stone within 半径? Like 影響図, this walks the
+    // ball and not the square, so neither the distance nor the index
+    // needs a call to build it.
     _近い(局面, 路, 点, 半径) {
         行 = 盤::行番(路, 点)
         列 = 盤::列番(路, 点)
@@ -336,14 +405,16 @@
         ? 下行 < 1 { 下行 = 1 }
         ? 上行 > 路 { 上行 = 路 }
         @ 各行:下行..上行 {
-            下列 = 列 - 半径
-            上列 = 列 + 半径
+            縦 = 各行 - 行
+            ? 縦 < 0 { 縦 = 0 - 縦 }
+            残 = 半径 - 縦
+            下列 = 列 - 残
+            上列 = 列 + 残
             ? 下列 < 1 { 下列 = 1 }
             ? 上列 > 路 { 上列 = 路 }
+            基 = (各行 - 1) * 路
             @ 各列:下列..上列 {
-                ? _距離(行, 列, 各行, 各列) <= 半径 {
-                    ? 局面[盤::位置(路, 各行, 各列)] <> 0 { <~ #1 }
-                }
+                ? 局面[基 + 各列] <> 0 { <~ #1 }
             }
         }
         <~ #0
@@ -404,13 +475,23 @@
         // EN: Layer 3 — escaping atari, but only when it works: the
         // chain must come out with more than one liberty, or the
         // move is just feeding a second stone to the same capture.
-        自群 = 盤::連(写, 路, 点)
-        自ダメ = 盤::群ダメ数(写, 路, 自群)
+        // ダメの数は二つまでしか要らない。0 なら取られ、1 なら
+        // アタリ、2 以上なら当座は生きている。連そのものは、点数に
+        // 石の数が要るときだけ組み立てる。
+        //
+        // EN: Two liberties is as far as this needs to count: 0 is
+        // captured, 1 is atari, 2 or more is alive for now. The chain
+        // itself is only collected when the score needs its size.
+        自ダメ = 盤::ダメ数上限(写, 路, 点, 2)
+        逃げ切った = #0
         @ 隣点 : 盤::隣(路, 点) {
             ? 局面[隣点] == 色 {
-                旧 = 盤::連(局面, 路, 隣点)
-                ? 盤::群ダメ数(局面, 路, 旧) == 1 {
-                    ? 自ダメ >= 2 { 守点 = 守点 + 重_逃げ * (旧$#) }
+                ? 盤::ダメ数上限(局面, 路, 隣点, 2) == 1 {
+                    ? 自ダメ >= 2 {
+                        旧 = 盤::連(局面, 路, 隣点)
+                        守点 = 守点 + 重_逃げ * (旧$#)
+                        逃げ切った = #1
+                    }
                 }
             }
         }
@@ -423,16 +504,20 @@
         // place: without it the engine walks into capture cheerfully
         // and every other layer is wasted.
         ? 自ダメ == 1 {
-            ? 取 == 0 { 守点 = 守点 - 重_自殺 * (自群$#) }
+            ? 取 == 0 {
+                自群 = 盤::連(写, 路, 点)
+                守点 = 守点 - 重_自殺 * (自群$#)
+            }
         }
 
         // 第四層 — 相手へのアタリ。
         // EN: Layer 4 — atari against the opponent.
+        掛けた = #0
         @ 隣点 : 盤::隣(路, 点) {
             ? 写[隣点] == 敵色 {
-                敵群 = 盤::連(写, 路, 隣点)
-                ? 盤::群ダメ数(写, 路, 敵群) == 1 {
+                ? 盤::ダメ数上限(写, 路, 隣点, 2) == 1 {
                     攻点 = 攻点 + 重_アタリ
+                    掛けた = #1
                 }
             }
         }
@@ -475,6 +560,70 @@
         // two spheres over the safe middle of your own.
         差 = _絶対(影響[点])
         ? 差 < 重_勢力 { 他点 = 他点 + (重_勢力 - 差) }
+
+        // 同じ図の裏側 — 相手の勢力の奥。
+        //
+        // このエンジンは先を読まない。第三層が見るのは打った直後の
+        // ダメだけである。相手の地の真ん中の空点は、打った直後には
+        // ダメが二つも三つもあって、その検査を涼しい顔で通る。
+        // 数手のうちに囲まれて只で取られるのだが、それを見るには
+        // 読みが要る。読みの代わりに置くのがこの見張りである。
+        // 「取られるかどうか」ではなく「そこは誰の懐か」を訊く。
+        //
+        // ただし戦術の口実があるならば話は別で、そのときは深さを
+        // 咎めない。口実は具体的でなければならない。
+        //
+        //   取 > 0        この手が実際に石を取る
+        //   自数 >= 2     自分の連を二つ繋ぐ（打つ前の盤で数えた
+        //                 もの。局面 は写しではなく元のままなので、
+        //                 ここは打つ前の事実である）
+        //   掛けた        この手が実際に敵の連をアタリにした
+        //   逃げ切った    この手が実際にアタリの自軍を助け出した
+        //
+        // 「敵の石に二つ以上触れている」を口実にしてはならない。
+        // 深い侵入は定義からして敵の石に囲まれているので、その条件は
+        // ほとんど常に成り立ち、見張りは捕まえるべき手の上で黙って
+        // 無効になる。
+        //
+        // EN: the same map, seen from the other side — the opponent's
+        // interior.
+        //
+        // This engine does not read ahead: layer 3 only ever looks at
+        // the liberties a move has the instant it is played. A point
+        // in the middle of the opponent's territory has two or three
+        // of them right then, and walks through that check untouched
+        // — to be surrounded and taken for free a few moves later,
+        // which takes reading to see. This guard stands in for the
+        // reading it does not do: it asks not "will this be
+        // captured" but "whose interior is this".
+        //
+        // A concrete tactical reason excuses the depth:
+        //
+        //   取 > 0        the move actually captures
+        //   自数 >= 2     it connects two of our chains (counted on
+        //                 the board BEFORE the move — 局面 is the
+        //                 caller's board and 写 is the copy played
+        //                 on, so this is a pre-move fact)
+        //   掛けた        it actually put an enemy chain in atari
+        //   逃げ切った    it actually rescued a chain that was in atari
+        //
+        // "It touches two or more enemy stones" must NOT be one of
+        // them. A deep invasion is by definition surrounded by enemy
+        // stones, so that condition is nearly always true and the
+        // guard turns itself off in silence on exactly the moves it
+        // exists to catch.
+        敵勢 = 0 - 影響[点]
+        ? 色 == 2 { 敵勢 = 影響[点] }
+        ? 敵勢 > 侵入閾値 {
+            口実 = #0
+            ? 取 > 0 { 口実 = #1 }
+            ? 自数 >= 2 { 口実 = #1 }
+            ? 掛けた { 口実 = #1 }
+            ? 逃げ切った { 口実 = #1 }
+            ? 口実 == #0 {
+                守点 = 守点 - 重_侵入 * (敵勢 - 侵入閾値)
+            }
+        }
 
         // 第七層 — 定石と、盤にまだ余地があるうちエンジンを一線
         // 二線から遠ざける辺の減点。

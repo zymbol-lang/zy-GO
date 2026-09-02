@@ -294,6 +294,126 @@
 
 // ------------------------------------------------------------
 >> "" ¶
+>> "invasion guard — 侵入の見張り" ¶
+
+// このエンジンは先を読まない。相手の地の真ん中に打った石は、
+// 打った直後にはダメが三つあって自殺の検査を通り、数手のうちに
+// 只で取られる。見張りはその読みの代わりであり、以下はそれが
+// 実際に効いているかを訊く試験である。
+//
+// 単体の試験でこれを押さえるのは、一局まるごとでは押さえられない
+// からである。種を決めて打たせても、この道を通る手はめったに
+// 現れない。手で組んだ局面だけが、確かにそこを通す。
+//
+// EN: The engine does not read ahead: a stone played in the middle
+// of the opponent's territory has three liberties the instant it
+// lands, passes the suicide check, and is taken for free a few
+// moves later. The guard stands in for that reading, and these
+// tests ask whether it actually works.
+//
+// They are unit tests because a whole game cannot pin this down:
+// with a fixed seed the path is almost never taken. Only a position
+// built by hand goes through it for certain.
+
+// 白の囲いの中。取りも、アタリも、繋ぎも、逃げも無い一手。
+// EN: Inside White's enclosure. The move captures nothing, ataris
+// nothing, connects nothing and escapes nothing.
+局面 = 図::読図([
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    "..OOOOO..",
+    "..O...O..",
+    "..O...O..",
+    "..OOOOO.."
+])
+影響 = 思::影響図(局面, 9)
+深点 = 盤::位置(9, 7, 5)
+平点 = 盤::位置(9, 2, 2)
+罠点 = 盤::位置(9, 7, 4)
+
+確認("a move deep in enemy territory scores below zero",
+     (思::評価(局面, 9, 深点, 1, 2, 0, 40, 影響, 0)) < 0, #1, 失敗<~)
+
+// 見張りの外は触らない。遠い普通の点は、これまでどおり正の点数を
+// もらう。減点がどこにでもかかるなら、それは見張りではなく雑音で
+// ある。
+//
+// EN: Outside its reach nothing changes: an ordinary point far from
+// the wall still scores positive. A penalty that lands everywhere is
+// not a guard, it is noise.
+確認("an ordinary point far from the wall is not penalised",
+     (思::評価(局面, 9, 平点, 1, 2, 0, 40, 影響, 0)) > 0, #1, 失敗<~)
+
+// 「敵の石に二つ以上触れている」を口実にしてはならない。深い侵入は
+// 定義からして敵の石に囲まれているのだから、その条件はほとんど常に
+// 成り立ち、見張りは捕まえるべき手の上で黙って無効になる。
+// この点は白石二つに触れており、それでも咎められなければならない。
+//
+// EN: "It touches two or more enemy stones" must never be the
+// excuse: a deep invasion is by definition surrounded by enemy
+// stones, so the condition is nearly always true and the guard would
+// turn itself off on exactly the moves it exists to catch. This
+// point touches two white stones and must still be penalised.
+確認("touching two enemy stones is not a tactical excuse",
+     (思::評価(局面, 9, 罠点, 1, 2, 0, 40, 影響, 0)) < 0, #1, 失敗<~)
+
+// 初級は第四層で止まる。見張りは第六層にあるので、初級の点数には
+// 現れない。
+//
+// EN: Beginner stops at layer 4 and the guard is in layer 6, so it
+// does not appear in a beginner's score.
+確認("the guard is not applied at beginner level",
+     思::評価(局面, 9, 深点, 1, 1, 0, 40, 影響, 0), 0, 失敗<~)
+
+// 符号は色で変わる。同じ図の色を入れ替えれば、咎められるのは白の
+// 一手である。符号を取り違えた見張りは、自陣の奥に打つのを咎めて
+// 敵陣の奥を褒める。
+//
+// EN: The sign turns with the colour. Swap the colours in the same
+// diagram and it is White's move that is penalised. A guard with the
+// sign wrong punishes playing deep in your OWN sphere and rewards
+// playing deep in the enemy's.
+局面 = 図::読図([
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    "..XXXXX..",
+    "..X...X..",
+    "..X...X..",
+    "..XXXXX.."
+])
+影響 = 思::影響図(局面, 9)
+確認("the same holds for White inside Black's wall",
+     (思::評価(局面, 9, 深点, 2, 2, 0, 40, 影響, 0)) < 0, #1, 失敗<~)
+
+// 口実があれば咎めない。この一手は同じくらい深いが、白石を取る。
+// EN: A concrete reason excuses the depth: this move is just as deep
+// and it captures a white stone.
+局面 = 図::読図([
+    ".........",
+    "..OOOOO..",
+    "..O.X.O..",
+    "..OXO.O..",
+    "..O.X.O..",
+    "..OOOOO..",
+    ".........",
+    ".........",
+    "........."
+])
+影響 = 思::影響図(局面, 9)
+取点 = 盤::位置(9, 4, 6)
+確認("the white stone really is in atari",
+     盤::ダメ数(局面, 9, 盤::位置(9, 4, 5)), 1, 失敗<~)
+確認("a capture is worth playing however deep it is",
+     (思::評価(局面, 9, 取点, 1, 2, 0, 40, 影響, 0)) > 0, #1, 失敗<~)
+
+// ------------------------------------------------------------
+>> "" ¶
 ? 失敗 == 0 {
     >> "PASS — the engine reads the position" ¶
 } _ {
