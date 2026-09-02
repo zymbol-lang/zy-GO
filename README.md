@@ -117,9 +117,11 @@ value, `↵` starts the game.
 ```
      ╭──────────────────────────────────────╮
      │                 囲碁                 │
-     │            Zymbol v0.0.8             │
+     │            Zymbol v0.0.9             │
      ├──────────────────────────────────────┤
      │ ► 路盤        ‹    九路盤    ›       │
+     │   棋力        ‹     中級     ›       │
+     │   手番        ‹      黒      ›       │
      │   コミ        ‹     6.5      ›       │
      │   主題        ‹      石      ›       │
      │   言語        ‹    日本語    ›       │
@@ -131,6 +133,10 @@ value, `↵` starts the game.
 Board sizes that do not fit the current terminal are shown dimmed with their
 required size. Choosing an integer komi (6 or 7) makes 持碁 — a draw — possible;
 the default 6.5 makes it impossible.
+
+**手番 — which side you take.** 黒 opens, so choosing 白 means the AI plays
+first. The third value, **観戦**, means you take neither: both sides are played
+by the engine and you watch. See [Spectating](#spectating--観戦).
 
 ### Board — 対局
 
@@ -177,6 +183,35 @@ Two consecutive passes end the game and scoring runs automatically:
 
 Resignation reports 中押し勝ち (a win by resignation, no point count). An exact
 tie reports 持碁 (jigo).
+
+### Spectating — 観戦
+
+Set 手番 to 観戦 and the engine plays both sides while you watch. It is the same
+board, the same panel and the same end-of-game count as a played game — what
+changes is who decides the next move, and therefore what a keystroke is for.
+
+```
+ space   pause / resume
+ s       one move, then pause
+ t       cycle the theme
+ q       leave
+```
+
+While it plays, the key is read **without blocking**, so the game advances on
+its own and a keystroke only changes its speed; while it is paused the read
+blocks, which is what makes a pause a pause. The last move played is
+highlighted, since there is no cursor to put anywhere.
+
+The ending comes in two steps. The board is left exactly as it stands and the
+status line offers the result; a keypress then draws the result over the side
+panel, **beside the board rather than instead of it**. A finished board is half
+of the result, and showing the numbers by erasing it throws that half away.
+(On a terminal too narrow for the side panel there is no room for a framed box
+next to the board, and it ends the way a played game does.)
+
+Nothing is written to disk and nothing needs a shell, so this is the mode that
+runs in the browser — unlike `棋戦.zy`, which is an instrument: it needs a clock
+from `BashExec` and writes its records to `棋譜/`.
 
 ### The same game in another language
 
@@ -310,6 +345,7 @@ the best one — with an amount of randomness that depends on the level:
 | 4 | アタリ | Putting an opponent chain in atari |
 | 5 | 形 | 3 × 3 shape patterns around the opponent's last move (hane, extension, connection, cut) |
 | 6 | 勢力 | An influence map, favouring the boundary between the two spheres |
+| 6b | 侵入 | The same map read from the other side: a penalty for playing deep in the opponent's sphere with no tactical reason |
 | 7 | 布石 | An opening book for the first moves: star and 3-4 points, never the first or second line |
 
 | Level | Japanese | Behaviour |
@@ -328,6 +364,26 @@ non-trivial decision engine, not to beat you.
 One term is not in the table above and earns its place: **self-atari**. Without
 a penalty for leaving your own chain on one liberty while capturing nothing, the
 engine walks into capture cheerfully and every other layer is wasted.
+
+**Why 6b exists.** Layer 3 only looks at the liberties a move has the *instant*
+it is played, and a stone dropped into the middle of the opponent's territory
+has two or three of them right then. It passes every check the engine can make
+and is captured for free a few moves later, which takes reading to see. Layer 6b
+stands in for the reading it does not do. A concrete tactical reason cancels it
+— the move captures, connects two of our chains, actually ataris an enemy chain,
+or actually rescues one of ours — but "it touches two or more enemy stones" is
+deliberately **not** one of them: a deep invasion is by definition surrounded by
+enemy stones, so that excuse would switch the guard off on exactly the moves it
+exists to catch.
+
+Its weights were not tuned by self-play, and the reason is worth stating: this
+engine's scoring counts stones on the board with **no dead-stone removal**, so
+an invasion neither side is strong enough to kill is worth a point to the
+invader at the end. Against that scorer, discouraging invasions can only look
+like a loss — measured, and it does: over 200 games at 13 × 13 the guarded side
+won 86 (the unguarded control split 99–101). Against a person who does capture
+the invasion, it is the opposite. The guard is validated by position tests in
+`試験/思考試験.zy`, not by the ladder.
 
 The level is a single number — how far below the best a move may score and still
 be picked (60 / 25 / 5 points). A beginner is not a program that plays badly on

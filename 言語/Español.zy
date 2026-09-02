@@ -25,6 +25,7 @@
             "品書.コミ"       => "Komi"
             "品書.主題"       => "Tema"
             "品書.言語"       => "Idioma"
+            "品書.観戦"       => "ver"
             "品書.案内"       => "↑↓ elegir   ←→ cambiar   ↵ empezar"
             "品書.不可"       => "pantalla estrecha"
 
@@ -57,6 +58,9 @@
             "報せ.待った不可" => "no queda nada por deshacer"
             "報せ.考慮中"     => "pensando…"
             "報せ.打つ手無し" => "no queda nada útil — pulsa p para pasar"
+            "報せ.観戦中"        => "IA contra IA — espacio pausa · s paso · t tema · q salir"
+            "報せ.休止"         => "en pausa — espacio sigue · s paso · q salir"
+            "報せ.結果へ"        => "fin de la partida — ↵ para el resultado"
             "報せ.投了"       => "abandono"
 
             "終局.表題"       => "Fin de la partida"

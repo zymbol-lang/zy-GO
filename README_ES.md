@@ -115,9 +115,11 @@ cambian el valor, `↵` empieza la partida.
 ```
      ╭──────────────────────────────────────╮
      │                 囲碁                 │
-     │            Zymbol v0.0.8             │
+     │            Zymbol v0.0.9             │
      ├──────────────────────────────────────┤
      │ ► 路盤        ‹    九路盤    ›       │
+     │   棋力        ‹     中級     ›       │
+     │   手番        ‹      黒      ›       │
      │   コミ        ‹     6.5      ›       │
      │   主題        ‹      石      ›       │
      │   言語        ‹    日本語    ›       │
@@ -129,6 +131,10 @@ cambian el valor, `↵` empieza la partida.
 Los tamaños que no caben en la terminal actual se muestran atenuados con el
 tamaño que requieren. Elegir un komi entero (6 o 7) hace posible el 持碁 — el
 empate técnico —; el 6.5 por defecto lo hace imposible.
+
+**手番 — con qué color juegas.** Abre 黒, así que elegir 白 significa que el
+motor abre. El tercer valor, **観戦**, significa que no juegas ninguno de los
+dos: el motor juega ambos y tú miras. Ver [Observar](#observar--観戦).
 
 ### Tablero — 対局
 
@@ -175,6 +181,36 @@ Dos pases consecutivos terminan la partida y el recuento se ejecuta solo:
 
 El abandono reporta 中押し勝ち (victoria por abandono, sin recuento de puntos).
 Un empate exacto reporta 持碁 (jigo).
+
+### Observar — 観戦
+
+Pon 手番 en 観戦 y el motor juega los dos lados mientras tú miras. Es el mismo
+tablero, el mismo panel y el mismo recuento final que una partida jugada; lo que
+cambia es quién decide la jugada siguiente y, por tanto, para qué sirve una
+tecla.
+
+```
+ espacio  pausa / seguir
+ s        una jugada y pausa
+ t        cambia el tema
+ q        salir
+```
+
+Mientras juega, la tecla se lee **sin bloquear**: la partida avanza sola y la
+tecla solo cambia su ritmo; en pausa la lectura sí bloquea, que es lo que hace
+que una pausa sea una pausa. La última jugada queda resaltada, porque aquí no
+hay cursor que poner en ningún sitio.
+
+El final llega en dos pasos. El tablero se queda tal cual y la línea de estado
+ofrece el resultado; una tecla lo dibuja sobre el panel lateral, **al lado del
+tablero y no en su lugar**. Un tablero terminado es la mitad del resultado, y
+enseñar los números borrándolo tira esa mitad.
+(En una terminal demasiado estrecha para el panel lateral no cabe una caja junto
+al tablero, y termina como termina una partida jugada.)
+
+No se escribe nada en disco ni hace falta intérprete de órdenes, así que este es
+el modo que corre en el navegador — al contrario que `棋戦.zy`, que es un
+instrumento: necesita un reloj de `BashExec` y escribe sus registros en `棋譜/`.
 
 ### La misma partida en otro idioma
 
@@ -312,6 +348,7 @@ del nivel:
 | 4 | アタリ | Poner en atari una cadena rival |
 | 5 | 形 | Patrones de forma 3 × 3 alrededor de la última jugada rival (hane, extensión, conexión, corte) |
 | 6 | 勢力 | Un mapa de influencia, favoreciendo la frontera entre ambas esferas |
+| 6b | 侵入 | El mismo mapa leído del otro lado: penaliza jugar en lo hondo de la esfera del rival sin razón táctica |
 | 7 | 布石 | Libro de aperturas para las primeras jugadas: puntos estrella y 3-4, nunca primera ni segunda línea |
 
 | Nivel | Japonés | Comportamiento |
@@ -331,6 +368,26 @@ para ganarte.
 Hay un término que no está en la tabla y se ganó su sitio: el **auto-atari**. Sin
 penalizar dejar la cadena propia con una sola libertad sin capturar nada, el
 motor se mete solo en la captura y todas las demás capas dan igual.
+
+**Por qué existe la 6b.** La capa 3 solo mira las libertades que tiene la jugada
+en el *instante* en que se pone, y una piedra en mitad del territorio del rival
+tiene dos o tres justo entonces. Pasa todas las comprobaciones que el motor sabe
+hacer y la capturan gratis unas jugadas después, cosa que solo se ve leyendo. La
+capa 6b hace de sustituto de esa lectura. Una razón táctica concreta la cancela
+— la jugada captura, conecta dos cadenas propias, pone de verdad en atari una
+cadena rival, o rescata de verdad una propia — pero «toca dos o más piedras
+enemigas» **no** es una de ellas, a propósito: una invasión profunda está por
+definición rodeada de piedras enemigas, así que esa excusa apagaría la guarda
+justo en las jugadas que existe para atrapar.
+
+Sus pesos no se ajustaron por autojuego, y conviene decir por qué: el recuento
+de este motor cuenta las piedras que hay en el tablero **sin retirar las
+muertas**, así que una invasión que ninguno de los dos sabe matar vale un punto
+para el invasor al final. Contra ese recuento, desalentar invasiones solo puede
+parecer una pérdida — medido, y lo parece: en 200 partidas de 13 × 13 el lado
+con guarda ganó 86 (el control sin guarda quedó 99–101). Contra una persona que
+sí captura la invasión, es al revés. La guarda se valida con pruebas de posición
+en `試験/思考試験.zy`, no con la escalera.
 
 El nivel es un solo número — cuánto por debajo de la mejor puede puntuar una
 jugada y aun así elegirse (60 / 25 / 5 puntos). Un principiante no es un programa
