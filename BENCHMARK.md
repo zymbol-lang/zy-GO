@@ -577,6 +577,49 @@ refactor plus guard — runs the same fixed seed in 0.13 s / 0.64 s / 3.5 s unde
 `--vm` at 9, 13 and 19, 0.98 s and 5.9 s under the tree-walker at 9 and 13, and
 3.7 s in the browser at 9×9.
 
+#### HLZ-012: the tree-walker stopped copying the board to read one point
+
+The engine did not change; the interpreter did. Until v0.0.9 `eval_index`
+evaluated the collection with `eval_expr`, and for a name that is a full clone,
+so every `局面[点]` copied 361 cells to read one. `eval_index` now borrows the
+collection from the environment and clones the element.
+
+Same machine, same tree, the fixed seed, and the three games **byte-identical**
+before and after — this is the oracle doing its job:
+
+| board | tree-walker before | tree-walker after | | `--vm` |
+|-------|--------------------|-------------------|---|--------|
+| 9×9   | 1.34 s | 1.11 s | 1.2× | 0.16 s |
+| 13×13 | 6.37 s | 4.82 s | 1.3× | 0.67 s |
+| 19×19 | 36.26 s | 21.20 s | **1.7×** | 3.83 s |
+
+The gain grows with the board, which is what fixing a cost that grew with the
+size of the state has to look like. It did not close the gap to the VM, because
+there was a second copy in the same engine: handing the board *to* a function
+cloned it as well.
+
+#### HLZ-014: and it stopped copying the board to hand it over
+
+The tree-walker's `Value` now holds its three aggregates behind an `Rc` and copies
+them **when written, not when passed** — `Rc::make_mut` at the 32 sites that
+write. That is not a new design: it is the register VM's value model, ported. The
+browser engine reaches the same place by a third route, sharing the JavaScript
+array and rebuilding it on write. The tree-walker was the only one of the three
+paying at the other door.
+
+Same seed, same oracle, and the three games byte-identical through both fixes:
+
+| board | v0.0.9 as shipped | after HLZ-012 | after HLZ-014 | `--vm` | total |
+|-------|-------------------|---------------|---------------|--------|-------|
+| 9×9   | 1.34 s | 1.11 s | **0.97 s** | 0.15 s | 1.4× |
+| 13×13 | 6.37 s | 4.82 s | **3.87 s** | 0.66 s | 1.6× |
+| 19×19 | 36.26 s | 21.20 s | **15.49 s** | 3.78 s | **2.3×** |
+
+The tree-walker's gap to the VM at 19×19 goes from 21× to **4.1×**. The VM was
+not touched: what changed is that the other engine stopped copying, twice, what
+nobody asked it to copy. `HALLAZGOS_ES.md` has the aliasing battery that shows
+the sharing stays invisible — fourteen doors, three engines, same answers.
+
 ### What actually cost the time
 
 Four changes, each measured on its own, in the order they were made:
