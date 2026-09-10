@@ -32,4 +32,24 @@ self-play — the engine against itself
   ok    never proposes an illegal move
   ok    the game actually progressed
   ok    and put stones on the board
+invasion guard — 侵入の見張り
+  ok    a move deep in enemy territory scores below zero
+  ok    an ordinary point far from the wall is not penalised
+  ok    touching two enemy stones is not a tactical excuse
+  ok    the guard is not applied at beginner level
+  ok    the same holds for White inside Black's wall
+  ok    the white stone really is in atari
+  ok    a capture is worth playing however deep it is
+hunting — 追討
+  ok    the invader really has four liberties
+  ok    approaching it beats playing far from it in the same area
+  ok    both chains are down to two liberties
+  ok    the big chain is three stones
+  ok    threatening three stones beats threatening one
+  ok    the stone to be taken has one liberty
+  ok    the other one still has two
+  ok    capturing outscores merely closing in
+defence — 守り
+  ok    the friendly chain is down to two liberties
+  ok    giving it another liberty beats playing elsewhere
 PASS — the engine reads the position

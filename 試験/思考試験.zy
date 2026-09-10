@@ -211,7 +211,29 @@
     "....."
 ])
 確認("the chain really is in atari", 盤::ダメ数(局面, 5, 7), 1, 失敗<~)
-確認("escapes through its only liberty", 思::着手選択(局面, 5, 1, 2, 0, 0, 10), 2, 失敗<~)
+
+// 上級で訊く。級は「最善からどれだけ下まで選ばれうるか」であって、
+// 中級の幅は 25 点ある。この局面では逃げが 67 点、白の一石に迫る手が
+// 49 点で、その差は 18 — 中級の窓の中である。だから中級はときどき
+// 迫るほうを選ぶ。それは評価の誤りではなく、級の定義そのものである。
+// 上級の幅は 5 なので、選ばれるのは最善だけになり、この試験が訊いて
+// いるもの — 評価が逃げを上に置くか — だけが残る。
+//
+// 追討の項が入るまで、その差は幅より広かった。試験が中級で通って
+// いたのは、そういう偶然による。
+//
+// EN: Asked at advanced level. A level is "how far below the best a
+// move may score and still be picked", and the intermediate window is
+// 25 points. Here the escape scores 67 and closing in on White's lone
+// stone scores 49 — 18 apart, inside that window, so intermediate will
+// sometimes close in instead. That is not the evaluation being wrong;
+// it is what the level means. The advanced window is 5, so only the
+// best move survives and what this test asks — does the evaluation
+// rank the escape first — is all that is left.
+//
+// Before the hunting term the gap was wider than the window, which is
+// the accident that let this pass at intermediate.
+確認("escapes through its only liberty", 思::着手選択(局面, 5, 1, 3, 0, 0, 10), 2, 失敗<~)
 
 // 眼が二つあり、他にすることが無い。まともな手はパスだけであり、
 // どちらの眼を埋めても生きている群を殺す。
@@ -291,6 +313,267 @@
 確認("never proposes an illegal move", 不正, 0, 失敗<~)
 確認("the game actually progressed", 手数, 40, 失敗<~)
 確認("and put stones on the board", (盤::石数(局面, 1)) > 5, #1, 失敗<~)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "invasion guard — 侵入の見張り" ¶
+
+// このエンジンは先を読まない。相手の地の真ん中に打った石は、
+// 打った直後にはダメが三つあって自殺の検査を通り、数手のうちに
+// 只で取られる。見張りはその読みの代わりであり、以下はそれが
+// 実際に効いているかを訊く試験である。
+//
+// 単体の試験でこれを押さえるのは、一局まるごとでは押さえられない
+// からである。種を決めて打たせても、この道を通る手はめったに
+// 現れない。手で組んだ局面だけが、確かにそこを通す。
+//
+// EN: The engine does not read ahead: a stone played in the middle
+// of the opponent's territory has three liberties the instant it
+// lands, passes the suicide check, and is taken for free a few
+// moves later. The guard stands in for that reading, and these
+// tests ask whether it actually works.
+//
+// They are unit tests because a whole game cannot pin this down:
+// with a fixed seed the path is almost never taken. Only a position
+// built by hand goes through it for certain.
+
+// 白の囲いの中。取りも、アタリも、繋ぎも、逃げも無い一手。
+// EN: Inside White's enclosure. The move captures nothing, ataris
+// nothing, connects nothing and escapes nothing.
+局面 = 図::読図([
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    "..OOOOO..",
+    "..O...O..",
+    "..O...O..",
+    "..OOOOO.."
+])
+影響 = 思::影響図(局面, 9)
+深点 = 盤::位置(9, 7, 5)
+平点 = 盤::位置(9, 2, 2)
+罠点 = 盤::位置(9, 7, 4)
+
+確認("a move deep in enemy territory scores below zero",
+     (思::評価(局面, 9, 深点, 1, 2, 0, 40, 影響, 0)) < 0, #1, 失敗<~)
+
+// 見張りの外は触らない。遠い普通の点は、これまでどおり正の点数を
+// もらう。減点がどこにでもかかるなら、それは見張りではなく雑音で
+// ある。
+//
+// EN: Outside its reach nothing changes: an ordinary point far from
+// the wall still scores positive. A penalty that lands everywhere is
+// not a guard, it is noise.
+確認("an ordinary point far from the wall is not penalised",
+     (思::評価(局面, 9, 平点, 1, 2, 0, 40, 影響, 0)) > 0, #1, 失敗<~)
+
+// 「敵の石に二つ以上触れている」を口実にしてはならない。深い侵入は
+// 定義からして敵の石に囲まれているのだから、その条件はほとんど常に
+// 成り立ち、見張りは捕まえるべき手の上で黙って無効になる。
+// この点は白石二つに触れており、それでも咎められなければならない。
+//
+// EN: "It touches two or more enemy stones" must never be the
+// excuse: a deep invasion is by definition surrounded by enemy
+// stones, so the condition is nearly always true and the guard would
+// turn itself off on exactly the moves it exists to catch. This
+// point touches two white stones and must still be penalised.
+確認("touching two enemy stones is not a tactical excuse",
+     (思::評価(局面, 9, 罠点, 1, 2, 0, 40, 影響, 0)) < 0, #1, 失敗<~)
+
+// 初級は第四層で止まる。見張りは第六層にあるので、初級の点数には
+// 現れない。
+//
+// EN: Beginner stops at layer 4 and the guard is in layer 6, so it
+// does not appear in a beginner's score.
+確認("the guard is not applied at beginner level",
+     思::評価(局面, 9, 深点, 1, 1, 0, 40, 影響, 0), 0, 失敗<~)
+
+// 符号は色で変わる。同じ図の色を入れ替えれば、咎められるのは白の
+// 一手である。符号を取り違えた見張りは、自陣の奥に打つのを咎めて
+// 敵陣の奥を褒める。
+//
+// EN: The sign turns with the colour. Swap the colours in the same
+// diagram and it is White's move that is penalised. A guard with the
+// sign wrong punishes playing deep in your OWN sphere and rewards
+// playing deep in the enemy's.
+局面 = 図::読図([
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    "..XXXXX..",
+    "..X...X..",
+    "..X...X..",
+    "..XXXXX.."
+])
+影響 = 思::影響図(局面, 9)
+確認("the same holds for White inside Black's wall",
+     (思::評価(局面, 9, 深点, 2, 2, 0, 40, 影響, 0)) < 0, #1, 失敗<~)
+
+// 口実があれば咎めない。この一手は同じくらい深いが、白石を取る。
+// EN: A concrete reason excuses the depth: this move is just as deep
+// and it captures a white stone.
+局面 = 図::読図([
+    ".........",
+    "..OOOOO..",
+    "..O.X.O..",
+    "..OXO.O..",
+    "..O.X.O..",
+    "..OOOOO..",
+    ".........",
+    ".........",
+    "........."
+])
+影響 = 思::影響図(局面, 9)
+取点 = 盤::位置(9, 4, 6)
+確認("the white stone really is in atari",
+     盤::ダメ数(局面, 9, 盤::位置(9, 4, 5)), 1, 失敗<~)
+確認("a capture is worth playing however deep it is",
+     (思::評価(局面, 9, 取点, 1, 2, 0, 40, 影響, 0)) > 0, #1, 失敗<~)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "hunting — 追討" ¶
+
+// 侵入の見張りの裏側。あちらは「自分の石を只でやるな」と言い、
+// こちらは「相手が只でくれた石は取れ」と言う。人が相手の engine が
+// 負けるのは、たいていこの二つのどちらかを知らないからである。
+//
+// EN: The other side of the invasion guard. That one says do not give
+// your stones away; this one says take the ones the opponent gave you.
+// An engine that loses to a person usually fails one of the two.
+
+// 白がいま自分の懐へ降りてきた。ダメは四つあって、まだ何も脅かして
+// いない。それでも隣に打つ手のほうが、同じ地の遠い点より高くなければ
+// ならない。追う値打ちがあるのは、追える間だけである。
+//
+// EN: White has just landed inside our own area with four liberties,
+// threatening nothing yet. Playing beside it must still score higher
+// than a far point in the same area: a group is worth hunting only
+// while it can still be hunted.
+局面 = 図::読図([
+    ".........",
+    ".XXXXXXX.",
+    ".X.....X.",
+    ".X.....X.",
+    ".X..O..X.",
+    ".X.....X.",
+    ".X.....X.",
+    ".XXXXXXX.",
+    "........."
+])
+影響 = 思::影響図(局面, 9)
+侵者 = 盤::位置(9, 5, 5)
+寄る = 盤::位置(9, 4, 5)
+遠い = 盤::位置(9, 3, 3)
+
+確認("the invader really has four liberties", 盤::ダメ数(局面, 9, 侵者), 4, 失敗<~)
+確認("approaching it beats playing far from it in the same area",
+     (思::評価(局面, 9, 寄る, 1, 2, 侵者, 40, 影響, 0)) > (思::評価(局面, 9, 遠い, 1, 2, 侵者, 40, 影響, 0)),
+     #1, 失敗<~)
+
+// 値打ちで測る。ダメの数が同じ二つの連なら、大きいほうを脅かす手が
+// 高い。石一つを脅す手と三つの連を脅す手が同じ点数だったのが、
+// 直したかった振る舞いそのものである。
+//
+// EN: Weighed by what it is worth. Between two chains with the same
+// liberties, threatening the larger one scores higher — a move that
+// threatened one stone and a move that threatened three scoring the
+// same is precisely the behaviour this replaced.
+局面 = 図::読図([
+    ".........",
+    ".........",
+    ".........",
+    ".XXX...X.",
+    ".OOO...O.",
+    ".XXX...X.",
+    ".........",
+    ".........",
+    "........."
+])
+影響 = 思::影響図(局面, 9)
+大群 = 盤::位置(9, 5, 3)
+小群 = 盤::位置(9, 5, 8)
+大へ = 盤::位置(9, 5, 5)
+小へ = 盤::位置(9, 5, 7)
+
+確認("both chains are down to two liberties", 盤::ダメ数(局面, 9, 大群), 盤::ダメ数(局面, 9, 小群), 失敗<~)
+確認("the big chain is three stones", (盤::連(局面, 9, 大群))$#, 3, 失敗<~)
+確認("threatening three stones beats threatening one",
+     (思::評価(局面, 9, 大へ, 1, 2, 0, 40, 影響, 0)) > (思::評価(局面, 9, 小へ, 1, 2, 0, 40, 影響, 0)),
+     #1, 失敗<~)
+
+// 取れるならば、脅すより取る。追討が取りより重くなったら、engine は
+// 手中の鳥を逃がして藪を突くことになる。
+//
+// EN: Taking beats threatening. Were hunting ever to outweigh the
+// capture itself, the engine would let the bird in hand go to beat
+// the bush.
+局面 = 図::読図([
+    ".........",
+    ".........",
+    "..XXX....",
+    "..XOX....",
+    ".........",
+    ".....X...",
+    "....XO...",
+    ".........",
+    "........."
+])
+影響 = 思::影響図(局面, 9)
+確認("the stone to be taken has one liberty", 盤::ダメ数(局面, 9, 盤::位置(9, 4, 4)), 1, 失敗<~)
+確認("the other one still has two", 盤::ダメ数(局面, 9, 盤::位置(9, 7, 6)), 2, 失敗<~)
+取る = 盤::位置(9, 5, 4)
+迫る = 盤::位置(9, 7, 7)
+確認("capturing outscores merely closing in",
+     (思::評価(局面, 9, 取る, 1, 2, 0, 40, 影響, 0)) > (思::評価(局面, 9, 迫る, 1, 2, 0, 40, 影響, 0)),
+     #1, 失敗<~)
+
+// ------------------------------------------------------------
+>> "" ¶
+>> "defence — 守り" ¶
+
+// 追討を裏返したもの。相手の連のダメを数えて追うのと同じ目盛りで、
+// 自分の連も見る。人はこうやって囲む — 四つを三つに、三つを二つに、
+// そして取る。アタリになってから気づく engine は、囲みの最後の
+// 一手まで気づかない engine である。
+//
+// EN: Hunting, turned around. A person surrounds a group by steps —
+// four liberties to three, three to two, then the capture — and an
+// engine that only notices at atari notices nothing until the last
+// move of the encirclement.
+
+// 黒の二石はダメが二つ。次の白の一手でアタリになる。
+// EN: The two black stones have two liberties; White's next move puts
+// them in atari.
+局面 = 図::読図([
+    ".........",
+    ".........",
+    "..OO.....",
+    "..OXXO...",
+    "..OO.....",
+    ".........",
+    ".....O...",
+    ".........",
+    "........."
+])
+影響 = 思::影響図(局面, 9)
+味方 = 盤::位置(9, 4, 4)
+確認("the friendly chain is down to two liberties", 盤::ダメ数(局面, 9, 味方), 2, 失敗<~)
+
+// 伸びれば三つになる。余所 は白の一石の隣で、追討の点がつく手
+// である。守りが追いより先に来ることを訊いている。
+//
+// EN: Extending gives it three. 余所 is beside White's lone stone and
+// scores for hunting — the question is whether defence comes first.
+伸ばす = 盤::位置(9, 3, 5)
+余所 = 盤::位置(9, 8, 6)
+確認("giving it another liberty beats playing elsewhere",
+     (思::評価(局面, 9, 伸ばす, 1, 2, 0, 40, 影響, 0)) > (思::評価(局面, 9, 余所, 1, 2, 0, 40, 影響, 0)),
+     #1, 失敗<~)
 
 // ------------------------------------------------------------
 >> "" ¶

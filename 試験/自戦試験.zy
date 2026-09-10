@@ -1,0 +1,118 @@
+// ============================================================
+// 試験/自戦試験.zy — 種から一局まるごと、一手ずつ
+//
+//   zymbol run 試験/自戦試験.zy [路] [種]
+//
+// 単体の試験はどれも一つの関数を一つの局面で試す。この試験は
+// 一局をまるごと打ち、打った手をすべて並べる。評価の作り直しが
+// 一手でも変えたなら、この並びが変わる。
+//
+// 盤.zy と 思考.zy の作り直しで壊れうるもののうち、単体の試験に
+// 映らないものがあるからここに在る。着手を写しの上ではなく盤の
+// 上で打つようにすると、評価の各層が「打つ前」と「打った後」の
+// どちらを読んでいるかが表に出る。そのどれかを取り違えても、
+// 単体の試験は緑のまま通る。変わるのは打たれる手だけである。
+//
+// 時計も殻も要らない。だから三つの実行系すべてで同じ出力になる。
+//
+// EN: 試験/自戦試験.zy — one whole game from a seed, move by move
+//
+//   zymbol run 試験/自戦試験.zy [board] [seed]
+//
+// Every unit test exercises one function on one position. This one
+// plays a whole game and lists every move it played: if a rewrite
+// of the evaluation changes a single move, this listing changes.
+//
+// It exists because of what a refactor of 盤.zy and 思考.zy can
+// break that no unit test reflects. Once a move is played on the
+// board itself instead of on a copy, every layer of the evaluation
+// has to say whether it reads the position BEFORE or AFTER the
+// move — and getting one of them wrong leaves every unit test
+// green. Only the moves played change.
+//
+// No clock and no shell, so all three engines produce the same
+// output.
+// ============================================================
+
+<# ../核/盤 => 盤
+<# ../核/思考 => 思
+<# ../核/計算 => 計算
+
+>< 引数
+
+路 = 9
+種初 = 424242
+? (引数$#) >= 1 { 路 = #|引数[1]| }
+? (引数$#) >= 2 { 種初 = #|引数[2]| }
+
+// 安全の上限であって、終わり方ではない。終わるのは 二度のパスで
+// ある。
+上限 = 路 * 路 * 4
+
+局面 = 盤::新規(路)
+種 = 種初
+手番 = 1
+コウ = 0
+最終 = 0
+パス = 0
+手数 = 0
+黒取 = 0
+白取 = 0
+
+>> "seed " 種初 "  board " 路 "x" 路 ¶
+
+@ 手数 < 上限 {
+    ? パス >= 2 { @! }
+
+    点 = 思::選択(局面, 路, 手番, 2, 0, コウ, 最終, 手数, 種<~)
+    手数 = 手数 + 1
+    取 = 0
+
+    ? 点 == 0 {
+        パス = パス + 1
+        コウ = 0
+        最終 = 0
+    } _ {
+        コ = 0
+        盤::着手(局面<~, 路, 点, 手番, 取<~, コ<~)
+        ? 手番 == 1 {
+            黒取 = 黒取 + 取
+        } _ {
+            白取 = 白取 + 取
+        }
+        コウ = コ
+        最終 = 点
+        パス = 0
+    }
+
+    >> 手数 " " 手番 " " 点 " " 取 ¶
+    手番 = 盤::敵(手番)
+}
+
+>> "" ¶
+// 路 は引数から来るので、範囲の向きが実行時に決まると解析器が
+// 見る。上限そのものを見る守りで、それを閉じる。
+//
+// EN: 路 comes from an argument, so the analyser sees a range whose
+// direction is decided at runtime. Guarding on the bound closes it.
+? 路 >= 1 {
+    @ 行:1..路 {
+        線 = ""
+        ? 路 >= 1 {
+            @ 列:1..路 {
+                値 = 局面[盤::位置(路, 行, 列)]
+                線 = "{線}{値}"
+            }
+        }
+        >> 線 ¶
+    }
+}
+
+計 = 計算::目算(局面, 路, 6.5)
+勝 = 計算::勝色(計)
+差 = 計算::差分(計)
+>> "" ¶
+>> "moves " 手数 ¶
+>> "captures " 黒取 " " 白取 ¶
+>> "score " 計.黒合計 " " 計.白合計 ¶
+>> "result " 勝 " +" 差 ¶

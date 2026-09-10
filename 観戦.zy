@@ -1,0 +1,37 @@
+// ============================================================
+// 観戦.zy — 入口、観戦から
+//
+// 他の四つの入口は、あらかじめ選ぶ言語だけが違う。この入口が
+// あらかじめ選ぶのは様式である。設定の画面は同じもので、手番 が
+// 観戦 に据わって開く。engine が両方を打ち、人はそれを見る。
+//
+// 画面の中で 手番 を 黒 か 白 に戻せば、そのまま打つ対局になる。
+// 言語も、路盤も、棋力も、いつもどおりそこで選ぶ。
+//
+// 英語で開くのは go.zy と同じ理由である。この入口は漢字仮名を
+// 打ちにくい端末のためにもあり、遊び場の一覧では既定の入口の
+// 隣に並ぶ。
+//
+//   zymbol run 観戦.zy
+//
+// EN: 観戦.zy — entry point, starting in spectating mode
+//
+// The other four entry points differ only in the locale they
+// preselect; this one preselects the *mode*. It opens the same setup
+// screen with 手番 sitting on 観戦: the engine plays both sides and
+// a person watches.
+//
+// Move 手番 back to 黒 or 白 on that screen and it is an ordinary
+// game again. Language, board size and level are chosen there as
+// always.
+//
+// It opens in English for the same reason go.zy does — this entry is
+// also for terminals where typing CJK is inconvenient, and in the
+// playground's list it sits next to the default one.
+//
+//   zymbol run 観戦.zy
+// ============================================================
+
+<# ./対局 => 対局
+
+対局::観戦開始("en")

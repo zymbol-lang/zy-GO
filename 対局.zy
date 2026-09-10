@@ -7,13 +7,14 @@
 // ることは無い。文言はすべて鍵を通して 言語/ から来る。
 //
 // 配列の並び（同じ表が 表示/描画.zy にもある）。
-//   設定[1] 路   [2] 主題   [3] 級   [4] コミ   [5] 人色
+//   設定[1] 路   [2] 主題   [3] 級   [4] コミ   [5] 人色   [6] 版   [6] 版
 //   状況[1] 手番 [2] 手数   [3] 黒取 [4] 白取   [5] 最終手
 //        [6] コウ点         [7] 連続パス
 //
-// 人色 が 0 なら両者とも人である。この節目で出す差し向かいの
-// 様式がそれにあたる。核/思考.zy が入ると 人色 は人の色となり、
-// 輪はもう一方を AI に尋ねる。
+// 人色 は人の打つ色である。0 なら人はいない — 観戦の様式で、
+// 両方を AI に尋ね、盤の上でそれを見る。区画が「自分／機械」では
+// なく色の名を出すのはそのためで、その形はもともと差し向かいの
+// ために書かれたものである。
 //
 // 矢印の鍵は <<| から矢印の字そのもの — '↑' '↓' '←' '→' — として
 // 届く。'U' 'D' 'L' 'R' ではない。GUIDE.md §3b はそう書いており、
@@ -32,9 +33,11 @@
 //   状況[1] 手番 [2] 手数   [3] 黒取 [4] 白取   [5] 最終手
 //        [6] コウ点         [7] 連続パス
 //
-// 人色 0 means both sides are human — the hot-seat mode this
-// milestone ships. When 核/思考.zy lands it becomes the human's
-// colour and the loop asks the AI for the other side.
+// 人色 is the colour the human plays; 0 means there is no human —
+// the spectating mode, where both sides are asked of the AI and the
+// game is watched on the board. That is why the panel names the
+// colours instead of "you / machine" in that case: the shape was
+// written for hot-seat and says exactly the right thing here.
 //
 // Arrow keys arrive from <<| as the arrow glyphs themselves —
 // '↑' '↓' '←' '→' — not as 'U' 'D' 'L' 'R'. GUIDE.md §3b says
@@ -48,14 +51,32 @@
     <# ./核/規則 => 規則
     <# ./核/計算 => 計算
     <# ./核/思考 => 思
+    <# ./版/思考v1 => 思1
+    <# ./版/思考v2 => 思2
     <# ./表示/主題 => 主
     <# ./表示/描画 => 描
     <# ./表示/文字 => 文
     <# ./言語/取次 => 言
 
-    #> { 開始 }
+    #> { 開始, 観戦開始 }
 
-    開始(言語コード) {
+    // 対局を始める。人は 手番 で選んだ色を持つ。
+    // EN: Start a game; the human takes the side chosen under 手番.
+    開始(言語コード) { <~ _起動(言語コード, 1) }
+
+    // 観戦から始める。設定の画面は同じで、手番 だけが 観戦 に
+    // 据えてある。入口を分けてあるのは、遊び場の script の一覧に
+    // 出るのが入口だからで、そこに出ないものは無いのと同じである。
+    // 画面の中で 手番 を戻せば、そのまま打つ対局になる。
+    //
+    // EN: Start in spectating mode. Same setup screen, with 手番 set
+    // to 観戦. It is a separate entry because the entries are what
+    // the playground's script list shows, and what is not in that
+    // list may as well not exist. Move 手番 back on the screen and it
+    // is an ordinary game again.
+    観戦開始(言語コード) { <~ _起動(言語コード, 3) }
+
+    _起動(言語コード, 手番既定) {
         言::設定(言語コード)
         (高, 幅) = >>?
 
@@ -69,12 +90,26 @@
             <~ 1
         }
 
+        // 棋譜は別画面の外で出す。中で出せば、次に描いた盤が上から
+        // 塗り潰してしまう。外に出れば、端末では普通の出力に流れ、
+        // 遊び場では盤の下の板に出て、そのまま写せる。
+        //
+        // EN: The record is printed outside the alternate screen: inside
+        // it, the next board drawn would paint over it. Outside, it goes
+        // to ordinary output — the terminal's scrollback, or the panel
+        // under the playground's canvas, where it can be copied.
+        棋譜 = ""
         >>| {
-            設定 = _設定画面(高, 幅)
+            設定 = _設定画面(高, 幅, 手番既定)
             ? (設定$#) > 0 {
-                _対局(設定, 高, 幅)
+                ? 設定[5] == 0 {
+                    _観戦(設定, 高, 幅, 棋譜<~)
+                } _ {
+                    _対局(設定, 高, 幅, 棋譜<~)
+                }
             }
         }
+        ? (棋譜$#) > 0 { >> 棋譜 }
         <~ 0
     }
 
@@ -105,6 +140,24 @@
         <~ 1
     }
 
+    // 次の主題へ。対局と観戦の両方が同じ鍵で同じことをするので、
+    // 二度書けば片方だけ直る日が来る。
+    //
+    // EN: Advance to the next theme. Both the played game and the
+    // spectator do the same thing under the same key, and written
+    // twice it is one edit away from doing two different things.
+    _主題送り(設定<~) {
+        一覧 = 主::主題一覧()
+        総 = 一覧$#
+        ? 総 >= 1 {
+            現位 = 1
+            @ 添字:1..総 {
+                ? 一覧[添字] == 設定[2] { 現位 = 添字 }
+            }
+            設定[2]$~ 一覧[_回す(現位, 総, 1)]
+        }
+    }
+
     _回す(値, 総, 向き) {
         新 = 値 + 向き
         ? 新 < 1 { <~ 総 }
@@ -114,38 +167,64 @@
 
     // 設定 の配列を返す。打ち手がやめたときは [] を返す。
     // EN: Returns the 設定 array, or [] when the player quits.
-    _設定画面(高, 幅) {
+    _設定画面(高, 幅, 手番既定) {
         路一覧 = _可能路盤(高, 幅)
         コミ一覧 = [0, 5.5, 6, 6.5, 7, 7.5]
+        // 選べる engine の版。新しいものが先頭に立つので、既定は
+        // いまの engine である。版を足すのはここに一つと、
+        // _版着手選択 に一行。
+        //
+        // EN: The engine versions on offer, newest first, so the
+        // default is the current one. Adding a version is one entry
+        // here and one line in _版着手選択.
+        版一覧 = [3, 2, 1]
         主題一覧 = 主::主題一覧()
         言語一覧 = 言::言語一覧()
         // 黒が先に打つ。だから 白 を選ぶことは AI が口火を切ることを
-        // 意味する。
+        // 意味する。0 は観戦 — 人はどちらも打たない。
         //
         // EN: Black moves first, so choosing 白 means the AI opens.
-        手番一覧 = [1, 2]
+        // 0 is spectating: the human plays neither side.
+        手番一覧 = [1, 2, 0]
 
         路位 = 1
         級 = 2
-        手番位 = 1
+        手番位 = 手番既定
+        黒位 = 1
+        白位 = 1
         コミ位 = 4
         主題位 = 1
         言語位 = _言語位置(言語一覧, 言::現在())
         選 = 1
-        行数 = 6
+        行数 = 8
+
 
         欄 = 38
-        上 = ##!((高 - 12) / 2 + 1)
+        // 箱の高さは行数から出す。枠が上下に一本ずつ、題と版と案内の
+        // ための仕切りが三本、その内側に品書の行。以前は 12 と書いて
+        // あって、品書が六行だった頃はそれで正しかった。行を足した
+        // 日に、箱は画面の下へずれた。
+        //
+        // EN: The box's height comes from the number of rows: a border
+        // top and bottom, three rules for the title, the version and
+        // the footer, and the menu rows inside. It used to be the
+        // literal 12, which was right while the menu had six rows and
+        // wrong the day one was added — the box slid down the screen.
+        箱高 = 行数 + 6
+        上 = ##!((高 - 箱高) / 2 + 1)
         左 = ##!((幅 - 欄 - 2) / 2 + 1)
         ? 上 < 1 { 上 = 1 }
         ? 左 < 1 { 左 = 1 }
 
         >>!
         @ {
+            人色 = 手番一覧[手番位]
             名一覧 = [
                 言::語("品書.路盤"),
                 言::語("品書.棋力"),
                 言::語("品書.手番"),
+                言::語("色.黒"),
+                言::語("色.白"),
                 言::語("品書.コミ"),
                 言::語("品書.主題"),
                 言::語("品書.言語")
@@ -153,6 +232,7 @@
             級札 = 言::語("棋力.{級}")
             手番札 = 言::語("色.黒")
             ? 手番一覧[手番位] == 2 { 手番札 = 言::語("色.白") }
+            ? 手番一覧[手番位] == 0 { 手番札 = 言::語("品書.観戦") }
             主題札 = 言::語(主::主題鍵(主題一覧[主題位]))
             言札 = _言語名(言語一覧[言語位])
             // 補間が受け取るのは {識別子} だけなので、コミの値は
@@ -161,10 +241,23 @@
             // EN: Interpolation takes {identifier} only, so the komi
             // value is bound before it can be turned into text.
             コミ値 = コミ一覧[コミ位]
+            // 人が持つ側には選ぶものが無い。その席に版の名を出すのは
+            // 嘘である。
+            //
+            // EN: There is nothing to choose for the side a person
+            // takes, and printing a version name in that seat would be
+            // a lie.
+            黒札 = _版名(版一覧[黒位])
+            白札 = _版名(版一覧[白位])
+            ? 人色 == 1 { 黒札 = 言::語("側.自分") }
+            ? 人色 == 2 { 白札 = 言::語("側.自分") }
+
             値一覧 = [
                 言::路盤名(路一覧[路位]),
                 級札,
                 手番札,
+                黒札,
+                白札,
                 "{コミ値}",
                 主題札,
                 言札
@@ -175,15 +268,15 @@
             ?? 打鍵 {
                 '↑' => { 選 = _回す(選, 行数, -1) }
                 '↓' => { 選 = _回す(選, 行数, 1) }
-                '←' => { _設定変更(選, -1, 路位<~, 級<~, 手番位<~, コミ位<~, 主題位<~, 言語位<~, 路一覧, コミ一覧, 主題一覧, 言語一覧) }
-                '→' => { _設定変更(選, 1, 路位<~, 級<~, 手番位<~, コミ位<~, 主題位<~, 言語位<~, 路一覧, コミ一覧, 主題一覧, 言語一覧) }
+                '←' => { _設定変更(選, -1, 路位<~, 級<~, 手番位<~, 黒位<~, 白位<~, コミ位<~, 主題位<~, 言語位<~, 路一覧, 版一覧, 手番一覧, コミ一覧, 主題一覧, 言語一覧, 人色) }
+                '→' => { _設定変更(選, 1, 路位<~, 級<~, 手番位<~, 黒位<~, 白位<~, コミ位<~, 主題位<~, 言語位<~, 路一覧, 版一覧, 手番一覧, コミ一覧, 主題一覧, 言語一覧, 人色) }
                 '\n' => { @! }
                 'q' || 'Q' => { <~ [] }
                 _ => { }
             }
         }
 
-        <~ [路一覧[路位], 主題一覧[主題位], 級, コミ一覧[コミ位], 手番一覧[手番位]]
+        <~ [路一覧[路位], 主題一覧[主題位], 級, コミ一覧[コミ位], 手番一覧[手番位], 版一覧[黒位], 版一覧[白位]]
     }
 
     // 添字は出力引数として渡り歩く。呼び出しの場に六つの枝を置く
@@ -193,13 +286,24 @@
     // EN: The indices travel as output parameters so the caller's
     // state moves with one call instead of six branches at the call
     // site.
-    _設定変更(選, 向き, 路位<~, 級<~, 手番位<~, コミ位<~, 主題位<~, 言語位<~, 路一覧, コミ一覧, 主題一覧, 言語一覧) {
+    _設定変更(選, 向き, 路位<~, 級<~, 手番位<~, 黒位<~, 白位<~, コミ位<~, 主題位<~, 言語位<~, 路一覧, 版一覧, 手番一覧, コミ一覧, 主題一覧, 言語一覧, 人色) {
         ? 選 == 1 { 路位 = _回す(路位, 路一覧$#, 向き) }
         ? 選 == 2 { 級 = _回す(級, 3, 向き) }
-        ? 選 == 3 { 手番位 = _回す(手番位, 2, 向き) }
-        ? 選 == 4 { コミ位 = _回す(コミ位, コミ一覧$#, 向き) }
-        ? 選 == 5 { 主題位 = _回す(主題位, 主題一覧$#, 向き) }
-        ? 選 == 6 {
+        ? 選 == 3 { 手番位 = _回す(手番位, 手番一覧$#, 向き) }
+        // 人が持つ席は動かさない。見えないものを黙って変えるより、
+        // 動かないほうが正直である。
+        //
+        // EN: The seat a person takes does not move: not moving is
+        // more honest than silently changing something invisible.
+        ? 選 == 4 {
+            ? 人色 <> 1 { 黒位 = _回す(黒位, 版一覧$#, 向き) }
+        }
+        ? 選 == 5 {
+            ? 人色 <> 2 { 白位 = _回す(白位, 版一覧$#, 向き) }
+        }
+        ? 選 == 6 { コミ位 = _回す(コミ位, コミ一覧$#, 向き) }
+        ? 選 == 7 { 主題位 = _回す(主題位, 主題一覧$#, 向き) }
+        ? 選 == 8 {
             言語位 = _回す(言語位, 言語一覧$#, 向き)
             言::設定(言語一覧[言語位])
         }
@@ -218,6 +322,142 @@
         <~ 名
     }
 
+    // ---- 版 -------------------------------------------------
+    // どの engine に訊くか。設定[6] が 1 なら凍らせた第一版、2 なら
+    // いまの版、0 なら「v1 対 v2」— 観戦のときだけ意味を持ち、黒が
+    // v1、白が v2 である。
+    //
+    // 版が違うのは読み方だけである。盤も規則も一つきりで、どちらの
+    // engine も同じ 核/盤 と 核/規則 を通る。石の振る舞いまで版ごとに
+    // 分かれたら、遊んでいるのは二つの碁になる。
+    //
+    // EN: which engine to ask. 設定[6] is 1 for the frozen first
+    // engine, 2 for the current one, 0 for "v1 against v2" — which
+    // only means anything while spectating, and puts v1 on black.
+    //
+    // A version differs in how it reads a position, never in what is
+    // legal: both engines go through the same 核/盤 and 核/規則. Let
+    // the stones behave differently per version and you are playing
+    // two different games.
+    _版選び(設定, 色) {
+        版 = 設定[6]
+        ? 版 == 0 {
+            ? 色 == 1 { <~ 1 }
+            <~ 2
+        }
+        <~ 版
+    }
+
+    _版着手選択(版, 局面, 路, 色, 級, コウ点, 最終手, 手数) {
+        ? 版 == 1 { <~ 思1::着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数) }
+        <~ 思::着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数)
+    }
+
+    // 版の名は番号そのものである。版が増えても、ここに行を足す
+    // 必要は無い。以前は枝で書いてあって、v3 を足した日にこの関数
+    // だけが v2 と言い続けた。数えられるものを数えずに並べると、
+    // こうなる。
+    //
+    // EN: A version's name is its number. Adding a version does not
+    // add a line here — it used to be a chain of branches, and the day
+    // v3 arrived this function alone went on saying v2. That is what
+    // listing something countable instead of counting it costs.
+    _版名(版) { <~ "v{版}" }
+
+    // ---- 棋譜 -----------------------------------------------
+    // 一手ずつの記録。打ち手が終局のあとで k を押したときだけ返す。
+    //
+    // 形は 棋戦.zy のものと同じで、訳さない。表示の言語が何であれ
+    // 機械向けの一つの形にとどまる。二つの言語に割れた資料は二つの
+    // 資料である。ここで大事なのは、この記録が自戦の記録では決して
+    // 手に入らないものを持っていることである — 人がどう打つか。
+    // 待ったも入っている。打ち手が何を打ち直したかは、打った手と
+    // 同じくらい多くを語る。
+    //
+    // EN: the record
+    // One line per move, returned only when the player asks for it with
+    // k after the game ends.
+    //
+    // Same shape as 棋戦.zy's, and untranslated: whatever the display
+    // language, the record stays in one machine form, because a dataset
+    // split across two languages is two datasets. What matters is that
+    // this record holds what no self-play log can — how a person plays.
+    // Takebacks are in it too: what a player unplayed says as much as
+    // what they played.
+
+    _棋譜頭(設定) {
+        路 = 設定[1]
+        級 = 設定[3]
+        コミ = 設定[4]
+        人色 = 設定[5]
+        人 = "none"
+        ? 人色 == 1 { 人 = "B" }
+        ? 人色 == 2 { 人 = "W" }
+        黒名 = _版名(設定[6])
+        白名 = _版名(設定[7])
+
+        // 名前へ束ねてから返す。`<~` に行をまたぐ literal を直に
+        // 書くと、browser の engine では Unit が返る（HLZ-013）。
+        // Rust の二つは文字列を返すので、この記録は端末では出て
+        // browser では消えていた。局所の名前を一つ挟めば、三つの
+        // engine とも同じものを返す。
+        //
+        // EN: Bound to a name before it is returned. A string literal
+        // that spans lines, written directly after `<~`, comes back as
+        // Unit in the browser engine (HLZ-013) — so this record printed
+        // in a terminal and vanished in a browser. One local name and
+        // all three engines return the same thing.
+        頭 = "# zy-GO kifu v1
+board {路}
+komi {コミ}
+level {級}
+human {人}
+engine_black {黒名}
+engine_white {白名}
+---
+"
+        <~ 頭
+    }
+
+    _色字(色) {
+        ? 色 == 1 { <~ "B" }
+        ? 色 == 2 { <~ "W" }
+        <~ "-"
+    }
+
+    _棋譜手(棋譜<~, 手数, 色, 路, 点, 取) {
+        字 = _色字(色)
+        座 = "pass"
+        ? 点 > 0 { 座 = 描::座標名(路, 点) }
+        棋譜 = "{棋譜}{手数} {字} {座} caps={取}
+"
+    }
+
+    _棋譜尾(棋譜<~, 局面, 設定, 状況, 勝, 中押) {
+        路 = 設定[1]
+        結果 = 計算::目算(局面, 路, 設定[4])
+        勝色 = 勝
+        差 = 0
+        ? 中押 == #0 {
+            勝色 = 計算::勝色(結果)
+            差 = 計算::差分(結果)
+        }
+        名 = _色字(勝色)
+        終 = "{差}"
+        ? 中押 { 終 = "R" }
+        手数 = 状況[2]
+        黒取 = 状況[3]
+        白取 = 状況[4]
+        黒合 = 結果.黒合計
+        白合 = 結果.白合計
+        棋譜 = "{棋譜}---
+result {名}+{終}
+moves {手数}
+score black={黒合} white={白合}
+captures black={黒取} white={白取}
+"
+    }
+
     // ---- 対局そのもの ---------------------------------------
     // EN: the match
 
@@ -227,10 +467,11 @@
         <~ 写
     }
 
-    _対局(設定, 高, 幅) {
+    _対局(設定, 高, 幅, 棋譜<~) {
         路 = 設定[1]
         局面 = 盤::新規(路)
         状況 = [1, 0, 0, 0, 0, 0, 0]
+        控 = _棋譜頭(設定)
 
         中央 = ##!((路 + 1) / 2)
         行 = 中央
@@ -256,7 +497,7 @@
         // first.
         ? 設定[5] == 2 {
             _全描画(局面, 設定, 状況, 配置, 上, 左, 側上, 側左, 下行, 状行, 行, 列, 言::語("報せ.考慮中"))
-            _思考一手(局面<~, 設定, 状況<~, 伝言<~)
+            _思考一手(局面<~, 設定, 状況<~, 伝言<~, 控<~)
         }
         _全描画(局面, 設定, 状況, 配置, 上, 左, 側上, 側左, 下行, 状行, 行, 列, 伝言)
 
@@ -319,12 +560,14 @@
 
                         伝言 = ""
                         ? 取 > 0 { 伝言 = 言::取石文(取) }
+                        _棋譜手(控<~, 状況[2], 盤::敵(状況[1]), 路, 点, 取)
 
                         ? 状況[1] <> 設定[5] {
                             描::状態描画(言::語("報せ.考慮中"), 状行, 左, 路)
-                            _思考一手(局面<~, 設定, 状況<~, 伝言<~)
+                            _思考一手(局面<~, 設定, 状況<~, 伝言<~, 控<~)
                             ? 規則::終局(状況[7]) {
-                                _終局(局面, 設定, 0, #0, 高, 幅)
+                                _棋譜尾(控<~, 局面, 設定, 状況, 0, #0)
+                                _終局(局面, 設定, 0, #0, 高, 幅, 控, 棋譜<~)
                                 @!
                             }
                         }
@@ -342,16 +585,19 @@
                     状況[6]$~ 0
                     状況[7]$~ (状況[7] + 1)
                     状況[1]$~ 盤::敵(状況[1])
+                    _棋譜手(控<~, 状況[2], 盤::敵(状況[1]), 路, 0, 0)
 
                     ? 規則::終局(状況[7]) {
-                        _終局(局面, 設定, 0, #0, 高, 幅)
+                        _棋譜尾(控<~, 局面, 設定, 状況, 0, #0)
+                        _終局(局面, 設定, 0, #0, 高, 幅, 控, 棋譜<~)
                         @!
                     }
                     ? 状況[1] <> 設定[5] {
                         描::状態描画(言::語("報せ.考慮中"), 状行, 左, 路)
-                        _思考一手(局面<~, 設定, 状況<~, 伝言<~)
+                        _思考一手(局面<~, 設定, 状況<~, 伝言<~, 控<~)
                         ? 規則::終局(状況[7]) {
-                            _終局(局面, 設定, 0, #0, 高, 幅)
+                            _棋譜尾(控<~, 局面, 設定, 状況, 0, #0)
+                            _終局(局面, 設定, 0, #0, 高, 幅, 控, 棋譜<~)
                             @!
                         }
                     }
@@ -373,18 +619,21 @@
                             履歴況 = 履歴況$[1..段数-1]
                         }
                         伝言 = 言::語("報せ.待った")
+                        // 待ったは記録から消さない。打ち直した手は、
+                        // 打った手と同じくらい人の打ち方を語る。
+                        //
+                        // EN: A takeback is not erased from the record.
+                        // What a player unplayed says as much about how
+                        // they play as what they played.
+                        戻先 = 状況[2]
+                        控 = "{控}undo {戻先}
+"
                     }
                     _全描画(局面, 設定, 状況, 配置, 上, 左, 側上, 側左, 下行, 状行, 行, 列, 伝言)
                 }
 
                 't' || 'T' => {
-                    一覧 = 主::主題一覧()
-                    現位 = 1
-                    総 = 一覧$#
-                    @ 添字:1..総 {
-                        ? 一覧[添字] == 設定[2] { 現位 = 添字 }
-                    }
-                    設定[2]$~ 一覧[_回す(現位, 総, 1)]
+                    _主題送り(設定<~)
                     >>!
                     _全描画(局面, 設定, 状況, 配置, 上, 左, 側上, 側左, 下行, 状行, 行, 列, 伝言)
                 }
@@ -408,7 +657,8 @@
                     // EN: Resignation: the side to move gives up, so
                     // the other side wins by 中押し — no point count.
                     勝 = 盤::敵(状況[1])
-                    _終局(局面, 設定, 勝, #1, 高, 幅)
+                    _棋譜尾(控<~, 局面, 設定, 状況, 勝, #1)
+                    _終局(局面, 設定, 勝, #1, 高, 幅, 控, 棋譜<~)
                     @!
                 }
 
@@ -422,12 +672,19 @@
     //
     // EN: One AI move. Mirrors the human's move handling exactly —
     // the engine does not know or care which side is asking.
-    _思考一手(局面<~, 設定, 状況<~, 伝言<~) {
+    _思考一手(局面<~, 設定, 状況<~, 伝言<~, 控<~) {
         路 = 設定[1]
         級 = 設定[3]
         色 = 状況[1]
 
-        点 = 思::着手選択(局面, 路, 色, 級, 状況[6], 状況[5], 状況[2])
+        点 = _版着手選択(_版選び(設定, 色), 局面, 路, 色, 級, 状況[6], 状況[5], 状況[2])
+
+        // 取 は枝の外で立てる。棋譜はどちらの枝を通っても書くので、
+        // 枝の中だけの名前では届かない。
+        //
+        // EN: 取 is declared outside the branch: the record is written
+        // on both paths, and a name local to one of them does not reach.
+        取 = 0
 
         ? 点 == 0 {
             伝言 = 言::語("報せ.機械パス")
@@ -435,7 +692,6 @@
             状況[6]$~ 0
             状況[7]$~ (状況[7] + 1)
         } _ {
-            取 = 0
             コ = 0
             盤::着手(局面<~, 路, 点, 色, 取<~, コ<~)
             ? 色 == 1 {
@@ -452,6 +708,7 @@
 
         状況[2]$~ (状況[2] + 1)
         状況[1]$~ 盤::敵(色)
+        _棋譜手(控<~, 状況[2], 色, 路, 点, 取)
     }
 
     _全描画(局面, 設定, 状況, 配置, 上, 左, 側上, 側左, 下行, 状行, 行, 列, 伝言) {
@@ -483,12 +740,169 @@
         描::状態描画(文言, 状行, 左, 路)
     }
 
+    // ---- 観戦 -----------------------------------------------
+    // 両方を AI が打ち、人はそれを見る。
+    //
+    // 対局の輪と別に書いてある。写し取ったからではなく、決めるものが
+    // 違うからである。対局の輪では、次に何が起きるかは打鍵が決める。
+    // ここでは対局が自分で進み、打鍵はその速さだけを決める。だから
+    // 読み方も違う。打っている間は塞がらない読み（<<|?）で、休んで
+    // いる間だけ塞がる読み（<<|）である。塞がる読みで回していたら
+    // 一手ごとに打鍵を待つことになり、それは観戦ではない。
+    //
+    // 終わりは二段構えである。まず盤をそのまま残して結果を出すかと
+    // 訊き、次に結果を出す。横並びの配置なら区画のあった所に出すので
+    // 盤は消えない。碁の終わった盤は結果の半分であり、数だけ見せて
+    // 盤を消してしまうのは、その半分を捨てることである。
+    //
+    // EN: spectating — both sides played by the AI, watched by a person.
+    //
+    // Written apart from the playing loop, not copied from it: what
+    // decides the next step is different. There, a keystroke decides
+    // what happens next; here the game advances on its own and a
+    // keystroke only decides how fast. So the reading is different
+    // too — non-blocking (<<|?) while it plays, blocking (<<|) only
+    // while it is paused. Driven by the blocking read it would wait
+    // for a key on every move, and that is not spectating.
+    //
+    // The ending comes in two steps: first the board is left exactly
+    // as it stands and the status line offers the result, then the
+    // result is drawn — over the panel, side by side with the board,
+    // so the board never disappears. A finished board is half of the
+    // result, and showing the numbers by erasing it throws that half
+    // away.
+    _観戦(設定, 高, 幅, 棋譜<~) {
+        路 = 設定[1]
+        局面 = 盤::新規(路)
+        状況 = [1, 0, 0, 0, 0, 0, 0]
+        伝言 = ""
+        控 = _棋譜頭(設定)
+
+        配置 = 主::配置(路, 幅, 高)
+        上 = 1
+        左 = 2
+        側上 = 1
+        側左 = ##!(左 + 主::区画幅(路) + 2)
+        下行 = ##!(路 + 4)
+        状行 = ##!(路 + 4)
+        ? 配置 == 1 { 状行 = ##!(路 + 6) }
+
+        停止 = #0
+        中断 = #0
+
+        >>!
+        _観戦描画(局面, 設定, 状況, 配置, 上, 左, 側上, 側左, 下行, 状行, 停止)
+
+        @ {
+            ? 規則::終局(状況[7]) { @! }
+
+            // 休んでいるなら打鍵を待ち、打っているなら覗くだけ。
+            // EN: Wait for a key while paused; only glance while playing.
+            打鍵 = '\0'
+            ? 停止 {
+                <<| 打鍵
+            } _ {
+                <<|? 打鍵
+            }
+
+            進む = #1
+            ? 停止 { 進む = #0 }
+
+            ?? 打鍵 {
+                'q' || 'Q' => {
+                    中断 = #1
+                    @!
+                }
+                ' ' || 'p' || 'P' => {
+                    停止 = !停止
+                    進む = !停止
+                }
+                's' || 'S' => {
+                    停止 = #1
+                    進む = #1
+                }
+                't' || 'T' => {
+                    _主題送り(設定<~)
+                    >>!
+                    進む = #0
+                }
+                '?' => {
+                    描::観戦助言描画(側上, 左)
+                    <<| _待
+                    >>!
+                    進む = #0
+                }
+                _ => { }
+            }
+
+            ? 進む {
+                _思考一手(局面<~, 設定, 状況<~, 伝言<~, 控<~)
+            }
+            _観戦描画(局面, 設定, 状況, 配置, 上, 左, 側上, 側左, 下行, 状行, 停止)
+        }
+
+        ? 中断 == #0 {
+            _棋譜尾(控<~, 局面, 設定, 状況, 0, #0)
+            _観戦終局(局面, 設定, 配置, 側上, 側左, 状行, 左, 高, 幅, 控, 棋譜<~)
+        }
+    }
+
+    // 対局の _全描画 との違いは二つだけ。合図の代わりに最後の一手を
+    // 強調することと、状態の行が観戦の操作を出すことである。
+    //
+    // EN: Two differences from the playing 全描画: the last move is
+    // highlighted instead of a cursor, and the status line carries
+    // the spectating controls.
+    _観戦描画(局面, 設定, 状況, 配置, 上, 左, 側上, 側左, 下行, 状行, 停止) {
+        路 = 設定[1]
+        主題 = 設定[2]
+        描::盤描画(局面, 路, 主題, 上, 左)
+
+        最終手 = 状況[5]
+        ? 最終手 > 0 {
+            行 = 盤::行番(路, 最終手)
+            列 = 盤::列番(路, 最終手)
+            描::升描画(局面, 路, 主題, 行, 列, 上, 左, #1)
+        }
+
+        ? 配置 == 2 {
+            描::側面描画(局面, 設定, 状況, 側上, 側左)
+        } _ {
+            描::下面描画(局面, 設定, 状況, 下行, 左)
+        }
+
+        文言 = 言::語("報せ.観戦中")
+        ? 停止 { 文言 = 言::語("報せ.休止") }
+        描::状態描画(文言, 状行, 左, 路)
+    }
+
+    _観戦終局(局面, 設定, 配置, 側上, 側左, 状行, 左, 高, 幅, 控, 棋譜<~) {
+        路 = 設定[1]
+        描::状態描画(言::語("報せ.結果へ"), 状行, 左, 路)
+        <<| _待
+
+        // 横並びなら盤を残す。縦積みでは枠付きの箱を置く余地が
+        // 無いので、対局と同じ終わり方をする。
+        //
+        // EN: Side by side, the board stays. Stacked, there is no
+        // room for a framed box, so it ends the way a played game does.
+        ? 配置 == 2 {
+            結果 = 計算::目算(局面, 路, 設定[4])
+            勝色 = 計算::勝色(結果)
+            差 = 計算::差分(結果)
+            描::終局描画(結果, 設定, 勝色, 差, #0, 側上, 側左)
+            _棋譜訊く(控, 棋譜<~, ##!(側上 + 13), 側左)
+        } _ {
+            _終局(局面, 設定, 0, #0, 高, 幅, 控, 棋譜<~)
+        }
+    }
+
     // 中押 が #1 なら対局は投了で終わっており、勝 が勝者である。
     // そうでなければ局面を数える。
     //
     // EN: 中押 #1 means the game ended by resignation and 勝 is the
     // winner; otherwise the position is counted.
-    _終局(局面, 設定, 勝, 中押, 高, 幅) {
+    _終局(局面, 設定, 勝, 中押, 高, 幅, 控, 棋譜<~) {
         路 = 設定[1]
         コミ = 設定[4]
         結果 = 計算::目算(局面, 路, コミ)
@@ -507,6 +921,18 @@
 
         >>!
         描::終局描画(結果, 設定, 勝色, 差, 中押, 上, 左)
-        <<| _待
+        _棋譜訊く(控, 棋譜<~, ##!(上 + 13), 左)
+    }
+
+    // 終局のあと、棋譜を出すかを訊く。訊くのは一度きりで、答えは
+    // 別画面を出てから印字される。
+    //
+    // EN: After the game, ask whether to print the record. Asked once;
+    // the answer is printed after the alternate screen is left.
+    _棋譜訊く(控, 棋譜<~, 行, 左) {
+        描::終局案内(言::語("報せ.棋譜へ"), 行, 左)
+        <<| 打鍵
+        ? 打鍵 == 'k' { 棋譜 = 控 }
+        ? 打鍵 == 'K' { 棋譜 = 控 }
     }
 }
