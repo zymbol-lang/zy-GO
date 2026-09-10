@@ -25,6 +25,7 @@
             "品書.コミ"       => "Komi"
             "品書.主題"       => "Tema"
             "品書.言語"       => "Idioma"
+            "品書.観戦"       => "ver"
             "品書.案内"       => "↑↓ elegir   ←→ cambiar   ↵ empezar"
             "品書.不可"       => "pantalla estrecha"
 
@@ -57,6 +58,10 @@
             "報せ.待った不可" => "no queda nada por deshacer"
             "報せ.考慮中"     => "pensando…"
             "報せ.打つ手無し" => "no queda nada útil — pulsa p para pasar"
+            "報せ.観戦中"        => "mirando  ␣pausa  ? teclas"
+            "報せ.休止"         => "en pausa  ␣sigue  s paso"
+            "報せ.結果へ"        => "fin — ↵ resultado"
+            "報せ.棋譜へ"   => "↵ salir · k registro"
             "報せ.投了"       => "abandono"
 
             "終局.表題"       => "Fin de la partida"
@@ -74,6 +79,9 @@
             "操作.待った"     => "deshacer"
             "操作.目算"       => "estimar puntuación"
             "操作.主題切替"   => "cambiar de tema"
+            "操作.休止"        => "pausa / sigue"
+            "操作.一手"        => "una jugada"
+            "操作.離脱"        => "salir"
             "操作.投了"       => "abandonar / salir"
 
             "端末.狭い"       => "la terminal es demasiado pequeña"

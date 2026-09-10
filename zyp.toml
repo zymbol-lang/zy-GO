@@ -10,6 +10,12 @@ path = "go.zy"
 default = true
 
 [[script]]
+name = "観戦"
+path = "観戦.zy"
+default = false
+desc = "AI vs AI — the engine plays both sides and you watch"
+
+[[script]]
 name = "囲碁"
 path = "囲碁.zy"
 default = false

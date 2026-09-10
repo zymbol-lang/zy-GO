@@ -82,7 +82,31 @@
 <# ./言語/道具 => 道
 <# ./標準/入出力 => 入出
 
-上限手数 := 400
+// 安全弁であって、終わり方ではない。碁の終わりは二度のパスで
+// あって手数ではない。ここが 400 の定数だったとき、19 路盤の
+// 対局はほぼすべてそこで切られていた。実際の二度のパスは 410〜
+// 456 手のあたりで来る。切られた対局は最後まで打たれた対局と
+// 見分けがつかず、報告はそれを「400 手」として数えていた。
+// 一手あたりの時間も、勝敗も、級の対戦表も、すべてその上に
+// 建っていた。
+//
+// いまは 路×路×4 で、これは終盤がどれだけ長引いても届かない。
+// 届いたときは 打切 として報告する。黙って切る計器は、澄ました
+// 顔で出鱈目を報告する計器である。
+//
+// EN: A safety valve, not an ending. A game of go ends on two
+// passes, not on a move count. While this was the constant 400,
+// nearly every 19-road game was cut there — the real second pass
+// arrives somewhere around move 410 to 456 — and a truncated game
+// was indistinguishable from a finished one, counted in the report
+// as "400 moves". Time per move, results, and the level tables were
+// all built on top of that.
+//
+// It is 路×路×4 now, which no endgame reaches however long it
+// drags, and reaching it is reported as 打切. An instrument that
+// truncates in silence is an instrument that reports nonsense with
+// a straight face.
+安全上限(路) { <~ 路 * 路 * 4 }
 
 // 記録の置き場。一回の tanda につき一つの directorio。
 //
@@ -244,11 +268,13 @@
 // 結果[1] 勝者（0 は持碁）  [4] 黒の合計    [7] 総ナノ秒
 // 結果[2] 手数              [5] 白の合計    [8] 序盤 10 手のナノ秒
 // 結果[3] 差                [6] 取った石の総数 [9] 終盤 10 手のナノ秒
+// 結果[10] 安全弁で切れたなら 1
 //
 // EN: one game
 // 結果[1] winner (0 jigo)   [4] black total     [7] total ns
 // 結果[2] moves             [5] white total     [8] first-10 ns
 // 結果[3] margin            [6] captures total  [9] last-10 ns
+// 結果[10] 1 when the safety valve cut the game short
 
 一局(番号, 路, 種初, 黒級, 黒性, 白級, 白性, 模式, 較正値, 実行印, 場所, 結果<~) {
     局面 = 盤::新規(路)
@@ -281,7 +307,8 @@ white level={白級} personality={白性}
         描::盤描画(局面, 路, "石", 2, 2)
     }
 
-    @ 手数 < 上限手数 {
+    上限 = 安全上限(路)
+    @ 手数 < 上限 {
         ? パス >= 2 { @! }
 
         級 = 黒級
@@ -339,6 +366,11 @@ white level={白級} personality={白性}
         手番 = 盤::敵(手番)
     }
 
+    // 二度のパスで抜けたのか、安全弁に当たったのか。
+    // EN: Did it end on two passes, or hit the safety valve?
+    打切 = 0
+    ? パス < 2 { 打切 = 1 }
+
     @ 値 : 最近 { 終10 = 終10 + 値 }
 
     計 = 計算::目算(局面, 路, 6.5)
@@ -354,6 +386,7 @@ white level={白級} personality={白性}
     結果[7]$~ 総時
     結果[8]$~ 初10
     結果[9]$~ 終10
+    結果[10]$~ 打切
 
     黒合 = 計.黒合計
     白合 = 計.白合計
@@ -366,6 +399,7 @@ white level={白級} personality={白性}
     記録 = "{記録}---
 result {勝名}+{差}
 moves {手数}
+truncated {打切}
 score black={黒合} white={白合}
 stones black={黒石} white={白石}
 captures black={黒取} white={白取}
@@ -512,6 +546,7 @@ _乱 = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
 黒勝 = 0
 白勝 = 0
 持碁 = 0
+打切数 = 0
 総手数 = 0
 総時間 = 0
 総初 = 0
@@ -544,7 +579,7 @@ _乱 = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
     種 = 思::乱数(種)
     局種 = 種
 
-    結果 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    結果 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     一局(局番, 路, 局種, 黒級, 黒性, 白級, 白性, 模式, 較正値, 実行印, 記録場所, 結果<~)
 
     勝 = 結果[1]
@@ -552,6 +587,7 @@ _乱 = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
     ? 勝 == 2 { 白勝 = 白勝 + 1 }
     ? 勝 == 0 { 持碁 = 持碁 + 1 }
 
+    打切数 = 打切数 + 結果[10]
     総手数 = 総手数 + 結果[2]
     総時間 = 総時間 + 結果[7]
     総初 = 総初 + 結果[8]
@@ -613,6 +649,11 @@ _乱 = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
 札 = 文::右詰(訳("棋戦.平均手数"), 20)
 値 = 総手数 / 対局数
 記す("  {札}{値}", #1, 報告<~)
+? 打切数 > 0 {
+    札 = 文::右詰(訳("棋戦.打切"), 20)
+    記す("  {札}{打切数}", #1, 報告<~)
+    記す("  " 訳("棋戦.打切補足"), #1, 報告<~)
+}
 記す("", #1, 報告<~)
 
 記す(訳("棋戦.時間見出"), #1, 報告<~)
@@ -754,6 +795,7 @@ clock_cost_ns {較正値}
 white_wins {要白勝}
 jigo {要持碁}
 avg_moves {要平均手}
+truncated_games {打切数}
 ---
 "
 要初10 = ミリ(総初 / (対局数 * 10))

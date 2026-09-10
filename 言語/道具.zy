@@ -77,6 +77,8 @@
             "棋戦.白勝"       => "白の勝ち"
             "棋戦.持碁"       => "持碁"
             "棋戦.平均手数"   => "平均手数"
+            "棋戦.打切"       => "安全弁で打切"
+            "棋戦.打切補足"   => "（二度のパスで終わらなかった対局。この対局は数に入れない方がよい）"
             "棋戦.時間見出"   => "── 一手あたりの時間 ──"
             "棋戦.初十手"     => "初めの十手の平均"
             "棋戦.終十手"     => "終わりの十手の平均"
@@ -113,6 +115,21 @@
             "集計.性格見出"   => "── 性格 ──"
             "集計.注意"       => "三十局に満たない枡は何も言っていない"
 
+            "対戦.表題"          => "対戦 — 版と版"
+            "対戦.版"           => "版"
+            "対戦.勝ち"          => "勝ち"
+            "対戦.黒番"          => "黒番"
+            "対戦.白番"          => "白番"
+            "対戦.平均差"         => "平均差"
+            "対戦.取石"          => "取った石"
+            "対戦.持碁"          => "持碁"
+            "対戦.平均手数"        => "平均手数"
+            "対戦.種"           => "種"
+            "対戦.打切"          => "安全弁で打切"
+            "対戦.版1"          => "第一版（v0.0.8）— 見張りも追討も無い"
+            "対戦.版2"          => "いまの版 — 侵入の見張りと、獲物の値打ちで測る追討"
+            "対戦.版3"       => "いまの版 — 二つダメになった自分の連を、囲まれきる前に守る"
+
             _                  => 鍵
         }
     }
@@ -137,6 +154,8 @@
             "棋戦.白勝"       => "victorias blancas"
             "棋戦.持碁"       => "empates"
             "棋戦.平均手数"   => "jugadas de media"
+            "棋戦.打切"       => "cortadas por la válvula"
+            "棋戦.打切補足"   => "(partidas que no acabaron en dos pasos: conviene no contarlas)"
             "棋戦.時間見出"   => "── tiempo por jugada ──"
             "棋戦.初十手"     => "primeras 10 jugadas"
             "棋戦.終十手"     => "últimas 10 jugadas"
@@ -173,6 +192,21 @@
             "集計.性格見出"   => "── personalidad ──"
             "集計.注意"       => "las celdas con menos de 30 partidas no dicen nada"
 
+            "対戦.表題"          => "escalera — versión contra versión"
+            "対戦.版"           => "ver"
+            "対戦.勝ち"          => "ganadas"
+            "対戦.黒番"          => "de negras"
+            "対戦.白番"          => "de blancas"
+            "対戦.平均差"         => "dif. media"
+            "対戦.取石"          => "capturas"
+            "対戦.持碁"          => "tablas"
+            "対戦.平均手数"        => "jugadas de media"
+            "対戦.種"           => "semilla"
+            "対戦.打切"          => "cortadas por la válvula"
+            "対戦.版1"          => "el primer motor (v0.0.8) — sin guarda de invasión y sin caza"
+            "対戦.版2"          => "el motor de ahora — guarda de invasión y caza pesada por lo que vale la presa"
+            "対戦.版3"       => "el motor de ahora — defiende sus cadenas a dos libertades, antes de que se cierre la red"
+
             _                  => 鍵
         }
     }
@@ -197,6 +231,8 @@
             "棋戦.白勝"       => "white wins"
             "棋戦.持碁"       => "jigo"
             "棋戦.平均手数"   => "avg moves"
+            "棋戦.打切"       => "cut by the safety valve"
+            "棋戦.打切補足"   => "(games that did not end on two passes — better left out of the counts)"
             "棋戦.時間見出"   => "── time per move ──"
             "棋戦.初十手"     => "first 10 moves, avg"
             "棋戦.終十手"     => "last 10 moves, avg"
@@ -233,6 +269,21 @@
             "集計.性格見出"   => "── personality ──"
             "集計.注意"       => "cells under 30 games say nothing"
 
+            "対戦.表題"          => "ladder — version against version"
+            "対戦.版"           => "ver"
+            "対戦.勝ち"          => "wins"
+            "対戦.黒番"          => "as black"
+            "対戦.白番"          => "as white"
+            "対戦.平均差"         => "avg margin"
+            "対戦.取石"          => "captures"
+            "対戦.持碁"          => "jigo"
+            "対戦.平均手数"        => "avg moves"
+            "対戦.種"           => "seed"
+            "対戦.打切"          => "cut by the safety valve"
+            "対戦.版1"          => "the first engine (v0.0.8) — no invasion guard, no hunting"
+            "対戦.版2"          => "the current engine — invasion guard, and hunting weighted by what the prey is worth"
+            "対戦.版3"       => "the current engine — defends its own chains at two liberties, before the net closes"
+
             _                  => 鍵
         }
     }
@@ -249,6 +300,7 @@
             "棋戦.表題", "棋戦.路盤", "棋戦.種", "棋戦.時計費用",
             "棋戦.減算", "棋戦.刻印", "棋戦.記録", "棋戦.結果",
             "棋戦.黒勝", "棋戦.白勝", "棋戦.持碁", "棋戦.平均手数",
+            "棋戦.打切", "棋戦.打切補足",
             "棋戦.時間見出", "棋戦.初十手", "棋戦.終十手", "棋戦.最遅",
             "棋戦.全体", "棋戦.思考秒", "棋戦.伸び", "棋戦.記憶見出",
             "棋戦.前", "棋戦.後", "棋戦.記憶伸び", "棋戦.超過",
@@ -257,7 +309,10 @@
             "棋戦.均衡短", "棋戦.攻短", "棋戦.守短",
             "棋戦.雑音", "棋戦.雑音対策", "棋戦.再演",
             "集計.表題", "集計.場所", "集計.回数", "集計.未了",
-            "集計.無し", "集計.級見出", "集計.性格見出", "集計.注意"
+            "集計.無し", "集計.級見出", "集計.性格見出", "集計.注意",
+            "対戦.表題", "対戦.版", "対戦.勝ち", "対戦.黒番", "対戦.白番",
+            "対戦.平均差", "対戦.取石", "対戦.持碁", "対戦.平均手数",
+            "対戦.種", "対戦.打切", "対戦.版1", "対戦.版2", "対戦.版3"
         ]
     }
 }

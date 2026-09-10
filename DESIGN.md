@@ -97,27 +97,54 @@ The match state is a named tuple threaded through `対局.zy`:
 
 ### Chain detection — flood fill
 
-Recursive, with a visited array of board length. Depth is bounded by chain size,
-so worst case is 361 frames on 19 × 19 — a real recursion-depth test for the
-tree-walker.
+Iterative, over a worklist, with **the chain itself as the visited set**:
 
 ```
 連(局面, 路, 起点):
     色 ← 局面[起点]
-    訪問 ← array of 路×路 zeros
-    _探索(局面, 路, 起点, 色, 訪問<~, 結果<~)
+    結果 ← [起点]
+    走査 ← 1
+    while 走査 ≤ |結果|:
+        for each neighbour q of 結果[走査]:
+            if 局面[q] == 色 and q ∉ 結果: 結果 $+ q
+        走査 ← 走査 + 1
     return 結果
-
-_探索(局面, 路, p, 色, 訪問<~, 結果<~):
-    if 訪問[p] ≠ 0 or 局面[p] ≠ 色: return
-    訪問[p] ← 1
-    結果 $+ p
-    for each neighbour q of p: _探索(局面, 路, q, 色, 訪問, 結果)
 ```
 
-An iterative worklist variant was held in reserve in case recursion depth or
-interpreter overhead became a problem. It was not needed: `試験/性能試験.zy`
-walks a single 360-stone chain on a 19 × 19 board without trouble.
+It was recursive to begin with, over a visited array of board length, and the
+worklist was "held in reserve in case recursion depth or interpreter overhead
+became a problem". Both turned out to be a problem, and neither was the one
+that had been anticipated. The cost was the **visited array**: `新規(路)`
+allocates 路 × 路 cells on every call, and the call happens eight to twelve
+times per candidate evaluated. A chain is typically three to ten stones, so the
+allocation was between thirty and a hundred times the size of the thing being
+walked, and it grew with the board while the chains did not — which is the
+super-quadratic term measured when the board size was varied.
+
+Membership in an array is a linear scan, so this is O(k²) in the chain size
+where the array was O(area) per call. For the sizes a chain actually reaches
+that is a straight win, and it is the reason the same rewrite gave 1.1× at 9 × 9
+and 5.0× at 19 × 19 in an isolated 連 + 群ダメ数 benchmark: what was removed is
+exactly the term that scaled with the board.
+
+The same change applies to `ダメ点` and `群ダメ数`, which had the same visited
+array for the same reason.
+
+### Counting liberties no further than you need — ダメ数上限
+
+```zymbol
+ダメ数上限(局面, 路, 起点, 上限)   → min(true liberty count, 上限)
+```
+
+Almost no caller wants the liberty count. They ask whether a chain can be
+captured (0), is in atari (1), or is alive for now (2 or more) — and a chain
+with twenty liberties does not have to be walked to its last stone to answer any
+of those. `ダメ数上限` stops as soon as it reaches 上限, so it may never
+flood-fill the whole chain. It is exact up to 上限 and says so, which is why the
+bound is the caller's to write.
+
+With `着手`, `判定` and `評価` asking through it, the number of full `連` walks
+in a 13 × 13 self-play game fell from 40,232 to 451.
 
 ### Placing a stone — order matters
 
@@ -129,10 +156,10 @@ usually — but not always — illegal:
     1. 局面[p] ← 色                      place first
     2. 取数 ← 0
        for each neighbour q of p with 局面[q] == 敵色:
-           if ダメ数(局面, 路, q) == 0:
-               取数 += size of that chain
+           if ダメ数上限(局面, 路, q, 1) == 0:
+               取数 += size of that chain      ← 連 is built only here
                除去(that chain)
-    3. if 取数 == 0 and ダメ数(局面, 路, p) == 0:
+    3. if 取数 == 0 and ダメ数上限(局面, 路, p, 1) == 0:
            undo step 1 and reject — 自殺手
     4. コウ点 ← p_captured  if 取数 == 1 and the played chain is a single
                             stone with exactly one liberty; else 0
@@ -155,11 +182,24 @@ legal moves; anything tighter permits infinite recapture.
 理由鍵(コード)                     → the i18n key for a rejection
 ```
 
-`判定` works on a **copy** of the board, so it never disturbs the caller. It is
-the most-called function in the AI loop, and it was the primary benchmark
-target — measured at 287 points scanned on a 19 × 19 position in 0.38 s of
-total process time, board copy included. A full unpruned legality scan is
-affordable.
+`判定` **never touches the board and never copies it**. Whether a move is
+suicide follows from three facts about its neighbours, without building the
+position it would produce:
+
+- one empty neighbour and the move has a liberty — legal;
+- an enemy chain beside it with exactly one liberty is captured (that liberty
+  can only be this point) — legal;
+- a friendly chain beside it with two or more liberties still has one left after
+  connecting — legal;
+- otherwise every neighbour is occupied, nothing is captured, and every friendly
+  neighbour chain has this point as its only liberty: playing there fills the
+  last one. Suicide.
+
+It is the most-called function in the AI loop — `有用手` asks it about every
+empty point, every turn — and the first scan answers **95 %** of the calls
+(measured: 10,907 of 11,477 in a 13 × 13 game) without a flood fill ever
+running. It used to copy the whole board and play the move on the copy, which is
+the same answer at a few hundred times the price.
 
 `理由鍵` exists so no caller ever hard-codes a message: a rejection travels as a
 code, becomes an i18n key here, and becomes text in whichever of the five
@@ -269,7 +309,16 @@ first:
 - Otherwise, candidates are empty points within Manhattan distance 2 of any
   existing stone, plus star points. This is standard bot practice and cuts the
   scan by roughly an order of magnitude in the opening and midgame.
-- Legality is tested only on the pruned set.
+- Legality is tested only on the pruned set. The order matters and was wrong
+  once: `候補` used to ask `有用手` for every legal non-eye point on the board
+  and *then* drop the far ones, which is the same set — "near AND not an eye AND
+  legal" is one product however it is ordered — arrived at by asking eye
+  detection and `判定` about every empty point on a 19 × 19 board, most of which
+  are nowhere near a stone.
+- The distance test is asked per empty point rather than marked per stone, and
+  that way round is the faster one: it stops at the first stone it finds, while
+  marking a ball around every stone always pays for the whole ball. Measured
+  both ways on a full 19 × 19 game — 9.9 s asking, 10.6 s marking.
 
 ### Evaluation layers
 
@@ -280,9 +329,12 @@ without touching the logic:
 |------|-----------------|-------|
 | Stones captured by this move | `重_取り` | `100 × captured` |
 | Own chain escaping atari, resulting liberties ≥ 2 | `重_逃げ` | `80 × chain size` |
+| Own chain at two liberties given a third | `重_守り` | `30 × chain size ÷ 2` |
 | Puts an opponent chain in atari | `重_アタリ` | `40` |
+| Hunting: pressure on a neighbouring enemy chain | `重_追討` | `15 × prey / liberties left` |
 | 3 × 3 shape pattern match near the opponent's last move | `重_形` | `10 … 30` per pattern |
 | Influence map value at the point | `重_勢力` | `0 … 20` |
+| Deep in the opponent's sphere with no tactical reason | `重_侵入` | `-10 × (depth - 12)` |
 | Opening book point, first 8 moves | `重_布石` | `50` |
 | First or second line before move 30 | `重_辺` | `-30` |
 | Fills own eye | — | rejected outright, never scored |
@@ -297,6 +349,55 @@ and doing so is an acceptable failure for a beginner-level engine.
 neighbourhood, black positive and white negative. Points with a near-zero sum
 are the contested boundary, which is where the AI wants to play. The map is
 computed once per turn, not per candidate.
+
+**Defence** (layer 3) is hunting turned around, and it is split at the boundary
+so the two terms never score the same thing twice: one liberty belongs to
+`重_逃げ`, which rewards actually saving a chain from capture, and two liberties
+belong to `重_守り`, which rewards not letting it get there. A person surrounds a
+group by steps — four liberties to three, three to two, then the capture — so an
+engine that only reacts at atari reacts on the last move of the encirclement.
+
+Note what makes the term work at all: `自ダメ` is counted to **three**, not two.
+Stopping at two makes taking a two-liberty chain to three look like no gain, and
+the first version of this shipped that way — the ladder measured it at +5% and
+the measurement was of something else entirely (a louder escape bonus, since the
+only branch that could fire was the atari one). A position test caught it; the
+ladder could not, because both halves of the ladder had the same bug.
+
+**Hunting** (layer 4) is the invasion guard's counterpart: the guard says do not
+give your stones away, and hunting says take the ones the opponent gave you. An
+atari used to be worth a flat 40 whether it threatened one stone or twelve. It
+is now worth `重_追討 × prey ÷ liberties left`, where the prey is the chain's
+size, doubled when it sits inside our own sphere — capturing an invader gives
+back the territory it was breaking as well as the stone, because under area
+scoring an empty region touching both colours belongs to nobody.
+
+Dividing by the liberties left rather than cutting off at some number of them is
+the whole design. The first version scored only chains down to two liberties,
+and a stone that has just invaded has four: the engine never touched an invader
+until it was already in atari, by which time it had roots. Measured on the
+ladder, that version was worth nothing at all (see BENCHMARK.md).
+
+The capture itself always outweighs the hunt — `重_取り` is 100 a stone against
+15 — so this cannot pull the engine off a bigger group onto a smaller one.
+Nothing sequences that; the values do.
+
+**The invasion guard** reads the same map from the other side. The engine does
+not search, so the self-atari check (layer 3) only ever looks at the liberties a
+move has the instant it is played — and a stone dropped into the middle of the
+opponent's territory has two or three of them right then, passes the check, and
+is captured for free a few moves later. Seeing that requires reading; the guard
+stands in for the reading, asking not "will this be captured" but "whose
+interior is this". Below `侵入閾値` it does nothing; past it the penalty grows
+with the depth.
+
+A concrete tactical reason cancels it: the move captures, or connects two of our
+own chains, or actually puts an enemy chain in atari, or actually rescues one of
+ours from atari. **"It touches two or more enemy stones" is not one of them** —
+a deep invasion is by definition surrounded by enemy stones, so that condition
+is nearly always true and the guard would switch itself off on exactly the moves
+it exists to catch. That was a real bug during development, and
+`試験/思考試験.zy` now has a case that fails if anyone reintroduces it.
 
 **Levels** modulate two things only — which layers are active and how much noise
 is added before the argmax:

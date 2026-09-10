@@ -46,19 +46,69 @@
     禁_コウ  := 3
 
     // 合法なら 0、そうでなければ理由を返す。
+    //
+    // 盤には触れない。写しも取らない。自殺かどうかは、打った後の
+    // 盤を作らなくても、隣の三つの事実だけで決まるからである。
+    //
+    //   · 隣に空点が一つでもあれば、その一手はダメを持つ
+    //   · 隣の敵の連がダメ一つなら、その一手が取る（唯一のダメが
+    //     この点なのだから、必ず取れる）
+    //   · 隣の味方の連がダメ二つ以上なら、繋いだ後も一つ残る
+    //
+    // どれにも当たらなければ、隣はすべて塞がり、取れる敵もおらず、
+    // 味方の連はどれもこの点だけがダメである。打てば全体のダメが
+    // 尽きる。すなわち自殺。
+    //
+    // これが要るのは費用のためである。この関数は AI の輪の中で
+    // 最も多く呼ばれ、有用手() は毎手すべての空点に対してこれを
+    // 呼ぶ。ほとんどの点は最初の走査 — 隣に空点あり — で答えが
+    // 出て、塗り潰しは一度も走らない。
+    //
     // EN: 0 when the move is legal, otherwise the reason.
+    //
+    // The board is never touched and never copied. Whether a move is
+    // suicide follows from three facts about its neighbours, without
+    // building the position it would produce:
+    //
+    //   · one empty neighbour and the move has a liberty
+    //   · an enemy chain next to it with exactly one liberty is
+    //     captured (that liberty can only be this point)
+    //   · a friendly chain next to it with two or more liberties
+    //     still has one left after connecting
+    //
+    // If none holds, every neighbour is occupied, nothing is
+    // captured, and every friendly neighbour chain has this point as
+    // its only liberty — so playing there fills the last one. Suicide.
+    //
+    // This exists for cost. It is the most-called function in the AI
+    // loop — 有用手() asks it about every empty point, every turn —
+    // and most points are answered by the first scan, one empty
+    // neighbour, without a flood fill ever running.
     判定(局面, 路, 起点, 色, コウ点) {
         ? 起点 < 1 { <~ 1 }
         ? 起点 > 路 * 路 { <~ 1 }
         ? 局面[起点] <> 0 { <~ 1 }
         ? 起点 == コウ点 { <~ 3 }
 
-        写 = 盤::複製(局面)
-        取 = 0
-        コウ = 0
-        結果 = 盤::着手(写<~, 路, 起点, 色, 取<~, コウ<~)
-        ? 結果 == 2 { <~ 2 }
-        <~ 0
+        隣接 = 盤::隣(路, 起点)
+        @ 隣点 : 隣接 {
+            ? 局面[隣点] == 0 { <~ 0 }
+        }
+
+        敵色 = 盤::敵(色)
+        @ 隣点 : 隣接 {
+            ? 局面[隣点] == 敵色 {
+                ? 盤::ダメ数上限(局面, 路, 隣点, 2) == 1 { <~ 0 }
+            }
+        }
+
+        @ 隣点 : 隣接 {
+            ? 局面[隣点] == 色 {
+                ? 盤::ダメ数上限(局面, 路, 隣点, 2) >= 2 { <~ 0 }
+            }
+        }
+
+        <~ 2
     }
 
     合法(局面, 路, 起点, 色, コウ点) {

@@ -117,9 +117,13 @@ value, `↵` starts the game.
 ```
      ╭──────────────────────────────────────╮
      │                 囲碁                 │
-     │            Zymbol v0.0.8             │
+     │            Zymbol v0.0.9             │
      ├──────────────────────────────────────┤
      │ ► 路盤        ‹    九路盤    ›       │
+     │   棋力        ‹     中級     ›       │
+     │   手番        ‹      黒      ›       │
+     │   黒          ‹    あなた    ›       │
+     │   白          ‹      v2      ›       │
      │   コミ        ‹     6.5      ›       │
      │   主題        ‹      石      ›       │
      │   言語        ‹    日本語    ›       │
@@ -131,6 +135,20 @@ value, `↵` starts the game.
 Board sizes that do not fit the current terminal are shown dimmed with their
 required size. Choosing an integer komi (6 or 7) makes 持碁 — a draw — possible;
 the default 6.5 makes it impossible.
+
+**手番 — which side you take.** 黒 opens, so choosing 白 means the AI plays
+first. The third value, **観戦**, means you take neither: both sides are played
+by the engine and you watch. See [Spectating](#spectating--観戦).
+
+**黒 and 白 — which engine plays each colour.** The seat you take reads `あなた`
+(you) and does not turn; the other one picks between the engine versions —
+`v2` is the current one, `v1` is the v0.0.8 engine kept frozen under `版/`.
+Watching, both rows are yours to set, so `v1` against `v2` is a game you can sit
+and watch rather than a table of numbers.
+
+There are two rows rather than one "opponent" because one row stops being enough
+the moment there are more than two versions: with a v3 there is v1 against v3 and
+v2 against v3 to look at as well. Per colour, every pairing is already there.
 
 ### Board — 対局
 
@@ -177,6 +195,81 @@ Two consecutive passes end the game and scoring runs automatically:
 
 Resignation reports 中押し勝ち (a win by resignation, no point count). An exact
 tie reports 持碁 (jigo).
+
+### Spectating — 観戦
+
+Set 手番 to 観戦 and the engine plays both sides while you watch. It is the same
+board, the same panel and the same end-of-game count as a played game — what
+changes is who decides the next move, and therefore what a keystroke is for.
+
+```
+ space   pause / resume
+ s       one move, then pause
+ t       cycle the theme
+ ?       the controls, in a panel
+ q       leave
+```
+
+The status line under the board carries the state — `watching` or `paused` — and
+is 25 columns wide on a 9-road board, which is why the full list lives behind
+`?` rather than in it.
+
+While it plays, the key is read **without blocking**, so the game advances on
+its own and a keystroke only changes its speed; while it is paused the read
+blocks, which is what makes a pause a pause. The last move played is
+highlighted, since there is no cursor to put anywhere.
+
+The ending comes in two steps. The board is left exactly as it stands and the
+status line offers the result; a keypress then draws the result over the side
+panel, **beside the board rather than instead of it**. A finished board is half
+of the result, and showing the numbers by erasing it throws that half away.
+(On a terminal too narrow for the side panel there is no room for a framed box
+next to the board, and it ends the way a played game does.)
+
+Nothing is written to disk and nothing needs a shell, so this is the mode that
+runs in the browser — unlike `棋戦.zy`, which is an instrument: it needs a clock
+from `BashExec` and writes its records to `棋譜/`.
+
+### The record — 棋譜
+
+Press `k` on the final screen, after the result, and the game is printed as a
+record when the alternate screen closes — in the terminal's scrollback, or in
+the panel under the playground's canvas, where it can be copied.
+
+```
+# zy-GO kifu v1
+board 9
+komi 6.5
+level 2
+human B
+---
+1 B E5 caps=0
+2 W G7 caps=0
+3 B G5 caps=0
+4 W C3 caps=0
+undo 4
+5 B pass caps=0
+6 W G3 caps=0
+---
+result W+R
+moves 6
+score black=2 white=9.5
+captures black=0 white=0
+```
+
+Same shape as the records `棋戦.zy` writes, and untranslated whatever the
+display language is, because a dataset split across two languages is two
+datasets. Nothing is written to disk: the browser has no disk, and a record that
+only exists on one of the two platforms is a record nobody collects.
+
+**Takebacks are in it.** `undo 4` says the player rewound to four moves. It
+would have been easy to drop them — they are not part of the game that was
+played — and they are the most interesting lines in the file: what a person
+unplays says as much about how they play as what they play.
+
+The point of keeping it is that self-play cannot produce it. `対戦.zy` can play
+ten thousand games of engine against engine and never show the one thing that
+matters here — how a person beats this engine. That is what these records hold.
 
 ### The same game in another language
 
@@ -306,10 +399,11 @@ the best one — with an amount of randomness that depends on the level:
 |-------|----------|-----------------|
 | 1 | 合法手 | Legality: no suicide, no ko, never fill your own eye |
 | 2 | 取り | Capturing — weighted by how many stones come off |
-| 3 | アタリ逃げ | Escaping atari, but only when the escape actually gains liberties |
-| 4 | アタリ | Putting an opponent chain in atari |
+| 3 | アタリ逃げ · 守り | Escaping atari when the escape actually gains liberties, and giving a chain that is down to two liberties another one — before the net closes |
+| 4 | アタリ · 追討 | Putting an opponent chain in atari, and pressing a neighbouring one — weighted by what it is worth and by how few liberties it has left |
 | 5 | 形 | 3 × 3 shape patterns around the opponent's last move (hane, extension, connection, cut) |
 | 6 | 勢力 | An influence map, favouring the boundary between the two spheres |
+| 6b | 侵入 | The same map read from the other side: a penalty for playing deep in the opponent's sphere with no tactical reason |
 | 7 | 布石 | An opening book for the first moves: star and 3-4 points, never the first or second line |
 
 | Level | Japanese | Behaviour |
@@ -329,6 +423,47 @@ One term is not in the table above and earns its place: **self-atari**. Without
 a penalty for leaving your own chain on one liberty while capturing nothing, the
 engine walks into capture cheerfully and every other layer is wasted.
 
+**Why 6b exists.** Layer 3 only looks at the liberties a move has the *instant*
+it is played, and a stone dropped into the middle of the opponent's territory
+has two or three of them right then. It passes every check the engine can make
+and is captured for free a few moves later, which takes reading to see. Layer 6b
+stands in for the reading it does not do. A concrete tactical reason cancels it
+— the move captures, connects two of our chains, actually ataris an enemy chain,
+or actually rescues one of ours — but "it touches two or more enemy stones" is
+deliberately **not** one of them: a deep invasion is by definition surrounded by
+enemy stones, so that excuse would switch the guard off on exactly the moves it
+exists to catch.
+
+Its weights were not tuned by self-play, and the reason is worth stating: this
+engine's scoring counts stones on the board with **no dead-stone removal**, so
+an invasion neither side is strong enough to kill is worth a point to the
+invader at the end. Against that scorer, discouraging invasions can only look
+like a loss — measured, and it does: over 200 games at 13 × 13 the guarded side
+won 86 (the unguarded control split 99–101). Against a person who does capture
+the invasion, it is the opposite. The guard is validated by position tests in
+`試験/思考試験.zy`, not by the ladder.
+
+**Is it getting better?** `対戦.zy` answers that and nothing else: it plays the
+current engine against the frozen ones under `版/`, swapping colours every game
+from a seed given as an argument.
+
+| | what it added | vs the one before |
+|---|---|---|
+| v1 | the v0.0.8 engine | — |
+| v2 | invasion guard · hunting weighted by the prey | 263 of 400 |
+| v3 | defence at two liberties | 342 of 600 |
+
+v3 beats v1 **275 of 400**. Adding v4 tomorrow is: freeze today's file as
+版/思考v4.zy, write the new one, add one line each to 選ぶ() and 版名(). See
+BENCHMARK.md — including the two things the ladder said that were not obvious,
+one of which was that an idea we were sure about was worth nothing at all, and
+the time the ladder measured the wrong thing and a position test caught it.
+
+**Before concluding anything about the engine, try 上級.** Same engine on both
+sides, one at advanced and one at intermediate: 179 to 121 over 300 games. A
+level is how far below the best a move may score and still be picked, so 中級
+gives away about a version's worth of strength on purpose.
+
 The level is a single number — how far below the best a move may score and still
 be picked (60 / 25 / 5 points). A beginner is not a program that plays badly on
 purpose; it is one that cannot tell a good move from a nearly-good one.
@@ -343,8 +478,12 @@ zy-GO/
 ├── 바둑.zy              entry point, Korean            │ same game,
 ├── 围棋.zy              entry point, Mandarin          │ preselected
 ├── go.zy                entry point, language menu     ┘ language
+├── 観戦.zy              entry point, spectating — the engine plays both sides
 ├── 対局.zy              match controller — turn loop, history, undo
 ├── 棋戦.zy              AI vs AI, instrumented — see BENCHMARK.md
+├── 対戦.zy              version against version — the ladder, see BENCHMARK.md
+├── 版/思考v1.zy         the v0.0.8 engine, frozen — no guard, no hunting
+├── 版/思考v2.zy         the first v0.0.9 engine, frozen — guard and hunting
 ├── 集計.zy              sums every run into one set of matrices
 │                       records go to zy-GO-kifu (ZYGO_KIFU to redirect)
 ├── 核/                  engine
@@ -385,6 +524,13 @@ zy-GO/
 Four entry points, one game. `囲碁.zy`, `바둑.zy` and `围棋.zy` differ only in the
 locale they preselect; `go.zy` opens on the language menu and is there for the
 terminal where typing CJK is inconvenient.
+
+`観戦.zy` is a fifth, and what it preselects is the **mode**, not the locale: the
+same setup screen opens with 手番 sitting on 観戦. It exists because an entry
+point is what a list of scripts can show — in the playground's picker, and in
+`zyp.toml` — and a mode reachable only by arrowing through a menu is a mode most
+people never find. Move 手番 back to 黒 or 白 on that screen and it is an
+ordinary game again.
 
 The board is a **flat array of `N × N` points**, 1-indexed, values `0` empty,
 `1` black, `2` white. Point `(row, col)` lives at index `(row - 1) × N + col`.

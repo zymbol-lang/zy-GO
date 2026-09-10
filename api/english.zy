@@ -48,6 +48,7 @@
         盤::連         => chain
         盤::ダメ点     => liberty_points
         盤::ダメ数     => liberties
+        盤::ダメ数上限 => liberties_capped
         盤::群ダメ数   => chain_liberties
         盤::除去       => remove
         盤::着手       => play

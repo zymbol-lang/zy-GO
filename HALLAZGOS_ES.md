@@ -1,8 +1,21 @@
 # Hallazgos del lenguaje — 囲碁 (zy-GO)
 
-Bugs, carencias e ideas encontrados al construir 囲碁 sobre Zymbol **v0.0.8**.
+Bugs, carencias e ideas encontrados al construir 囲碁 sobre Zymbol **v0.0.8**
+y, desde HLZ-012, **v0.0.9**.
 Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 [Hov veS](../klingon_galaxy/hallazgos_es.md).
+
+> **Estado (2026-09-02): los catorce hallazgos están corregidos.** HLZ-012 (el
+> tree-walker copiaba la colección para leer un elemento), HLZ-013 (zyjs devolvía
+> Unit en vez de una cadena multilínea) y HLZ-014 (copiaba la colección al pasarla
+> a una función) se cerraron en la rama `v0.0.9`, cada uno con su prueba de
+> regresión: un banco de pendiente en `zyquality/bench/bench_index_read.zy` y un
+> fichero de corpus en `zyquality/corpus/strings/literal_multilinea.zy`.
+> HLZ-014 salió del banco escrito para HLZ-012, y su arreglo fue **portar el
+> modelo de valores de la VM** al tree-walker: los dos motores que no fallaban ya
+> pagaban al escribir en vez de al pasar. Entre los dos, la partida de 19×19 pasó
+> de 36,3 s a 15,5 s y la búsqueda alfa-beta de Chaturanga de 43,5 s a 12,8 s,
+> con las partidas del oráculo idénticas byte a byte.
 
 > **Estado (2026-07-24): los once hallazgos están corregidos en el intérprete**,
 > en la rama `v0.0.8`, cada uno con su prueba de regresión. Puertas tras los
@@ -26,6 +39,9 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 | [HLZ-009](#hlz-009--la-vm-no-puede-cortar-un-string-dentro-de-un-módulo) | Bug | En `--vm`, `s$[3..]` dentro de una función de módulo da «expected Array, Tuple, or NamedTuple» | **Corregido** |
 | [HLZ-010](#hlz-010--la-vm-convertía-una-constante-interpolada-en-texto-literal) | **Bug grave** | En `--vm`, `"{CONST}"` dentro de una función producía las llaves literales | **Corregido** |
 | [HLZ-011](#hlz-011--una-variable-usada-solo-como-cota-de-rango-se-marcaba-como-no-usada) | Bug (aviso) | `総 = 名一覧$#` usado solo en `@ i:1..総` se marcaba «unused variable» | **Corregido** |
+| [HLZ-012](#hlz-012--en-el-tree-walker-leer-ai-copia-la-colección-entera) | **Bug de rendimiento** | En el tree-walker, `a[i]` clona el array completo en cada lectura: O(n) por lectura, y el tablero son 361 celdas | **Corregido** |
+| [HLZ-013](#hlz-013--en-el-motor-del-navegador-devolver-una-cadena-multilínea-da-unit) | **Bug grave** | En zyjs, `<~ "línea1⏎línea2"` devuelve Unit en vez de la cadena; los dos motores Rust la devuelven | **Corregido** |
+| [HLZ-014](#hlz-014--pasar-una-colección-a-una-función-la-clona-entera) | **Bug de rendimiento** | En el tree-walker, pasar un array a una función lo clona entero, aunque la función no lo mire: 20 000 llamadas con 4 000 elementos son 10 s frente a 6 ms en la VM | **Corregido** |
 | [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | Propuesta |
 | [IDEA-002](#idea-002--el-coste-numérico-decide-la-arquitectura-de-la-ia) | Medición | Números que descartan MCTS y redes neuronales en Zymbol actual | Aplicada |
 
@@ -428,6 +444,327 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
   rango; una variable genuinamente sin usar sigue avisando. Regresión en
   `interpreter/crates/zymbol-semantic/tests/underscore_semantics.rs` (tres
   casos: cota superior, `inicio..fin:paso`, y el que debe seguir avisando).
+
+---
+
+## HLZ-012 · En el tree-walker, leer `a[i]` copia la colección entera
+
+- **Archivo:** cualquiera. Se encontró perfilando `核/盤.zy`, donde `局面[点]`
+  está en el camino de todo.
+- **Descripción:** `eval_index` evalúa la expresión de la colección con
+  `eval_expr`, y para un identificador eso es `get_variable(...).clone()`. La
+  lectura de **un** elemento clona el array entero antes de indexarlo. El coste
+  de `a[7]` crece con el tamaño de `a`, no con nada más.
+
+  Sonda (200.000 lecturas de `a[7]`, restando el coste de construir `a`):
+
+  | tamaño de `a` | zytw | zyvm | zyjs |
+  |---|---|---|---|
+  | 100 | 261 ms | 21 ms | ~226 ms* |
+  | 1.000 | 2.147 ms | 21 ms | ~234 ms* |
+  | 4.000 | 8.590 ms | 21 ms | ~260 ms* |
+
+  \* zyjs con 20.000 lecturas, no 200.000 — es un motor mucho más lento por
+  operación, y lo que importa aquí es la **pendiente**: plana en la VM y en el
+  navegador, lineal en el tree-walker.
+
+- **Por qué importa:** un programa que lleva su estado en un array — un tablero,
+  una rejilla, un buffer — paga el tamaño de ese estado en cada lectura. En 囲碁
+  el tablero de 19×19 son 361 celdas, así que cada `局面[点]` copia 361 valores
+  para leer uno. Es la razón principal de que el tree-walker fuera 21× más lento
+  que la VM en una partida de 19×19 (777 s frente a 36 s), y no es una diferencia
+  de diseño entre motores: es una copia que nadie pidió.
+- **Alcance:** solo el tree-walker. La VM y el motor del navegador leen en
+  tiempo constante.
+- **Arreglo propuesto:** en `eval_index`, cuando la expresión de la colección es
+  un identificador, tomarla prestada del entorno y clonar **el elemento**, no la
+  colección. Es un caso rápido dentro de una función, sin cambio de semántica:
+  la lectura ya devolvía una copia del elemento. Lo mismo vale para
+  `eval_member_access` sobre un diccionario.
+- **Estado:** **corregido** (v0.0.9, `crates/zymbol-interpreter/src/expr_eval.rs`).
+  Se reportó desde aquí porque es un hallazgo del lenguaje, no de la aplicación;
+  囲碁 no lo podía arreglar, solo esquivarlo — y esquivarlo es exactamente lo que
+  hicieron las optimizaciones de v0.0.9: menos lecturas del tablero, no lecturas
+  más baratas.
+
+### Cómo quedó
+
+`eval_index` toma un camino corto cuando la colección es un **nombre**, sola o en
+la raíz de una cadena como `m[i][j]`: evalúa los índices, toma el valor prestado
+del entorno y clona **el elemento**. `eval_member_access` hace lo mismo con el
+diccionario, porque `d.clave` tenía exactamente la misma copia — sobre 300 claves
+eran 0,46 s frente a los 0,045 s del `d["clave"]` ya arreglado, las dos formas de
+leer lo mismo con un factor 10 entre ellas.
+
+La semántica no cambia —una lectura ya devolvía una copia del elemento— y los
+diagnósticos tampoco: los diecinueve errores de indexación y de acceso por punto
+(índice 0, fuera de rango en array, tupla, tupla con nombre y cadena, clave
+ausente, diccionario por posición, índice no entero, indexar o puntear algo que
+no es colección, tupla posicional por nombre, y los mismos a través de una
+cadena) dan **texto idéntico** antes y después, comprobado contra los binarios
+anteriores.
+
+Un detalle que no es cosmético: el mensaje de fuera de rango **nombra la
+colección**, y cada una de esas cuatro redacciones es un mensaje propio. Al
+factorizarlas en una sola plantilla la suite `messages` se puso roja —
+compara los motores por los mensajes que sus fuentes construyen, y tres de zyjs
+se quedaron sin pareja. Están escritas otra vez una por una.
+
+La misma sonda, restando el coste de construir `a`:
+
+| tamaño de `a` | zytw antes | zytw ahora | zyvm |
+|---|---|---|---|
+| 100 | 261 ms | 19 ms | 21 ms |
+| 1.000 | 2.147 ms | 16 ms | 21 ms |
+| 4.000 | 8.590 ms | 28 ms | 21 ms |
+
+La pendiente es plana: lo que queda es ruido de máquina, no tamaño.
+
+### Lo que gana el juego
+
+`試験/自戦試験.zy` es el oráculo — una partida entera desde semilla fija — así que
+la comparación es la misma partida, movimiento a movimiento. Misma máquina, mismo
+árbol, binario anterior y binario con el arreglo; las tres partidas salieron
+**byte a byte idénticas**:
+
+| tablero | zytw antes | zytw ahora | |
+|---|---|---|---|
+| 9×9 | 1,34 s | 1,11 s | 1,2× |
+| 13×13 | 6,37 s | 4,82 s | 1,3× |
+| 19×19 | 36,26 s | 21,20 s | **1,7×** |
+
+La ganancia crece con el tablero, que es lo que tiene que hacer el arreglo de un
+coste que crecía con el tamaño del estado. No es el 21× que separaba al
+tree-walker de la VM: **la otra mitad es [HLZ-014](#hlz-014--pasar-una-colección-a-una-función-la-clona-entera)**,
+la copia que se paga al *entregar* el tablero a una función, y esa sigue abierta.
+
+### La prueba de regresión
+
+`zyquality/bench/bench_index_read.zy`, registrado en `bench_gate.sh`. No mide un
+tiempo: mide una **pendiente** — las mismas 60 000 lecturas contra un array de
+100 elementos y contra uno de 4 000, y las mismas 40 000 contra un diccionario de
+9 claves y otro de 301, en sus dos grafías (`d["k"]` y `d.k`, que van por caminos
+distintos y tenían la misma copia). Cada par tiene que dar lo mismo en cualquier
+máquina y en cualquier motor.
+
+Nada en `bench/` leía un elemento por índice: los bancos de colecciones van por
+`$>`, `$|`, `$<`, `$?` y cortes, que consumen la colección entera de todos modos
+y por eso no distinguen una copia de una lectura. Ese era el hueco por el que se
+coló el hallazgo.
+
+---
+
+## HLZ-013 · En el motor del navegador, devolver una cadena multilínea da Unit
+
+- **Archivo:** cualquiera. Se encontró en `対局.zy`, en la cabecera del 棋譜.
+- **Descripción:** una función cuyo `<~` lleva **directamente** un literal de
+  cadena que ocupa varias líneas devuelve `Unit` en zyjs. Los dos motores Rust
+  devuelven la cadena. No hay error ni aviso: el valor sale vacío.
+
+  ```zymbol
+  # mod2 {
+      #> { a1, a2 }
+      a1() { <~ "sin salto" }
+      a2() {
+          <~ "con
+  salto"
+      }
+  }
+  ```
+
+  ```
+  tw / vm:   a1=[sin salto]   a2=[con\nsalto]
+  zyjs:      a1=[sin salto]   a2=[]
+  ```
+
+  Alcance medido con sondas:
+
+  | forma | tw | vm | zyjs |
+  |---|---|---|---|
+  | `<~ "una línea"` | ok | ok | ok |
+  | `<~ "dos⏎líneas"` | ok | ok | **Unit** |
+  | `<~ "con {x}⏎interpolación"` | ok | ok | **Unit** |
+  | `<~ "con\nsalto escapado"` | ok | ok | ok |
+  | `t = "dos⏎líneas"` y luego `<~ t` | ok | ok | ok |
+
+  Pasa igual en una función de módulo y en una de guion suelto, así que no es
+  el problema de alcance de los nombres con guion bajo (§4 del brief).
+
+- **Por qué importa:** el valor no falla, sale vacío, y el programa sigue. En
+  囲碁 la cabecera del 棋譜 —`# zy-GO kifu v1 / board 9 / …`— se construye así,
+  y el registro salía completo en la terminal y **sin cabecera** en el
+  navegador. Un registro sin cabecera no dice ni de qué tablero es.
+- **Alcance:** solo el motor del navegador. Lo esquivamos atando el literal a un
+  nombre local antes de devolverlo (`頭 = "…"` y `<~ 頭`), que funciona en los
+  tres.
+- **Por qué el gate no lo veía:** el corpus no tiene ningún caso de
+  `<~` con literal multilínea. Es un hueco de cobertura, no un fallo del
+  comparador: `zyq consensus` compara lo que se le da.
+- **Estado:** **corregido** (v0.0.9, `web/src/zymbol/zymbol.js`).
+
+### La causa
+
+`readString` empuja el token con `this.line` **después** de haber consumido el
+literal, saltos incluidos, así que un literal multilínea quedaba fechado en la
+línea de su comilla de **cierre**. Un token pertenece a la línea en la que
+**empieza** — los dos motores Rust pasan la posición de inicio a `lex_string`
+precisamente por esto — y en zyjs todas las reglas sensibles a la línea leían ese
+campo. `<~` concluía que su valor empezaba en otra línea, decidía que el retorno
+no llevaba valor y devolvía Unit sin decir nada.
+
+### Cómo quedó
+
+El token guarda las dos: `line` es donde empieza y `endLine` donde termina. Las
+reglas que preguntan *«¿esto continúa la expresión anterior?»* —yuxtaposición,
+`[`, `(`, y las de `>>` y `<~`— preguntan por `endLine` a través de
+`prevEndLine()`, que es como lo deletrean los motores Rust
+(`peek().span.start.line != expr.span().end.line`).
+
+Esa segunda mitad no era opcional: fechar el token en su inicio y dejar las
+reglas como estaban habría cambiado un fallo por otro. La sonda destapó dos
+divergencias más de la misma raíz, ambas ya corregidas y ambas comprobadas contra
+los dos motores Rust:
+
+| forma | tw / vm | zyjs antes | zyjs ahora |
+|---|---|---|---|
+| `<~ "a⏎b"` | `a\nb` | **Unit** | `a\nb` |
+| `<~ "a⏎b" "c"` | `a\nbc` | `a\nb` | `a\nbc` |
+| `>> "[" f("d⏎e") "]" "f" ¶` | `[d\ne]f` | `[d\ne` | `[d\ne]f` |
+
+### La prueba de regresión
+
+`zyquality/corpus/strings/literal_multilinea.zy` (con su módulo `_m`), que es
+donde debería haber saltado: el corpus no tenía **ningún** caso de literal
+multilínea tras `<~`. Recorre las once formas que leen el número de línea de una
+cadena — devuelta desde función de módulo y desde función suelta, con y sin cola
+yuxtapuesta, atada a un nombre, impresa directamente, como argumento, como
+operando de `$#` y dentro de un array. Los tres motores coinciden.
+
+---
+
+## HLZ-014 · Pasar una colección a una función la clona entera
+
+- **Archivo:** cualquiera. Salió del banco de pruebas escrito para
+  [HLZ-012](#hlz-012--en-el-tree-walker-leer-ai-copia-la-colección-entera), en la
+  línea que mide una lectura hecha *dentro* de una función.
+- **Descripción:** en el tree-walker, entregar un array a una función lo copia
+  entero, aunque la función no lo mire. La sonda es una función que ignora su
+  parámetro:
+
+  ```zymbol
+  toma(t) { <~ 1 }
+  @ _k:1..20000 { s = s + toma(a) }
+  ```
+
+  | tamaño de `a` | zytw | zyvm | zyjs\* |
+  |---|---|---|---|
+  | 100 | 61 ms | 5 ms | 11 ms |
+  | 1.000 | 1.486 ms | 10 ms | — |
+  | 4.000 | 8.846 ms | 6 ms | 2 ms |
+
+  \* zyjs con 2.000 llamadas y tiempo de pared menos su propia línea base; lo
+  que importa es la pendiente, plana en los dos motores que no copian.
+
+  El coste es del **paso**, no de la llamada: la misma función sin argumento son
+  34 ms, y leer `a[7]` fuera de la función son 8 ms.
+
+- **Causa:** `eval_traditional_function_call` evalúa cada argumento con
+  `eval_expr`, y para un nombre eso es `get_variable(..).clone()`. Una copia por
+  llamada. En el caso de 4.000 elementos son ~192 KB por llamada, por encima del
+  umbral de `mmap` de glibc, así que cada llamada es además un `mmap`/`munmap`:
+  de los 10 s medidos, 6,9 s eran tiempo de **sistema**.
+- **Por qué importa:** es la otra mitad de la distancia entre los dos motores
+  Rust en 囲碁. Con HLZ-012 cerrado, la partida de 19×19 desde semilla fija son
+  21,2 s en el tree-walker y 3,8 s en la VM — 5,5× — y el juego pasa `局面` a casi
+  todas sus funciones. Un programa que lleva su estado en una colección paga el
+  tamaño de ese estado en cada llamada que se lo entrega.
+- **Alcance:** solo el tree-walker. La VM y el motor del navegador entregan la
+  colección en tiempo constante.
+- **Lo que NO es el arreglo:** pasar por referencia. Un parámetro sin marca es
+  una copia y el lenguaje lo dice: el cuerpo puede reasignarlo y puede editarlo
+  con `$~`, y ni una cosa ni la otra llegan a quien llamó — para eso está `<~`
+  en la firma. La semántica se queda como está.
+- **Estado:** **corregido** (v0.0.9, `crates/zymbol-interpreter/src/lib.rs` y 14
+  ficheros más del crate).
+
+### Los otros dos motores ya lo hacían
+
+La pregunta que decidió el arreglo no fue «¿qué inventamos?» sino «¿cómo lo hacen
+los que no fallan?», y la respuesta estaba en el repositorio:
+
+| motor | al ligar | al escribir |
+|---|---|---|
+| **zyvm** | `Array(Rc<Vec<Value>>)` — comparte | `Rc::make_mut`, se separa el primero que escribe |
+| **zyjs** | comparte el array de JavaScript | `deepUpdateValue` construye uno nuevo: `[...col.v]` |
+| **zytw** | **clonaba entero** | escribía en sitio |
+
+Dos caminos distintos hacia el mismo principio —se paga al **escribir**, no al
+**pasar**— y el tree-walker era el único que pagaba en la otra puerta. Así que
+esto no fue diseñar copia al escribir: fue **portar el modelo de valores de la
+VM**, con sus decisiones ya tomadas y probadas.
+
+### Cómo quedó
+
+```rust
+Array(Rc<Vec<Value>>),
+Tuple(Rc<Vec<Value>>),
+NamedTuple(Rc<Vec<(String, Value)>>),
+```
+
+y `Rc::make_mut` en los **32** sitios que escriben. `own_elements`/`own_fields`
+son el gemelo del lado de la lectura para el código que consume la colección
+(`$>`, `json::encode`): entrega los valores sin copia cuando nadie más los tiene.
+`String` se queda como está a propósito: la VM tiene `ZyStr` para eso —7 bytes en
+línea, `Rc<String>` por encima— que es código `unsafe` que se gana el sueldo en un
+bucle de bytecode y no aquí, y una cadena es una asignación, no una por elemento.
+
+El compilador señaló los 76 sitios y no hubo que buscar ninguno a mano.
+
+### La semántica no se movió
+
+Es la parte que había que demostrar, porque compartir solo es aceptable si es
+invisible. Catorce puertas, los tres motores, misma respuesta en las tres
+columnas: reasignar el parámetro, `$~` dentro del llamado, `b = a` y escribir
+luego, un array dentro de otro array, `$+` sobre la copia, las marcas `~` y `<~`,
+el diccionario por clave y por punto, la tupla, la matriz anidada, recorrer con
+`@`, `$>` y `$+`. Y los 19 diagnósticos de indexación y acceso por punto siguen
+dando texto idéntico.
+
+Una comprobación más, la que importaba: escribir en un bucle no se volvió caro.
+40 000 escrituras sobre un array de 2 000 cuestan lo mismo compartido que sin
+compartir (14 ms y 15 ms) — la copia ocurre **una vez**, en la primera escritura,
+y a partir de ahí el contador vuelve a uno.
+
+### Lo que gana
+
+Misma sonda de antes, la función que ignora su parámetro:
+
+| tamaño de `a` | antes | ahora | zyvm |
+|---|---|---|---|
+| 100 | 61 ms | 17 ms | 7 ms |
+| 1.000 | 1.486 ms | 20 ms | 5 ms |
+| 4.000 | **8.846 ms** | **14 ms** | 6 ms |
+
+Y en las dos aplicaciones que más lo pagaban, con las partidas del oráculo otra
+vez **byte a byte idénticas**:
+
+| carga | v0.0.9 original | tras HLZ-012 | tras HLZ-014 | zyvm | total |
+|---|---|---|---|---|---|
+| zy-GO 9×9 | 1,34 s | 1,11 s | **0,97 s** | 0,15 s | 1,4× |
+| zy-GO 13×13 | 6,37 s | 4,82 s | **3,87 s** | 0,66 s | 1,6× |
+| zy-GO 19×19 | 36,26 s | 21,20 s | **15,49 s** | 3,78 s | **2,3×** |
+| Chaturanga `गतिपरीक्षा` | 6,11 s | 2,16 s | **1,94 s** | 0,17 s | 3,2× |
+| Chaturanga `मतिपरीक्षा` | 43,5 s | 16,08 s | **12,78 s** | 0,99 s | **3,4×** |
+
+La distancia con la VM en la partida de 19×19 baja de 21× a **4,1×**, y en la
+búsqueda alfa-beta de 42–46× a **13×**. La VM no se tocó: lo que cambió es que el
+tree-walker dejó de copiar dos veces lo que nadie le pidió que copiara.
+
+### La prueba de regresión
+
+La línea `read_in_fn` de `zyquality/bench/bench_index_read.zy`, que se escribió
+para esto y por eso está ahí: 2,165 s antes, 0,009 s ahora. El banco entero pasó
+de 2,32 s a 0,14 s.
 
 ---
 

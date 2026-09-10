@@ -115,9 +115,13 @@ cambian el valor, `↵` empieza la partida.
 ```
      ╭──────────────────────────────────────╮
      │                 囲碁                 │
-     │            Zymbol v0.0.8             │
+     │            Zymbol v0.0.9             │
      ├──────────────────────────────────────┤
      │ ► 路盤        ‹    九路盤    ›       │
+     │   棋力        ‹     中級     ›       │
+     │   手番        ‹      黒      ›       │
+     │   黒          ‹    あなた    ›       │
+     │   白          ‹      v2      ›       │
      │   コミ        ‹     6.5      ›       │
      │   主題        ‹      石      ›       │
      │   言語        ‹    日本語    ›       │
@@ -129,6 +133,20 @@ cambian el valor, `↵` empieza la partida.
 Los tamaños que no caben en la terminal actual se muestran atenuados con el
 tamaño que requieren. Elegir un komi entero (6 o 7) hace posible el 持碁 — el
 empate técnico —; el 6.5 por defecto lo hace imposible.
+
+**手番 — con qué color juegas.** Abre 黒, así que elegir 白 significa que el
+motor abre. El tercer valor, **観戦**, significa que no juegas ninguno de los
+dos: el motor juega ambos y tú miras. Ver [Observar](#observar--観戦).
+
+**黒 y 白 — qué motor juega cada color.** El asiento que ocupas pone `あなた`
+(tú) y no gira; el otro elige entre las versiones del motor: `v2` es el de ahora
+y `v1` el de v0.0.8, congelado bajo `版/`. Observando, las dos filas son tuyas,
+así que v1 contra v2 es una partida que puedes ver jugarse en vez de una tabla
+de números.
+
+Son dos filas y no un solo «rival» porque una fila deja de bastar en cuanto hay
+más de dos versiones: con un v3 también querrás ver v1 contra v3 y v2 contra v3.
+Por color, todas las parejas están ya ahí.
 
 ### Tablero — 対局
 
@@ -175,6 +193,83 @@ Dos pases consecutivos terminan la partida y el recuento se ejecuta solo:
 
 El abandono reporta 中押し勝ち (victoria por abandono, sin recuento de puntos).
 Un empate exacto reporta 持碁 (jigo).
+
+### Observar — 観戦
+
+Pon 手番 en 観戦 y el motor juega los dos lados mientras tú miras. Es el mismo
+tablero, el mismo panel y el mismo recuento final que una partida jugada; lo que
+cambia es quién decide la jugada siguiente y, por tanto, para qué sirve una
+tecla.
+
+```
+ espacio  pausa / seguir
+ s        una jugada y pausa
+ t        cambia el tema
+ ?        las teclas, en un panel
+ q        salir
+```
+
+La línea de estado bajo el tablero lleva el estado — `mirando` o `en pausa` — y
+mide 25 columnas en un tablero de nueve, que es la razón de que la lista entera
+viva detrás de `?` y no dentro de ella.
+
+Mientras juega, la tecla se lee **sin bloquear**: la partida avanza sola y la
+tecla solo cambia su ritmo; en pausa la lectura sí bloquea, que es lo que hace
+que una pausa sea una pausa. La última jugada queda resaltada, porque aquí no
+hay cursor que poner en ningún sitio.
+
+El final llega en dos pasos. El tablero se queda tal cual y la línea de estado
+ofrece el resultado; una tecla lo dibuja sobre el panel lateral, **al lado del
+tablero y no en su lugar**. Un tablero terminado es la mitad del resultado, y
+enseñar los números borrándolo tira esa mitad.
+(En una terminal demasiado estrecha para el panel lateral no cabe una caja junto
+al tablero, y termina como termina una partida jugada.)
+
+No se escribe nada en disco ni hace falta intérprete de órdenes, así que este es
+el modo que corre en el navegador — al contrario que `棋戦.zy`, que es un
+instrumento: necesita un reloj de `BashExec` y escribe sus registros en `棋譜/`.
+
+### El registro — 棋譜
+
+Pulsa `k` en la pantalla final, después del resultado, y la partida se imprime
+como registro al cerrarse la pantalla alterna: en el historial de la terminal, o
+en el panel bajo el lienzo del playground, de donde se puede copiar.
+
+```
+# zy-GO kifu v1
+board 9
+komi 6.5
+level 2
+human B
+---
+1 B E5 caps=0
+2 W G7 caps=0
+3 B G5 caps=0
+4 W C3 caps=0
+undo 4
+5 B pass caps=0
+6 W G3 caps=0
+---
+result W+R
+moves 6
+score black=2 white=9.5
+captures black=0 white=0
+```
+
+La misma forma que los registros que escribe `棋戦.zy`, y sin traducir sea cual
+sea el idioma en pantalla, porque un conjunto de datos partido en dos idiomas
+son dos conjuntos de datos. No se escribe nada en disco: el navegador no tiene
+disco, y un registro que solo existe en una de las dos plataformas es un
+registro que nadie recoge.
+
+**Los deshacer están dentro.** `undo 4` dice que quien jugaba rebobinó a cuatro
+jugadas. Habría sido fácil quitarlos —no son parte de la partida que se jugó— y
+son las líneas más interesantes del fichero: lo que una persona *des*juega dice
+tanto de cómo juega como lo que juega.
+
+Se guarda porque el autojuego no lo puede producir. `対戦.zy` puede jugar diez
+mil partidas de motor contra motor y no enseñar nunca lo único que importa aquí:
+cómo le gana una persona a este motor. Eso es lo que guardan estos registros.
 
 ### La misma partida en otro idioma
 
@@ -308,10 +403,11 @@ del nivel:
 |------|---------|------------|
 | 1 | 合法手 | Legalidad: sin suicidio, sin ko, nunca rellenar un ojo propio |
 | 2 | 取り | Capturar — ponderado por cuántas piedras se llevan |
-| 3 | アタリ逃げ | Escapar del atari, pero solo cuando la fuga gana libertades de verdad |
-| 4 | アタリ | Poner en atari una cadena rival |
+| 3 | アタリ逃げ · 守り | Escapar del atari cuando la fuga gana libertades de verdad, y dar una libertad más a la cadena que se ha quedado con dos — antes de que se cierre la red |
+| 4 | アタリ · 追討 | Poner en atari una cadena rival, y apretar a una vecina — pesado por lo que vale y por las pocas libertades que le quedan |
 | 5 | 形 | Patrones de forma 3 × 3 alrededor de la última jugada rival (hane, extensión, conexión, corte) |
 | 6 | 勢力 | Un mapa de influencia, favoreciendo la frontera entre ambas esferas |
+| 6b | 侵入 | El mismo mapa leído del otro lado: penaliza jugar en lo hondo de la esfera del rival sin razón táctica |
 | 7 | 布石 | Libro de aperturas para las primeras jugadas: puntos estrella y 3-4, nunca primera ni segunda línea |
 
 | Nivel | Japonés | Comportamiento |
@@ -332,6 +428,36 @@ Hay un término que no está en la tabla y se ganó su sitio: el **auto-atari**.
 penalizar dejar la cadena propia con una sola libertad sin capturar nada, el
 motor se mete solo en la captura y todas las demás capas dan igual.
 
+**Por qué existe la 6b.** La capa 3 solo mira las libertades que tiene la jugada
+en el *instante* en que se pone, y una piedra en mitad del territorio del rival
+tiene dos o tres justo entonces. Pasa todas las comprobaciones que el motor sabe
+hacer y la capturan gratis unas jugadas después, cosa que solo se ve leyendo. La
+capa 6b hace de sustituto de esa lectura. Una razón táctica concreta la cancela
+— la jugada captura, conecta dos cadenas propias, pone de verdad en atari una
+cadena rival, o rescata de verdad una propia — pero «toca dos o más piedras
+enemigas» **no** es una de ellas, a propósito: una invasión profunda está por
+definición rodeada de piedras enemigas, así que esa excusa apagaría la guarda
+justo en las jugadas que existe para atrapar.
+
+Sus pesos no se ajustaron por autojuego, y conviene decir por qué: el recuento
+de este motor cuenta las piedras que hay en el tablero **sin retirar las
+muertas**, así que una invasión que ninguno de los dos sabe matar vale un punto
+para el invasor al final. Contra ese recuento, desalentar invasiones solo puede
+parecer una pérdida — medido, y lo parece: en 200 partidas de 13 × 13 el lado
+con guarda ganó 86 (el control sin guarda quedó 99–101). Contra una persona que
+sí captura la invasión, es al revés. La guarda se valida con pruebas de posición
+en `試験/思考試験.zy`, no con la escalera.
+
+**¿Está mejorando?** `対戦.zy` responde a eso y a nada más: juega el motor de
+ahora contra `版/思考v1.zy` —el motor de v0.0.8, congelado y nunca más
+editado—, cambiando de color cada partida desde una semilla que se pasa como
+argumento. El motor de hoy gana **263 de 400** en 9×9 y **122 de 200** en 13×13,
+por unos once puntos y medio de media, y captura como un 50% más de piedras.
+Añadir un v3 mañana es: congelar el fichero de hoy como 版/思考v3.zy, escribir el
+nuevo, y añadir una línea a la tabla de 対戦.zy. Ver BENCHMARK.md — incluidas las
+dos cosas que dijo la escalera y que no eran obvias, una de ellas que una idea de
+la que estábamos seguros no valía absolutamente nada.
+
 El nivel es un solo número — cuánto por debajo de la mejor puede puntuar una
 jugada y aun así elegirse (60 / 25 / 5 puntos). Un principiante no es un programa
 que juega mal a propósito: es uno que no distingue la mejor jugada de una casi
@@ -347,8 +473,12 @@ zy-GO/
 ├── 바둑.zy              punto de entrada, coreano      │ el mismo juego,
 ├── 围棋.zy              punto de entrada, mandarín     │ con el idioma
 ├── go.zy                punto de entrada, menú         ┘ preseleccionado
+├── 観戦.zy              punto de entrada, observar — el motor juega los dos lados
 ├── 対局.zy              controlador de partida — turnos, historial, deshacer
 ├── 棋戦.zy              IA contra IA, instrumentado — ver BENCHMARK.md
+├── 対戦.zy              versión contra versión — la escalera, ver BENCHMARK.md
+├── 版/思考v1.zy         el motor de v0.0.8, congelado — sin guarda ni caza
+├── 版/思考v2.zy         el primer motor de v0.0.9, congelado — guarda y caza
 ├── 集計.zy              suma todas las tandas en un solo juego de matrices
 │                       los registros van a zy-GO-kifu (ZYGO_KIFU para redirigir)
 ├── 核/                  motor
@@ -385,6 +515,13 @@ zy-GO/
 Cuatro puntos de entrada, un solo juego. `囲碁.zy`, `바둑.zy` y `围棋.zy` solo se
 diferencian en el idioma que preseleccionan; `go.zy` abre en el menú de idiomas y
 existe para la terminal donde escribir CJK es incómodo.
+
+`観戦.zy` es un quinto, y lo que preselecciona es el **modo**, no el idioma: abre
+la misma pantalla de configuración con 手番 puesto en 観戦. Existe porque un punto
+de entrada es lo que una lista de scripts puede enseñar — el selector del
+playground, el `zyp.toml` —, y un modo al que solo se llega recorriendo un menú
+con las flechas es un modo que casi nadie encuentra. Devuelve 手番 a 黒 o 白 en esa
+pantalla y vuelve a ser una partida normal.
 
 El tablero es un **array plano de `N × N` puntos**, indexado desde 1, con
 valores `0` vacío, `1` negras, `2` blancas. El punto `(fila, columna)` vive en
