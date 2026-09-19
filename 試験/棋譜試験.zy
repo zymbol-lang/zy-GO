@@ -1,0 +1,126 @@
+// ============================================================
+// 試験/棋譜試験.zy — 棋譜を並べ直すと取った石が盤から消えることを検める
+//
+// 棋譜は一手ごとに座標と取った数を書き残す。どの石が取られたかは
+// 書かない。だから並べ直す側が 着手 を通さず座標を盤に書き込むだけ
+// だと、取られた石はそのまま盤に残り、一度も現れなかった局面が
+// できあがる。検めるのはその一点、そして棋譜に載る綴りが 座標名 の
+// 答えと合うことである。
+//
+//   zymbol run 試験/棋譜試験.zy
+//   zymbol run --vm 試験/棋譜試験.zy
+//
+// EN: 試験/棋譜試験.zy — replaying a kifu removes the captured stones
+//
+// A kifu records, for each move, a coordinate and how many stones it
+// took. It never records WHICH stones. A replay that writes those
+// coordinates onto a flat board therefore leaves captured stones
+// standing and produces positions that were never played. That is the
+// one thing this suite checks, together with the spelling a kifu
+// stores — which is 座標名's answer.
+//
+// 図 の約束どおり、図の第一行が盤の第一行である。
+// EN: per 図's contract, row 1 of the diagram is row 1 of the board.
+// ============================================================
+
+<# ../核/盤 => 盤
+<# ../核/規則 => 規則
+<# ../表示/描画 => 描
+<# ./図 => 図
+
+路 := 9
+
+確認(名, 実際, 期待, 失敗<~) {
+    ? 実際 == 期待 {
+        >> "  ok    " 名 ¶
+    } _ {
+        >> "  FAIL  " 名 "   expected " 期待 ", got " 実際 ¶
+        失敗 = 失敗 + 1
+    }
+}
+
+失敗 = 0
+>> "囲碁 — kifu replay (9×9)" ¶
+>> "" ¶
+
+// ── 棋譜の一局 / one game, as a kifu writes it ────────────────
+//   # zy-GO kifu v1
+//   board 9
+//   ---
+//   1 B B2 ms=1 caps=0     5 B pass ms=1 caps=0
+//   2 W A2 ms=1 caps=0     6 W B3   ms=1 caps=0
+//   3 B pass ms=1 caps=0   7 B pass ms=1 caps=0
+//   4 W C2 ms=1 caps=0     8 W B1   ms=1 caps=1
+//
+// 白の最後の一手が B2 の黒石を取る。棋譜が残すのは caps=1 だけで、
+// 消えた石が B2 だったことはどこにも書かれていない。
+// EN: White's last move takes the black stone on B2. All the kifu
+// keeps is caps=1; that the stone was the one on B2 is nowhere in it.
+点列 = [11, 10, 0, 12, 0, 20, 0, 2]
+色列 = [1, 2, 1, 2, 1, 2, 1, 2]
+綴列 = ["B2", "A2", "—", "C2", "—", "B3", "—", "B1"]
+記録取 := 1
+
+// ── 綴り / the spelling ──────────────────────────────────────
+// 棋譜に書かれる文字列は 座標名 が作る。並べ直す側はその逆を
+// 引くのだから、ここが合わなければ盤も目標も揃わない。
+// EN: the string in the kifu is what 座標名 produced. A replay reads
+// it the other way round, so if this disagrees nothing else lines up.
+>> "coordinates — 座標名" ¶
+番 = 0
+@ 点:点列 {
+    番 = 番 + 1
+    確認("move " 番 " is written " 綴列[番], 描::座標名(路, 点), 綴列[番], 失敗<~)
+}
+
+// ── 並べ直し / the replay ────────────────────────────────────
+>> "" ¶
+>> "replay — 並べ直し" ¶
+局面 = 盤::新規(路)
+コウ = 0
+取計 = 0
+
+番 = 0
+@ 点:点列 {
+    番 = 番 + 1
+    ? 点 == 0 {
+        コウ = 0
+    } _ {
+        取 = 0
+        次コウ = 0
+        確認("move " 番 " is legal", 規則::合法(局面, 路, 点, 色列[番], コウ), #1, 失敗<~)
+        状態 = 盤::着手(局面<~, 路, 点, 色列[番], 取<~, 次コウ<~)
+        確認("move " 番 " accepted", 状態, 盤.可, 失敗<~)
+        取計 = 取計 + 取
+        コウ = 次コウ
+    }
+}
+
+// ── 結果 / what the board holds afterwards ───────────────────
+// 座標を書き込むだけの並べ直しなら、B2 に黒石が残る。
+// EN: a replay that only writes coordinates leaves a black stone on B2.
+>> "" ¶
+>> "board — 結果の局面" ¶
+期待 = 図::読図([
+    ".O.......",
+    "O.O......",
+    ".O.......",
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    ".........",
+    "........."
+])
+確認("the position is the one that was played", 図::描図(局面, 路), 図::描図(期待, 路), 失敗<~)
+確認("the captured point is empty", 局面[11], 盤.空, 失敗<~)
+確認("no black stone survived", 盤::石数(局面, 盤.黒), 0, 失敗<~)
+確認("captures add up to the kifu's caps", 取計, 記録取, 失敗<~)
+
+// ------------------------------------------------------------
+>> "" ¶
+? 失敗 == 0 {
+    >> "PASS — the replay reproduces the game the kifu recorded" ¶
+} _ {
+    >> "FAIL — " 失敗 " case(s) failed" ¶
+}
