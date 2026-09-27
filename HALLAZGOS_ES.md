@@ -5,7 +5,7 @@ y, desde HLZ-012, **v0.0.9**; desde HLZ-015, **v0.0.10**.
 Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 [Hov veS](../klingon_galaxy/hallazgos_es.md).
 
-> **Estado (2026-09-27): HLZ-015 corregido; HLZ-016 abierto.** Salieron de
+> **Estado (2026-09-27): HLZ-015 y HLZ-016 corregidos.** Salieron de
 > una revisión externa del `.zyp` publicado que encontró dos bugs de la
 > aplicación (blanco juega siempre con la versión de negro; v2 es inalcanzable)
 > y observó que ninguna herramienta los había señalado. Confirmado en los tres
@@ -53,7 +53,7 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 | [HLZ-013](#hlz-013--en-el-motor-del-navegador-devolver-una-cadena-multilínea-da-unit) | **Bug grave** | En zyjs, `<~ "línea1⏎línea2"` devuelve Unit en vez de la cadena; los dos motores Rust la devuelven | **Corregido** |
 | [HLZ-014](#hlz-014--pasar-una-colección-a-una-función-la-clona-entera) | **Bug de rendimiento** | En el tree-walker, pasar un array a una función lo clona entero, aunque la función no lo mire: 20 000 llamadas con 4 000 elementos son 10 s frente a 6 ms en la VM | **Corregido** |
 | [HLZ-015](#hlz-015--un-import-que-nadie-usa-no-produce-ningún-aviso) | Gap (aviso) | `<# ./版/思考v2 => 思2` nunca se nombra y ningún motor avisa; ocultaba que v2 era inalcanzable | **Corregido** (v0.0.10) |
-| [HLZ-016](#hlz-016--el-código-que-no-puede-ejecutarse-no-produce-ningún-aviso) | Gap (aviso) | Ni el código tras `<~` ni una rama de condición constante avisan; el bug del color de `_版選び` no lo habría atrapado ninguna regla estática | **Abierto** |
+| [HLZ-016](#hlz-016--el-código-que-no-puede-ejecutarse-no-produce-ningún-aviso) | Gap (aviso) | Ni el código tras `<~` ni una rama de condición constante avisan; el bug del color de `_版選び` no lo habría atrapado ninguna regla estática | **Corregido** (v0.0.10) |
 | [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | Propuesta |
 | [IDEA-002](#idea-002--el-coste-numérico-decide-la-arquitectura-de-la-ia) | Medición | Números que descartan MCTS y redes neuronales en Zymbol actual | Aplicada |
 
@@ -886,8 +886,34 @@ de 2,32 s a 0,14 s.
   constante. Son baratas, deterministas y
   no dan falsos positivos, que es la condición para que un aviso no se aprenda
   a ignorar (la lección de HLZ-011).
-- **Estado:** **abierto** — gap confirmado, sin decisión (implementar /
-  desestimar, y con qué alcance).
+- **Medido antes de decidir** sobre 1258 ficheros (corpus, aplicaciones,
+  ejemplos del playground, aprende_zymbol, casos de ZyDDT): 3 casos «tras una
+  salida», todos en ficheros de corpus que ya son error (`@!` fuera de un
+  bucle); 0 «todas las ramas salen»; 1 condición constante que de verdad deja
+  código muerto (`corpus/arity/wrong_arity_on_a_dead_branch.zy`, que lo prueba
+  a propósito). Y 27 `? #1 { … }` sin `_`, más 2 `_? #1` finales en ZyBank,
+  que no son código muerto sino el modismo del bloque de alcance: la regla los
+  excluye. Cero avisos en código de aplicación.
+- **Decidido (2026-09-27): A + B + C**, en los tres motores, sin forma de
+  silenciarlo: tras una salida (`<~`, `@!`, `@>`), tras un `? … _ { }` cuyas
+  ramas salen todas, y condición constante (rama con `#0`, ramas tras un `#1`,
+  `@ cond` con `#0`). Una condición solo se pliega si está hecha de literales
+  Bool y numéricos con `!`, `-`/`+` unarios, `&&`, `||` y las comparaciones.
+  `? #1 { … }` sin otra rama no avisa.
+- **Cómo quedó:** Rust, `check_unreachable`
+  (`zymbol-semantic/src/unreachable.rs`), en `run`, `check` y el LSP; baja a
+  los cuerpos de lambda y a los brazos de `??` dentro de expresiones, que es
+  la zona ciega que el analizador ya tuvo tres veces. zyjs, `unreachableCode`
+  en `checkSource`, fuera del `Checker` como el de HLZ-015, con cinco códigos
+  y sus textos en inglés y español en el catálogo del playground.
+- **Barrido después:** Rust y zyjs dan los mismos 4 avisos, en la misma línea
+  y columna, sobre los 1265 ficheros; son los cuatro previstos.
+- **Pruebas:** cinco en `unreachable.rs` (incluido el programa de control y el
+  cuerpo de una lambda) y tres celdas de ZyDDT en `syntax-control-flow`
+  (`unreachable-after-an-exit`, `unreachable-constant-condition`, y el control
+  `reachable-code-is-quiet`).
+- **Estado:** **corregido** (v0.0.10). Documentado en GUIDE.md § 6. No habría
+  atrapado DG-01, y la documentación lo dice.
 
 ---
 
