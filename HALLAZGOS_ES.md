@@ -1,9 +1,19 @@
 # Hallazgos del lenguaje — 囲碁 (zy-GO)
 
 Bugs, carencias e ideas encontrados al construir 囲碁 sobre Zymbol **v0.0.8**
-y, desde HLZ-012, **v0.0.9**.
+y, desde HLZ-012, **v0.0.9**; desde HLZ-015, **v0.0.10**.
 Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 [Hov veS](../klingon_galaxy/hallazgos_es.md).
+
+> **Estado (2026-09-27): dos gaps abiertos, HLZ-015 y HLZ-016.** Salieron de
+> una revisión externa del `.zyp` publicado que encontró dos bugs de la
+> aplicación (blanco juega siempre con la versión de negro; v2 es inalcanzable)
+> y observó que ninguna herramienta los había señalado. Confirmado en los tres
+> motores con sondas mínimas: no hay aviso de import sin usar ni de código
+> inalcanzable. Solo el primero habría delatado uno de los dos bugs.
+> Los dos bugs están corregidos y documentados en
+> [Depurando_GO.md](Depurando_GO.md) (DG-01 y DG-02), junto con las
+> divergencias de motor que salieron al depurarlos.
 
 > **Estado (2026-09-02): los catorce hallazgos están corregidos.** HLZ-012 (el
 > tree-walker copiaba la colección para leer un elemento), HLZ-013 (zyjs devolvía
@@ -42,6 +52,8 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 | [HLZ-012](#hlz-012--en-el-tree-walker-leer-ai-copia-la-colección-entera) | **Bug de rendimiento** | En el tree-walker, `a[i]` clona el array completo en cada lectura: O(n) por lectura, y el tablero son 361 celdas | **Corregido** |
 | [HLZ-013](#hlz-013--en-el-motor-del-navegador-devolver-una-cadena-multilínea-da-unit) | **Bug grave** | En zyjs, `<~ "línea1⏎línea2"` devuelve Unit en vez de la cadena; los dos motores Rust la devuelven | **Corregido** |
 | [HLZ-014](#hlz-014--pasar-una-colección-a-una-función-la-clona-entera) | **Bug de rendimiento** | En el tree-walker, pasar un array a una función lo clona entero, aunque la función no lo mire: 20 000 llamadas con 4 000 elementos son 10 s frente a 6 ms en la VM | **Corregido** |
+| [HLZ-015](#hlz-015--un-import-que-nadie-usa-no-produce-ningún-aviso) | Gap (aviso) | `<# ./版/思考v2 => 思2` nunca se nombra y ningún motor avisa; ocultaba que v2 era inalcanzable | **Abierto** |
+| [HLZ-016](#hlz-016--el-código-que-no-puede-ejecutarse-no-produce-ningún-aviso) | Gap (aviso) | Ni el código tras `<~` ni una rama de condición constante avisan; el bug del color de `_版選び` no lo habría atrapado ninguna regla estática | **Abierto** |
 | [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | Propuesta |
 | [IDEA-002](#idea-002--el-coste-numérico-decide-la-arquitectura-de-la-ia) | Medición | Números que descartan MCTS y redes neuronales en Zymbol actual | Aplicada |
 
@@ -765,6 +777,96 @@ tree-walker dejó de copiar dos veces lo que nadie le pidió que copiara.
 La línea `read_in_fn` de `zyquality/bench/bench_index_read.zy`, que se escribió
 para esto y por eso está ahí: 2,165 s antes, 0,009 s ahora. El banco entero pasó
 de 2,32 s a 0,14 s.
+
+---
+
+## HLZ-015 · Un import que nadie usa no produce ningún aviso
+
+- **Archivo:** `対局.zy`, línea 55: `<# ./版/思考v2 => 思2`.
+- **Origen:** una revisión externa de `examples/games/classic/go.zyp`
+  (2026-09-27) encontró que la versión v2 de la IA es inalcanzable jugando:
+  `_版着手選択` solo distingue `版 == 1` y todo lo demás cae en `思` (v3). El
+  alias `思2` se importa y no se nombra en ningún otro sitio del fichero. Ese es
+  un bug de la aplicación; lo que es del lenguaje es que **ninguna herramienta lo
+  señaló**.
+- **Descripción:** importar un módulo con un alias que el fichero no vuelve a
+  nombrar pasa sin aviso en los tres motores. El analizador ya avisa de una
+  variable asignada y nunca leída (HLZ-011 es de esa familia); de un alias de
+  módulo, no.
+
+  ```zymbol
+  <# ./m => a
+  <# ./m => b        // b no se usa nunca
+  >> a::f() ¶
+  ```
+
+  ```
+  zymbol check (v0.0.9):   No errors or warnings
+  checkSource (zyjs):      diagnostics: []
+  ```
+
+  Ejecuta en los tres motores y da `1`. Sobre el fichero real, `zymbol check
+  対局.zy` da un solo aviso (la dirección del rango en 137:14) y `checkSource`
+  ninguno: ni uno ni otro mencionan `思2`. El `対局.zy` del `.zyp` publicado es
+  idéntico byte a byte al de `GO/`.
+
+- **Por qué importa:** un import sin usar es la huella más barata de un cable
+  suelto. Aquí es exactamente eso: alguien añadió v2 al menú y al import y no
+  al despacho. Con el aviso, el hallazgo habría salido en el primer `check`.
+- **Lo que hay que decidir antes de construirlo:**
+  - si un alias cuenta como usado cuando solo se re-exporta (las capas de
+    re-exportación de `I18N.md`), que es un uso legítimo sin llamada;
+  - si hay forma de callarlo a propósito, como el `_` de las variables;
+  - que el aviso nazca en las cuatro superficies a la vez: `zymbol-semantic`
+    (CLI y LSP) y `checkSource` en zyjs, con su fila en el inventario de
+    mensajes.
+- **Estado:** **abierto** — gap confirmado, sin decisión (implementar /
+  desestimar).
+
+---
+
+## HLZ-016 · El código que no puede ejecutarse no produce ningún aviso
+
+- **Archivo:** `対局.zy`, `_版選び` (línea 342).
+- **Origen:** la misma revisión. `_版選び(設定, 色)` devuelve siempre
+  `設定[6]`, la versión de **negro**, sin mirar el color: con negro=v1 y
+  blanco=v3, blanco juega con v1. El único sitio donde lee `色` es una rama
+  `? 版 == 0`, y el menú de `_設定画面` (`版一覧 = [3, 2, 1]`) nunca produce un
+  0. El rótulo del tablero sí distingue (`表示/描画.zy:340-341` lee `設定[7]`
+  cuando juega blanco), así que la pantalla dice v3 mientras piensa v1.
+  Confirmado ejecutando, en zyjs y en los dos motores Rust, con una copia
+  instrumentada que llama a `_版選び` y `_版着手選択` sobre un tablero real:
+  negro=v1/blanco=v3 resuelve `1` para ambos colores y despacha a `思1` las dos
+  veces; negro=v2 despacha a `思` (el núcleo actual) y `思2` no se alcanza nunca.
+- **Descripción:** ningún motor avisa de código que no puede ejecutarse, ni
+  siquiera en las formas que se deciden sin ejecutar nada:
+
+  ```zymbol
+  g(x) {
+      <~ x
+      >> "nunca" ¶      // tras el retorno
+  }
+  ? #0 { >> "nunca" ¶ }          // condición literal falsa
+  ? 1 == 2 { >> "nunca" ¶ }      // condición constante
+  ```
+
+  `zymbol check` y `checkSource`: sin diagnósticos en las tres.
+
+- **Lo que un aviso así NO habría atrapado** — y conviene dejarlo escrito para
+  no sobrevender la regla: la rama `版 == 0` de `_版選び` **no es inalcanzable
+  para un analizador**. Depende de lo que otra función guardó en el arreglo
+  `設定`; demostrar que nunca vale 0 exige seguir valores entre funciones, y eso
+  no es un aviso sino un análisis de flujo. Tampoco la señala un aviso de
+  parámetro sin usar: `色` sí se lee, dentro de esa rama. El bug del color
+  habría pasado igual. De los dos bugs de la revisión, HLZ-015 habría marcado
+  el de v2; ninguna de las dos reglas marca el del color.
+- **Lo que sí atrapa:** sentencias tras `<~` en el mismo bloque (y tras las
+  demás salidas de bloque, por sondear), y ramas cuya condición es una
+  constante. Son baratas, deterministas y
+  no dan falsos positivos, que es la condición para que un aviso no se aprenda
+  a ignorar (la lección de HLZ-011).
+- **Estado:** **abierto** — gap confirmado, sin decisión (implementar /
+  desestimar, y con qué alcance).
 
 ---
 
