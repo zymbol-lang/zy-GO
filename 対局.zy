@@ -276,7 +276,16 @@
             }
         }
 
-        <~ [路一覧[路位], 主題一覧[主題位], 級, コミ一覧[コミ位], 手番一覧[手番位], 版一覧[黒位], 版一覧[白位]]
+        // 設定 は数と文字 (主題) とコミの小数を混ぜた並びである。混ぜる
+        // のは意図なので #[…] と書く。[…] は同じ型の並びを約束し、
+        // ここでは要素の型が解析器に見えないから通っていただけだった
+        // (DG-04)。
+        //
+        // EN: 設定 mixes numbers, a string (the theme) and a fractional
+        // komi. The mix is deliberate, so it is written #[…]. […]
+        // promises one type, and this only passed because the analyser
+        // could not see any element's type (DG-04).
+        <~ #[路一覧[路位], 主題一覧[主題位], 級, コミ一覧[コミ位], 手番一覧[手番位], 版一覧[黒位], 版一覧[白位]]
     }
 
     // 添字は出力引数として渡り歩く。呼び出しの場に六つの枝を置く
@@ -323,33 +332,44 @@
     }
 
     // ---- 版 -------------------------------------------------
-    // どの engine に訊くか。設定[6] が 1 なら凍らせた第一版、2 なら
-    // いまの版、0 なら「v1 対 v2」— 観戦のときだけ意味を持ち、黒が
-    // v1、白が v2 である。
+    // どの engine に訊くか。黒の版は 設定[6]、白の版は 設定[7] にあり、
+    // 手番の色がどちらを読むかを決める。以前は色を見ずに 設定[6] を
+    // 返していたので、白も黒の engine で打っていた。観戦で v1 と v3 を
+    // 並べても、盤の上では同じ版同士の一局だった (Depurando_GO.md
+    // DG-01)。
     //
-    // 版が違うのは読み方だけである。盤も規則も一つきりで、どちらの
+    // 版が違うのは読み方だけである。盤も規則も一つきりで、どの
     // engine も同じ 核/盤 と 核/規則 を通る。石の振る舞いまで版ごとに
     // 分かれたら、遊んでいるのは二つの碁になる。
     //
-    // EN: which engine to ask. 設定[6] is 1 for the frozen first
-    // engine, 2 for the current one, 0 for "v1 against v2" — which
-    // only means anything while spectating, and puts v1 on black.
+    // EN: which engine to ask. Black's version is 設定[6], white's is
+    // 設定[7], and the colour to move decides which is read. This used
+    // to return 設定[6] whatever the colour, so white played with
+    // black's engine: v1 against v3 in spectator mode was one version
+    // playing itself (Depurando_GO.md DG-01).
     //
     // A version differs in how it reads a position, never in what is
-    // legal: both engines go through the same 核/盤 and 核/規則. Let
+    // legal: every engine goes through the same 核/盤 and 核/規則. Let
     // the stones behave differently per version and you are playing
     // two different games.
     _版選び(設定, 色) {
-        版 = 設定[6]
-        ? 版 == 0 {
-            ? 色 == 1 { <~ 1 }
-            <~ 2
-        }
-        <~ 版
+        ? 色 == 2 { <~ 設定[7] }
+        <~ 設定[6]
     }
 
+    // 版ごとに一行。今の版 (核/思考) は最後の行で、新しい版が来る
+    // たびに、それまでの版は 版/ に凍らせて、ここに行を一つ足す。
+    // v3 が来た日には import と品書の 2 は足されたのに、この行が
+    // 足されず、v2 を選んでも v3 が打っていた (DG-02)。
+    //
+    // EN: One line per version. The current one (核/思考) is the last
+    // line; each time a new version arrives, the previous one is frozen
+    // under 版/ and gets its line here. The day v3 arrived the import
+    // and the menu's 2 were added and this line was not, so choosing v2
+    // played v3 (DG-02).
     _版着手選択(版, 局面, 路, 色, 級, コウ点, 最終手, 手数) {
         ? 版 == 1 { <~ 思1::着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数) }
+        ? 版 == 2 { <~ 思2::着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数) }
         <~ 思::着手選択(局面, 路, 色, 級, コウ点, 最終手, 手数)
     }
 
