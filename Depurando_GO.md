@@ -19,6 +19,7 @@ motores** que la depuración va destapando, con la prueba de cada una.
 | [DG-05](#dg-05--zyjs-deja-de-comprobar-un-arreglo-en-cuanto-un-elemento-no-tiene-tipo-conocido) | zyjs | `[9, "x", p]` es error en Rust y se ejecuta en zyjs | **Corregido** |
 | [DG-06](#dg-06--zyjs-descarta-todos-los-avisos-dentro-de-un-módulo) | zyjs | `check` de un fichero de módulo: Rust da los avisos, zyjs ninguno | **Descartado por ahora** |
 | [DG-07](#dg-07--rust-avisa-de-mezcla-innecesaria-sobre-tipos-que-no-conoce) | tw, vm | `#[id(1), "x"]` avisa «every element is Any»: afirma una homogeneidad que no puede ver | **Corregido** |
+| [DG-08](#dg-08--zymbol-run-callaba-los-avisos-de-la-fase-de-tipos-al-rechazar) | tw, vm | Con un error estático, `run` no imprimía los avisos de la fase de tipos; `check` y zyjs sí | **Corregido** |
 
 Los dos gaps de herramientas que señaló la misma revisión (import sin usar,
 código inalcanzable) son del lenguaje y están en `HALLAZGOS_ES.md` como
@@ -301,6 +302,47 @@ esperando la entrada real.
   `declared_mix_with_an_untyped_element_does_not_warn` en `type_check.rs`.
   Ningún golden dependía del aviso falso.
 - **Estado:** **corregido.** Desbloquea DG-04.
+
+
+## DG-08 · `zymbol run` callaba los avisos de la fase de tipos al rechazar
+
+- **Encontrado** al construir HLZ-016: siete celdas de ZyDDT usaban `? #0 { … }`
+  a propósito, y tres de ellas, que además eran un error estático, pasaron a
+  `DIVERGE`. zyjs imprimía `this branch never runs` antes del error; tw y vm
+  no.
+- **No era del aviso nuevo.** Ya pasaba con cualquier aviso de esa fase:
+
+  ```zymbol
+  x = 5
+  ? x { >> 1 ¶ }
+  sobra = 2
+  >> nada ¶
+  ```
+
+  | | avisos antes del error |
+  |---|---|
+  | `zymbol check` | `unused variable 'sobra'`, `if condition should be Bool, got Int` |
+  | zyjs | los mismos dos |
+  | `zymbol run` (tw, vm), antes | solo `unused variable 'sobra'` |
+
+  `run` imprimía los avisos del análisis de variables, que va antes, y los de
+  la fase de tipos solo si el programa pasaba: al rechazarlo por un error de
+  tipos o de `std/`, salía antes de llegar a ellos. Ninguna celda lo
+  provocaba.
+- **Corrección:** `run_program` junta los avisos de la fase (los del type
+  checker, HLZ-015 y HLZ-016) en cuanto termina el análisis y los imprime
+  **antes** de salir por cualquiera de los dos rechazos. Es el principio que
+  el propio código ya enunciaba: *«`run` says what `check` says»*. En un
+  programa que pasa, el orden y el contenido de la salida no cambian.
+- **Las celdas `WRONG`.** Las cuatro celdas que esperaban `ok` (dos en
+  `lifetime`, una en `runtime-functions-hof`, una en `syntax-expressions`)
+  pasaron a avisar, igual en los tres motores. Cambiarles `expect` a `warn`
+  habría debilitado la pregunta: `ok` también afirma que no sale *ningún*
+  aviso, y eso es lo que vigila `prefix-hot-read-in-an-else-if` (ZYJS-035).
+  Se cambió la condición: `? #0` pasó a `? x == 0` con `x = 1`, que sigue sin
+  correr y el analizador no pliega. Cada celda lleva un comentario con el
+  porqué.
+- **Estado:** **corregido.**
 
 ---
 
