@@ -5,7 +5,7 @@ y, desde HLZ-012, **v0.0.9**; desde HLZ-015, **v0.0.10**.
 Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 [Hov veS](../klingon_galaxy/hallazgos_es.md).
 
-> **Estado (2026-09-27): dos gaps abiertos, HLZ-015 y HLZ-016.** Salieron de
+> **Estado (2026-09-27): HLZ-015 corregido; HLZ-016 abierto.** Salieron de
 > una revisión externa del `.zyp` publicado que encontró dos bugs de la
 > aplicación (blanco juega siempre con la versión de negro; v2 es inalcanzable)
 > y observó que ninguna herramienta los había señalado. Confirmado en los tres
@@ -52,7 +52,7 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 | [HLZ-012](#hlz-012--en-el-tree-walker-leer-ai-copia-la-colección-entera) | **Bug de rendimiento** | En el tree-walker, `a[i]` clona el array completo en cada lectura: O(n) por lectura, y el tablero son 361 celdas | **Corregido** |
 | [HLZ-013](#hlz-013--en-el-motor-del-navegador-devolver-una-cadena-multilínea-da-unit) | **Bug grave** | En zyjs, `<~ "línea1⏎línea2"` devuelve Unit en vez de la cadena; los dos motores Rust la devuelven | **Corregido** |
 | [HLZ-014](#hlz-014--pasar-una-colección-a-una-función-la-clona-entera) | **Bug de rendimiento** | En el tree-walker, pasar un array a una función lo clona entero, aunque la función no lo mire: 20 000 llamadas con 4 000 elementos son 10 s frente a 6 ms en la VM | **Corregido** |
-| [HLZ-015](#hlz-015--un-import-que-nadie-usa-no-produce-ningún-aviso) | Gap (aviso) | `<# ./版/思考v2 => 思2` nunca se nombra y ningún motor avisa; ocultaba que v2 era inalcanzable | **Abierto** |
+| [HLZ-015](#hlz-015--un-import-que-nadie-usa-no-produce-ningún-aviso) | Gap (aviso) | `<# ./版/思考v2 => 思2` nunca se nombra y ningún motor avisa; ocultaba que v2 era inalcanzable | **Corregido** (v0.0.10) |
 | [HLZ-016](#hlz-016--el-código-que-no-puede-ejecutarse-no-produce-ningún-aviso) | Gap (aviso) | Ni el código tras `<~` ni una rama de condición constante avisan; el bug del color de `_版選び` no lo habría atrapado ninguna regla estática | **Abierto** |
 | [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | Propuesta |
 | [IDEA-002](#idea-002--el-coste-numérico-decide-la-arquitectura-de-la-ia) | Medición | Números que descartan MCTS y redes neuronales en Zymbol actual | Aplicada |
@@ -820,8 +820,29 @@ de 2,32 s a 0,14 s.
   - que el aviso nazca en las cuatro superficies a la vez: `zymbol-semantic`
     (CLI y LSP) y `checkSource` en zyjs, con su fila en el inventario de
     mensajes.
-- **Estado:** **abierto** — gap confirmado, sin decisión (implementar /
-  desestimar).
+- **Decidido (2026-09-27): implementar, sin forma de silenciarlo.** Una
+  variable a veces se asigna solo para descartarla; un import nunca.
+- **Cómo quedó:** `import 'b' is never used`, con su `= help:`, en los tres
+  motores, en `run` y en `check`, y en el LSP. Rust: `check_unused_imports`
+  (`zymbol-semantic/src/unused_imports.rs`), hermano de `check_stdlib_access`
+  y con la misma lectura por tokens, porque una re-exportación
+  (`#> { es::saludo => saludo }`) es un uso y no es una expresión. zyjs:
+  `unusedImports` en `checkSource`, **fuera** del `Checker`, para que el
+  descarte de avisos dentro de un módulo (DG-06) no lo alcance: Rust lo da
+  también ahí. `web/tests/run_one.mjs` ya no imprime avisos al *ejecutar* un
+  fichero de módulo, que es lo que hace `zymbol run` (lo rechaza antes de
+  analizarlo).
+- **Barrido:** sobre los 300 ficheros con imports del corpus y de las
+  aplicaciones, Rust y zyjs dan los mismos 10 avisos. Uno es intencionado
+  (`corpus/modules_scope/exporta_nada.zy`); los otros 9 eran imports muertos y
+  se borraron: `文` en `対局.zy` y `規則` en `棋戦.zy` (GO), y uno en
+  Chaturanga, Zofia (dos), ZyAudit, ZyBank, GoL y aprende_zymbol.
+- **Pruebas:** cuatro en `unused_imports.rs` (el que avisa; función, constante
+  y re-exportación como usos; la propia sentencia de import no es un uso; un
+  campo con el nombre del alias tampoco), y dos celdas de ZyDDT en
+  `runtime-modules-scripts`: `unused-import-warns` (`warn`) y su control
+  `import-used-without-a-call-is-used` (`ok`).
+- **Estado:** **corregido** (v0.0.10). Documentado en GUIDE.md § 17.
 
 ---
 

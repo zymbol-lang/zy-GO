@@ -107,7 +107,9 @@ esperando la entrada real.
 - **Qué hace:** distingue solo `版 == 1`; 2 y 3 van a `思` (`核/思考`, el motor
   actual). `思2` no se nombra fuera del import.
 - **Medido:** `黒=v2` → `版=2 -> 思 (核/思考)` en los tres motores.
-- **Por qué no lo vio ninguna herramienta:** HLZ-015.
+- **Por qué no lo vio ninguna herramienta:** HLZ-015. Desde el 2026-09-27
+  los tres motores avisan `import '思2' is never used`; con la línea del
+  despacho puesta, ya no hay nada que avisar.
 - **Origen:** 4972446 (2026-09-02, *v3: defend a chain at two liberties*). Al
   llegar v3 se congeló v2 en `版/思考v2.zy`, se añadieron su import y el `2`
   del menú (`版一覧 = [3, 2, 1]`), y faltó la línea del despacho, que es
