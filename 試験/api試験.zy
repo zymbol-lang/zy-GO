@@ -90,4 +90,5 @@ _検(名, 実, 期) {
     >> "PASS — api/english and api/espanol resolve to the same engine" ¶
 } _ {
     >> "FAIL — " 失敗 " mismatches" ¶
+    <~ 1
 }

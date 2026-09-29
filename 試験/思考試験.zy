@@ -581,4 +581,5 @@
     >> "PASS — the engine reads the position" ¶
 } _ {
     >> "FAIL — " 失敗 " case(s) failed" ¶
+    <~ 1
 }

@@ -119,4 +119,5 @@
     >> "PASS — every key resolves in every locale" ¶
 } _ {
     >> "FAIL — " 欠落合計 " missing translations" ¶
+    <~ 1
 }

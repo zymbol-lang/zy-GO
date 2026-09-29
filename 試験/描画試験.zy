@@ -145,4 +145,5 @@
     >> "PASS — the grid holds together" ¶
 } _ {
     >> "FAIL — " 失敗 " case(s) failed" ¶
+    <~ 1
 }
