@@ -499,6 +499,9 @@ _乱 = <\ "od -An -N2 -tu2 /dev/urandom | tr -d ' \n'" \>
 親種 = (#|_ナノ| + #|_番号| * 31337 + #|_乱| * 65537) % 2147483647
 
 基底 = <\ "printenv ZYGO_KIFU" \>
+// 未設定なら printenv は 1 で終わり、v0.0.10 からそれは ##IO エラーになる。
+// EN: unset makes printenv exit 1, an ##IO error since v0.0.10.
+? 基底$! { 基底 = 既定場所 }
 ? (基底$#) == 0 { 基底 = 既定場所 }
 
 較正値 = 較正()
