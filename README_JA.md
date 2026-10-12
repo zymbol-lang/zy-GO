@@ -1,5 +1,7 @@
 # 囲碁
 
+🌐 [zymbol-lang.org](https://zymbol-lang.org) · ▶ [playground](https://zymbol-lang.org/playground.html)
+
 > **対象は Zymbol v0.0.8**
 
 端末で遊ぶ囲碁。すべて Zymbol で書いてある。AI の相手、規則の完全な適用、

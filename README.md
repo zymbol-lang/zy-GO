@@ -1,5 +1,7 @@
 # 囲碁 (Igo)
 
+🌐 [zymbol-lang.org](https://zymbol-lang.org) · ▶ [playground](https://zymbol-lang.org/playground.html)
+
 > **Targets Zymbol v0.0.8**
 
 The game of Go for the terminal, written entirely in Zymbol, with an AI opponent,

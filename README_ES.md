@@ -1,5 +1,7 @@
 # 囲碁 (Igo)
 
+🌐 [zymbol-lang.org](https://zymbol-lang.org) · ▶ [playground](https://zymbol-lang.org/playground.html)
+
 > **Dirigido a Zymbol v0.0.8**
 
 El juego del go para terminal, escrito íntegramente en Zymbol, con oponente de
