@@ -1,9 +1,19 @@
 # Hallazgos del lenguaje — 囲碁 (zy-GO)
 
 Bugs, carencias e ideas encontrados al construir 囲碁 sobre Zymbol **v0.0.8**
-y, desde HLZ-012, **v0.0.9**.
+y, desde HLZ-012, **v0.0.9**; desde HLZ-015, **v0.0.10**.
 Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 [Hov veS](../klingon_galaxy/hallazgos_es.md).
+
+> **Estado (2026-09-27): HLZ-015 y HLZ-016 corregidos.** Salieron de
+> una revisión externa del `.zyp` publicado que encontró dos bugs de la
+> aplicación (blanco juega siempre con la versión de negro; v2 es inalcanzable)
+> y observó que ninguna herramienta los había señalado. Confirmado en los tres
+> motores con sondas mínimas: no hay aviso de import sin usar ni de código
+> inalcanzable. Solo el primero habría delatado uno de los dos bugs.
+> Los dos bugs están corregidos y documentados en
+> [Depurando_GO.md](Depurando_GO.md) (DG-01 y DG-02), junto con las
+> divergencias de motor que salieron al depurarlos.
 
 > **Estado (2026-09-02): los catorce hallazgos están corregidos.** HLZ-012 (el
 > tree-walker copiaba la colección para leer un elemento), HLZ-013 (zyjs devolvía
@@ -42,6 +52,8 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 | [HLZ-012](#hlz-012--en-el-tree-walker-leer-ai-copia-la-colección-entera) | **Bug de rendimiento** | En el tree-walker, `a[i]` clona el array completo en cada lectura: O(n) por lectura, y el tablero son 361 celdas | **Corregido** |
 | [HLZ-013](#hlz-013--en-el-motor-del-navegador-devolver-una-cadena-multilínea-da-unit) | **Bug grave** | En zyjs, `<~ "línea1⏎línea2"` devuelve Unit en vez de la cadena; los dos motores Rust la devuelven | **Corregido** |
 | [HLZ-014](#hlz-014--pasar-una-colección-a-una-función-la-clona-entera) | **Bug de rendimiento** | En el tree-walker, pasar un array a una función lo clona entero, aunque la función no lo mire: 20 000 llamadas con 4 000 elementos son 10 s frente a 6 ms en la VM | **Corregido** |
+| [HLZ-015](#hlz-015--un-import-que-nadie-usa-no-produce-ningún-aviso) | Gap (aviso) | `<# ./版/思考v2 => 思2` nunca se nombra y ningún motor avisa; ocultaba que v2 era inalcanzable | **Corregido** (v0.0.10) |
+| [HLZ-016](#hlz-016--el-código-que-no-puede-ejecutarse-no-produce-ningún-aviso) | Gap (aviso) | Ni el código tras `<~` ni una rama de condición constante avisan; el bug del color de `_版選び` no lo habría atrapado ninguna regla estática | **Corregido** (v0.0.10) |
 | [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | Propuesta |
 | [IDEA-002](#idea-002--el-coste-numérico-decide-la-arquitectura-de-la-ia) | Medición | Números que descartan MCTS y redes neuronales en Zymbol actual | Aplicada |
 
@@ -765,6 +777,143 @@ tree-walker dejó de copiar dos veces lo que nadie le pidió que copiara.
 La línea `read_in_fn` de `zyquality/bench/bench_index_read.zy`, que se escribió
 para esto y por eso está ahí: 2,165 s antes, 0,009 s ahora. El banco entero pasó
 de 2,32 s a 0,14 s.
+
+---
+
+## HLZ-015 · Un import que nadie usa no produce ningún aviso
+
+- **Archivo:** `対局.zy`, línea 55: `<# ./版/思考v2 => 思2`.
+- **Origen:** una revisión externa de `examples/games/classic/go.zyp`
+  (2026-09-27) encontró que la versión v2 de la IA es inalcanzable jugando:
+  `_版着手選択` solo distingue `版 == 1` y todo lo demás cae en `思` (v3). El
+  alias `思2` se importa y no se nombra en ningún otro sitio del fichero. Ese es
+  un bug de la aplicación; lo que es del lenguaje es que **ninguna herramienta lo
+  señaló**.
+- **Descripción:** importar un módulo con un alias que el fichero no vuelve a
+  nombrar pasa sin aviso en los tres motores. El analizador ya avisa de una
+  variable asignada y nunca leída (HLZ-011 es de esa familia); de un alias de
+  módulo, no.
+
+  ```zymbol
+  <# ./m => a
+  <# ./m => b        // b no se usa nunca
+  >> a::f() ¶
+  ```
+
+  ```
+  zymbol check (v0.0.9):   No errors or warnings
+  checkSource (zyjs):      diagnostics: []
+  ```
+
+  Ejecuta en los tres motores y da `1`. Sobre el fichero real, `zymbol check
+  対局.zy` da un solo aviso (la dirección del rango en 137:14) y `checkSource`
+  ninguno: ni uno ni otro mencionan `思2`. El `対局.zy` del `.zyp` publicado es
+  idéntico byte a byte al de `GO/`.
+
+- **Por qué importa:** un import sin usar es la huella más barata de un cable
+  suelto. Aquí es exactamente eso: alguien añadió v2 al menú y al import y no
+  al despacho. Con el aviso, el hallazgo habría salido en el primer `check`.
+- **Lo que hay que decidir antes de construirlo:**
+  - si un alias cuenta como usado cuando solo se re-exporta (las capas de
+    re-exportación de `I18N.md`), que es un uso legítimo sin llamada;
+  - si hay forma de callarlo a propósito, como el `_` de las variables;
+  - que el aviso nazca en las cuatro superficies a la vez: `zymbol-semantic`
+    (CLI y LSP) y `checkSource` en zyjs, con su fila en el inventario de
+    mensajes.
+- **Decidido (2026-09-27): implementar, sin forma de silenciarlo.** Una
+  variable a veces se asigna solo para descartarla; un import nunca.
+- **Cómo quedó:** `import 'b' is never used`, con su `= help:`, en los tres
+  motores, en `run` y en `check`, y en el LSP. Rust: `check_unused_imports`
+  (`zymbol-semantic/src/unused_imports.rs`), hermano de `check_stdlib_access`
+  y con la misma lectura por tokens, porque una re-exportación
+  (`#> { es::saludo => saludo }`) es un uso y no es una expresión. zyjs:
+  `unusedImports` en `checkSource`, **fuera** del `Checker`, para que el
+  descarte de avisos dentro de un módulo (DG-06) no lo alcance: Rust lo da
+  también ahí. `web/tests/run_one.mjs` ya no imprime avisos al *ejecutar* un
+  fichero de módulo, que es lo que hace `zymbol run` (lo rechaza antes de
+  analizarlo).
+- **Barrido:** sobre los 300 ficheros con imports del corpus y de las
+  aplicaciones, Rust y zyjs dan los mismos 10 avisos. Uno es intencionado
+  (`corpus/modules_scope/exporta_nada.zy`); los otros 9 eran imports muertos y
+  se borraron: `文` en `対局.zy` y `規則` en `棋戦.zy` (GO), y uno en
+  Chaturanga, Zofia (dos), ZyAudit, ZyBank, GoL y aprende_zymbol.
+- **Pruebas:** cuatro en `unused_imports.rs` (el que avisa; función, constante
+  y re-exportación como usos; la propia sentencia de import no es un uso; un
+  campo con el nombre del alias tampoco), y dos celdas de ZyDDT en
+  `runtime-modules-scripts`: `unused-import-warns` (`warn`) y su control
+  `import-used-without-a-call-is-used` (`ok`).
+- **Estado:** **corregido** (v0.0.10). Documentado en GUIDE.md § 17.
+
+---
+
+## HLZ-016 · El código que no puede ejecutarse no produce ningún aviso
+
+- **Archivo:** `対局.zy`, `_版選び` (línea 342).
+- **Origen:** la misma revisión. `_版選び(設定, 色)` devuelve siempre
+  `設定[6]`, la versión de **negro**, sin mirar el color: con negro=v1 y
+  blanco=v3, blanco juega con v1. El único sitio donde lee `色` es una rama
+  `? 版 == 0`, y el menú de `_設定画面` (`版一覧 = [3, 2, 1]`) nunca produce un
+  0. El rótulo del tablero sí distingue (`表示/描画.zy:340-341` lee `設定[7]`
+  cuando juega blanco), así que la pantalla dice v3 mientras piensa v1.
+  Confirmado ejecutando, en zyjs y en los dos motores Rust, con una copia
+  instrumentada que llama a `_版選び` y `_版着手選択` sobre un tablero real:
+  negro=v1/blanco=v3 resuelve `1` para ambos colores y despacha a `思1` las dos
+  veces; negro=v2 despacha a `思` (el núcleo actual) y `思2` no se alcanza nunca.
+- **Descripción:** ningún motor avisa de código que no puede ejecutarse, ni
+  siquiera en las formas que se deciden sin ejecutar nada:
+
+  ```zymbol
+  g(x) {
+      <~ x
+      >> "nunca" ¶      // tras el retorno
+  }
+  ? #0 { >> "nunca" ¶ }          // condición literal falsa
+  ? 1 == 2 { >> "nunca" ¶ }      // condición constante
+  ```
+
+  `zymbol check` y `checkSource`: sin diagnósticos en las tres.
+
+- **Lo que un aviso así NO habría atrapado** — y conviene dejarlo escrito para
+  no sobrevender la regla: la rama `版 == 0` de `_版選び` **no es inalcanzable
+  para un analizador**. Depende de lo que otra función guardó en el arreglo
+  `設定`; demostrar que nunca vale 0 exige seguir valores entre funciones, y eso
+  no es un aviso sino un análisis de flujo. Tampoco la señala un aviso de
+  parámetro sin usar: `色` sí se lee, dentro de esa rama. El bug del color
+  habría pasado igual. De los dos bugs de la revisión, HLZ-015 habría marcado
+  el de v2; ninguna de las dos reglas marca el del color.
+- **Lo que sí atrapa:** sentencias tras `<~` en el mismo bloque (y tras las
+  demás salidas de bloque, por sondear), y ramas cuya condición es una
+  constante. Son baratas, deterministas y
+  no dan falsos positivos, que es la condición para que un aviso no se aprenda
+  a ignorar (la lección de HLZ-011).
+- **Medido antes de decidir** sobre 1258 ficheros (corpus, aplicaciones,
+  ejemplos del playground, aprende_zymbol, casos de ZyDDT): 3 casos «tras una
+  salida», todos en ficheros de corpus que ya son error (`@!` fuera de un
+  bucle); 0 «todas las ramas salen»; 1 condición constante que de verdad deja
+  código muerto (`corpus/arity/wrong_arity_on_a_dead_branch.zy`, que lo prueba
+  a propósito). Y 27 `? #1 { … }` sin `_`, más 2 `_? #1` finales en ZyBank,
+  que no son código muerto sino el modismo del bloque de alcance: la regla los
+  excluye. Cero avisos en código de aplicación.
+- **Decidido (2026-09-27): A + B + C**, en los tres motores, sin forma de
+  silenciarlo: tras una salida (`<~`, `@!`, `@>`), tras un `? … _ { }` cuyas
+  ramas salen todas, y condición constante (rama con `#0`, ramas tras un `#1`,
+  `@ cond` con `#0`). Una condición solo se pliega si está hecha de literales
+  Bool y numéricos con `!`, `-`/`+` unarios, `&&`, `||` y las comparaciones.
+  `? #1 { … }` sin otra rama no avisa.
+- **Cómo quedó:** Rust, `check_unreachable`
+  (`zymbol-semantic/src/unreachable.rs`), en `run`, `check` y el LSP; baja a
+  los cuerpos de lambda y a los brazos de `??` dentro de expresiones, que es
+  la zona ciega que el analizador ya tuvo tres veces. zyjs, `unreachableCode`
+  en `checkSource`, fuera del `Checker` como el de HLZ-015, con cinco códigos
+  y sus textos en inglés y español en el catálogo del playground.
+- **Barrido después:** Rust y zyjs dan los mismos 4 avisos, en la misma línea
+  y columna, sobre los 1265 ficheros; son los cuatro previstos.
+- **Pruebas:** cinco en `unreachable.rs` (incluido el programa de control y el
+  cuerpo de una lambda) y tres celdas de ZyDDT en `syntax-control-flow`
+  (`unreachable-after-an-exit`, `unreachable-constant-condition`, y el control
+  `reachable-code-is-quiet`).
+- **Estado:** **corregido** (v0.0.10). Documentado en GUIDE.md § 6. No habría
+  atrapado DG-01, y la documentación lo dice.
 
 ---
 

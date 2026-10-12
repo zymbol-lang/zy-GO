@@ -1,0 +1,27 @@
+囲碁 — kifu replay (9×9)
+coordinates — 座標名
+  ok    move 1 is written B2
+  ok    move 2 is written A2
+  ok    move 3 is written —
+  ok    move 4 is written C2
+  ok    move 5 is written —
+  ok    move 6 is written B3
+  ok    move 7 is written —
+  ok    move 8 is written B1
+replay — 並べ直し
+  ok    move 1 is legal
+  ok    move 1 accepted
+  ok    move 2 is legal
+  ok    move 2 accepted
+  ok    move 4 is legal
+  ok    move 4 accepted
+  ok    move 6 is legal
+  ok    move 6 accepted
+  ok    move 8 is legal
+  ok    move 8 accepted
+board — 結果の局面
+  ok    the position is the one that was played
+  ok    the captured point is empty
+  ok    no black stone survived
+  ok    captures add up to the kifu's caps
+PASS — the replay reproduces the game the kifu recorded

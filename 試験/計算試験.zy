@@ -106,4 +106,5 @@
     >> "PASS — scoring behaved" ¶
 } _ {
     >> "FAIL — " 失敗 " case(s) failed" ¶
+    <~ 1
 }
