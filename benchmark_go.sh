@@ -51,7 +51,7 @@ ZYJS=${ZYJS:-../zyquality/harness/js.mjs}
 engine_cmd() {                       # engine_cmd <id> <file> <args...>
   local id=$1; shift
   case "$id" in
-    zytw) echo "zymbol run $*" ;;
+    zytw) echo "zymbol run --tw $*" ;;
     zyvm) echo "zymbol run --vm $*" ;;
     zyjs) echo "node $ZYJS $*" ;;
     *) return 1 ;;
