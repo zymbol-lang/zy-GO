@@ -54,7 +54,7 @@ Sigue la convención de [Serpiente](../serpiente/HALLAZGOS_ES.md) y
 | [HLZ-014](#hlz-014--pasar-una-colección-a-una-función-la-clona-entera) | **Bug de rendimiento** | En el tree-walker, pasar un array a una función lo clona entero, aunque la función no lo mire: 20 000 llamadas con 4 000 elementos son 10 s frente a 6 ms en la VM | **Corregido** |
 | [HLZ-015](#hlz-015--un-import-que-nadie-usa-no-produce-ningún-aviso) | Gap (aviso) | `<# ./版/思考v2 => 思2` nunca se nombra y ningún motor avisa; ocultaba que v2 era inalcanzable | **Corregido** (v0.0.10) |
 | [HLZ-016](#hlz-016--el-código-que-no-puede-ejecutarse-no-produce-ningún-aviso) | Gap (aviso) | Ni el código tras `<~` ni una rama de condición constante avisan; el bug del color de `_版選び` no lo habría atrapado ninguna regla estática | **Corregido** (v0.0.10) |
-| [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | Propuesta |
+| [IDEA-001](#idea-001--ancho-de-visualización-como-primitiva) | Idea | No hay forma directa de medir columnas de terminal de un string | **Implementada** 2026-07-24 — `std/term` (verificada 2026-10-21: `t::width("囲碁")` da 4 en `zytw` y `zyvm`) |
 | [IDEA-002](#idea-002--el-coste-numérico-decide-la-arquitectura-de-la-ia) | Medición | Números que descartan MCTS y redes neuronales en Zymbol actual | Aplicada |
 
 ---
