@@ -591,7 +591,7 @@ returns. `試験/api試験.zy` plays the same move under both names and compares
 board, the capture count and the ko point — including the output parameters of
 `着手`, which is where a broken re-export would show up first.
 
-This is the three-layer pattern from [I18N.md](../interpreter/I18N.md), applied
+This is the three-layer pattern from `zymbol-design/I18N.md`, applied
 to a real engine rather than a test fixture.
 
 **Vocabulary for the instruments** (`言語/道具.zy`) — `棋戦` and `集計` are not the

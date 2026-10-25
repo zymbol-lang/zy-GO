@@ -9,7 +9,7 @@ no sigue su propia doctrina de i18n.
 
 囲碁 es la implementación de referencia del proyecto Zymbol en esta materia — la
 doctrina extraída de aquí está escrita en
-[interpreter/USERAPPI18N.md](../interpreter/USERAPPI18N.md). Los tres hallazgos de
+`zymbol-design/USERAPPI18N.md`. Los tres hallazgos de
 abajo son los sitios donde la referencia no se cumple a sí misma.
 
 | ID | Tipo | Descripción | Estado |
@@ -125,7 +125,7 @@ abajo son los sitios donde la referencia no se cumple a sí misma.
   traducción más larga del español (`sin terminar (sin summary)`) alcanzaba
   exactamente, pegando el rótulo al número. Ahora se mide con `文::幅` sobre los
   cuatro rótulos del idioma activo — punto 8 de la lista de comprobación de
-  [USERAPPI18N.md](../interpreter/USERAPPI18N.md).
+  `zymbol-design/USERAPPI18N.md`.
 
 ---
 
@@ -204,7 +204,7 @@ abajo son los sitios donde la referencia no se cumple a sí misma.
   español. La documentación existe en japonés, inglés y español. Faltan el coreano y
   el mandarín, que son dos de los tres idiomas en los que el go se juega de verdad y
   la razón declarada de que el juego los incluya.
-- **Punto 14 de la lista** de [USERAPPI18N.md](../interpreter/USERAPPI18N.md): una
+- **Punto 14 de la lista** de `zymbol-design/USERAPPI18N.md`: una
   aplicación multiidioma cuya documentación es monolingüe —o parcial— está traducida
   a medias.
 - **Por qué queda abierto:** son dos traducciones largas, trabajo de traducción y no

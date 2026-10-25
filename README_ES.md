@@ -596,7 +596,7 @@ La arquitectura que se describe aquí está escrita como doctrina común en
 donde 囲碁 todavía no la cumple, lo dice [AUDITORIA_I18N_ES.md](AUDITORIA_I18N_ES.md).
 
 Es el
-patrón de tres capas de [I18N.md](../interpreter/I18N.md), aplicado a un motor
+patrón de tres capas de `zymbol-design/I18N.md`, aplicado a un motor
 real y no a un fixture de pruebas.
 
 ---

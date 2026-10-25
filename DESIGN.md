@@ -624,7 +624,7 @@ boolean through fifteen call sites instead; see
 ## 9. api/ — identifier-level API translation
 
 Pure re-export layers, no logic, no runtime cost — the three-layer pattern from
-[I18N.md](../interpreter/I18N.md) applied to a working engine:
+`zymbol-design/I18N.md` applied to a working engine:
 
 ```zymbol
 # .api_english {
