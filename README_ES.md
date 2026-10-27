@@ -61,8 +61,9 @@ cd zy-GO
 zymbol run 囲碁.zy
 ```
 
-> Ejecutar con el tree-walker (el predeterminado). La VM de registros (`--vm`)
-> solo tiene soporte parcial de módulos; ver [Limitaciones](#limitaciones).
+> Corre en la VM de registros, el motor predeterminado de Zymbol desde v0.0.11.
+> `zymbol run --tw 囲碁.zy` juega la misma partida en el tree-walker; ver
+> [Limitaciones](#limitaciones).
 
 ### Tamaño de terminal
 
@@ -617,7 +618,9 @@ real y no a un fixture de pruebas.
    `--vm` descartaba en silencio los parámetros de salida de funciones de módulo
    (HLZ-008) y no sabía cortar un String dentro de una (HLZ-009). Ambos están
    corregidos en el intérprete, y las seis suites —y el juego mismo— corren
-   idénticas bajo `zymbol run` y `zymbol run --vm`.
+   idénticas bajo `zymbol run --tw` y `zymbol run --vm`. Hay que nombrar el
+   motor: desde Zymbol v0.0.11 un `zymbol run` sin más es la VM, y antes era el
+   tree-walker.
 
 ---
 

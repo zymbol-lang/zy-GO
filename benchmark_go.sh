@@ -46,14 +46,16 @@ done
 
 # zyml, the OCaml engine, was retired 2026-08-17: BENCHMARK.md keeps its
 # numbers as the record of why (3.4x the VM at 19x19 even after copy-on-write).
-ZYJS=${ZYJS:-../zyquality/harness/js.mjs}
+# The JavaScript engine's runner is the one zyquality/engines.toml names.
+# Everything after `--` is the program's command line.
+ZYJS=${ZYJS:-../web/tests/run_one.mjs}
 
 engine_cmd() {                       # engine_cmd <id> <file> <args...>
   local id=$1; shift
   case "$id" in
     zytw) echo "zymbol run --tw $*" ;;
     zyvm) echo "zymbol run --vm $*" ;;
-    zyjs) echo "node $ZYJS $*" ;;
+    zyjs) local file=$1; shift; echo "node $ZYJS $file -- $*" ;;
     *) return 1 ;;
   esac
 }
@@ -95,7 +97,8 @@ for eng in "${ENGINE_LIST[@]}"; do
     # needs a terminal is not a benchmark.
     cmd=$(engine_cmd "$eng" "棋戦.zy" "$GAMES" "$board" "静")
     start=$(date +%s.%N)
-    timeout "$TIMEOUT" bash -c "$cmd" > "$log" 2>&1
+    # stdin closed: the JavaScript runner reads a piped stdin to its end.
+    timeout "$TIMEOUT" bash -c "$cmd" < /dev/null > "$log" 2>&1
     rc=$?
     end=$(date +%s.%N)
     secs=$(awk -v a="$start" -v b="$end" 'BEGIN{printf "%.1f", b-a}')

@@ -10,7 +10,8 @@
 # through printed no FAIL and passed — measured, not supposed. Since
 # 2026-09-29 each suite ends a failing run with `<~ 1` (IDEA-GOL-012), and
 # a crash exits non-zero anyway, so this reads the exit status instead. It
-# still runs the tree-walker only.
+# runs both Rust engines, each named by its flag: since Zymbol v0.0.11 a bare
+# `zymbol run` is the VM, and before it was the tree-walker.
 #
 # The gate is in ZyQuality, which compares each suite against a golden (a
 # truncated run does not match one) and runs every engine that can:
@@ -25,9 +26,10 @@ set -u
 cd "$(dirname "$0")/.."
 
 fallo=0
+for motor in --tw --vm; do
 for suite in 試験/文字試験.zy 試験/言語検証.zy 試験/api試験.zy 試験/盤試験.zy 試験/計算試験.zy 試験/思考試験.zy 試験/描画試験.zy 試験/棋譜試験.zy; do
-    echo "─── $suite"
-    salida=$(zymbol run "$suite" 2>&1)
+    echo "─── $motor $suite"
+    salida=$(zymbol run "$motor" "$suite" 2>&1)
     estado=$?
     echo "$salida" | tail -1
     if [ "$estado" -ne 0 ]; then
@@ -35,6 +37,7 @@ for suite in 試験/文字試験.zy 試験/言語検証.zy 試験/api試験.zy �
         fallo=1
     fi
     echo
+done
 done
 
 if [ "$fallo" -eq 0 ]; then
