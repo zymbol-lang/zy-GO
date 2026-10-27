@@ -534,6 +534,151 @@ Two things it taught while being written, both about `1..n`:
 
 ---
 
+## v0.0.11 — the optimization release, measured
+
+v0.0.11 is the release whose stated purpose is speed (the interpreter's
+`CHANGELOG.md`, *Performance*), so this section records what it did for this
+program. **Nothing in 囲碁 changed between the two measurements**: the same
+`核/`, the same `試験/自戦試験.zy`, two interpreters.
+
+**Name the engine.** Since v0.0.11 a bare `zymbol run` is the register VM; up
+to v0.0.10 it was the tree-walker. A command without `--tw` or `--vm` measures a
+different engine under each version, and the comparison comes out as a tenfold
+speedup that nobody made. Every command in this section names its engine.
+
+How it was measured, on 2026-10-27:
+
+- **Two builds, each from its own source and target directory.** v0.0.10 from
+  its tag with `cargo build --release -p zymbol-cli --no-default-features` (no
+  `std/db`, as its Linux release); v0.0.11 at `5d9d023`, before its tag, with
+  `cargo build --release` (no `std/db` by default since this release). `zyjs`
+  is `web` at its `v0.0.10` tag and at `66eabb7`, run by
+  `web/tests/run_one.mjs` under Node 24.16.
+- **The fixed-seed game, as an oracle first.** `試験/自戦試験.zy`, seed 424242,
+  on 9, 13 and 19. It held on every run: all three engines, under both
+  versions, played **the same game**, move for move — 103, 217 and 454 moves.
+- **The two versions in turn** (ABBA), seven runs each, five for `zyjs`; the
+  median of wall time. CPU time is within 1 % of it in the Rust engines.
+- AMD Ryzen 7 4800H, Linux 6.12.
+
+### Time — the VM of v0.0.11 is 1
+
+| engine | 9×9 | 13×13 | 19×19 |
+|--------|-----|-------|-------|
+| `--vm` v0.0.11 | **1** · 82 ms | **1** · 272 ms | **1** · 1.04 s |
+| `--vm` v0.0.10 | 1.30 · 106 ms | 1.44 · 392 ms | 1.47 · 1.53 s |
+| tree-walker v0.0.11 | 11.8 · 0.97 s | 14.0 · 3.80 s | 14.7 · 15.3 s |
+| tree-walker v0.0.10 | 12.3 · 1.00 s | 14.7 · 3.99 s | 15.6 · 16.2 s |
+| `zyjs` v0.0.11 | 61.8 · 5.06 s | 71.8 · 19.5 s | 76.1 · 79.2 s |
+| `zyjs` v0.0.10 | 61.2 · 5.02 s | 71.1 · 19.3 s | 74.7 · 77.7 s |
+
+Version over version: the VM **×1.30 · ×1.44 · ×1.47**, the tree-walker ×1.04 ·
+×1.05 · ×1.06, `zyjs` ×0.99 · ×0.99 · ×0.98. At 19×19 the ranges of the seven
+runs do not overlap for either Rust engine (VM 1489–1581 ms against
+1014–1123 ms); for `zyjs` they do.
+
+### What changed underneath — `--count`
+
+Exact, the same on every run, and comparable because the game is the same:
+
+| | 9×9 | 13×13 | 19×19 |
+|---|-----|-------|-------|
+| `--vm` steps | 9.46 M → 6.89 M (−27 %) | 41.1 M → 29.3 M (−29 %) | 176.4 M → 122.8 M (−30 %) |
+| `--vm` allocations | 427 k → 239 k (−44 %) | 1.54 M → 0.75 M (−51 %) | 6.24 M → 2.67 M (−57 %) |
+| `--vm` bytes allocated | 39 MB → 26 MB (−34 %) | 129 MB → 84 MB (−34 %) | 610 MB → 421 MB (−31 %) |
+| tree-walker steps | 8.19 M → 8.12 M (−1 %) | 34.9 M → 34.6 M (−1 %) | 146.7 M → 145.8 M (−1 %) |
+| tree-walker allocations | 6.51 M → 6.48 M (0 %) | 24.5 M → 24.5 M (0 %) | 94.4 M → 94.4 M (0 %) |
+| tree-walker bytes allocated | 604 MB → 374 MB (−38 %) | 2.37 GB → 1.38 GB (−42 %) | 9.95 GB → 5.29 GB (−47 %) |
+
+Calls (148 444 · 553 207 · 2 077 200) and aggregates copied are identical in
+both versions: the same work, done cheaper.
+
+**The VM is where the release went, and its gain grows with the board.** That
+is the shape of a cost per operation coming down, not of a constant at start-up
+going away. A third of the steps are gone — the changelog names the
+instructions: a counted loop and a for-each close each pass in one
+(`RangeStep`, `IterStep`), and a call pushes its frame inline. More than half
+the allocations are gone too; which change took them away was not separated.
+
+**The tree-walker moves half the bytes and gains 5 %.** Its `Value` went from
+120 bytes to 24 (ZYTW-019), so each of the same 94 million allocations is
+smaller, but the number of allocations and of steps is unchanged, and the time
+follows the number, not the size. The gap to the VM at 19×19 therefore widens,
+from 10.6× to **14.7×**.
+
+**`zyjs` is where it was.** Its changes in this release are mostly about
+correctness — the two about cost are a dictionary's lookup (GLB-132) and an
+append that copied its receiver (ZYJS-068) — and it comes out 1–2 % slower on
+all three boards; at 19×19 the ranges overlap, and the
+cause was not looked for. It plays this game 62–76× slower than the VM, a ratio
+that grows with the board.
+
+### Memory
+
+Peak RSS, one run each:
+
+| engine | 9×9 | 13×13 | 19×19 | `>> 1 ¶` |
+|--------|-----|-------|-------|----------|
+| `--vm` v0.0.10 | 8.6 MB | 8.8 MB | 8.7 MB | 7.1 MB |
+| `--vm` v0.0.11 | 9.3 MB | 9.3 MB | 9.2 MB | 7.0 MB |
+| tree-walker v0.0.10 | 9.6 MB | 9.9 MB | 9.6 MB | 6.6 MB |
+| tree-walker v0.0.11 | 10.3 MB | 10.4 MB | 10.1 MB | 6.5 MB |
+| `zyjs` v0.0.10 (Node) | 163 MB | 228 MB | 240 MB | |
+| `zyjs` v0.0.11 (Node) | 159 MB | 228 MB | 246 MB | |
+
+Flat with the board in the Rust engines: a game's state is small next to the
+interpreter. v0.0.11 takes about 0.6 MB more to run this program, the same on
+every board; it is not in `zymbol check` (+80 KB) and not in a one-line program
+(−0.1 MB). A fixed cost of running it, cause not identified.
+
+The instrument matters here. A child started from Python inherits Python's own
+peak (~13.7 MB) through `fork` and `exec`, and the interpreter peaks below
+that, so every Rust run read the same 13 760 KB. These figures come from a
+static launcher of 1.3 MB that does `fork`, `exec` and `wait4` and nothing else.
+`zyjs`, well above the floor, is unaffected.
+
+### 棋戦 and the browser
+
+The table in *All four engines* below records `zyjs` **rejecting** `棋戦.zy`,
+under v0.0.8. It no longer does: it starts the program and stops at the first
+shell command —
+
+```
+Runtime error: cannot run 'printenv ZYGO_KIFU': a shell command runs as a process, and the browser has none
+```
+
+`棋戦` reads its directory from the environment, times itself through `date`
+and reads its memory through `ps`. That is a property of the harness, not of
+the engine, and the reason a comparison between versions is made with
+`自戦試験.zy`, which needs no shell and no clock. `benchmark_go.sh` reports it
+as `failed`. Until 2026-10-27 the script looked for the engine at
+`../zyquality/harness/js.mjs`, which had stopped existing, and reported it as
+*not available*; it now uses `../web/tests/run_one.mjs`, the runner
+`zyquality/engines.toml` names.
+
+### To reproduce
+
+```bash
+# from interpreter/: one build per version, each in its own directories
+mkdir -p /tmp/v0010 /tmp/v0011
+git archive v0.0.10 | tar -x -C /tmp/v0010
+(cd /tmp/v0010 && CARGO_TARGET_DIR=/tmp/t0010 \
+   cargo build --release -p zymbol-cli --no-default-features)
+git archive 5d9d023 | tar -x -C /tmp/v0011
+(cd /tmp/v0011 && CARGO_TARGET_DIR=/tmp/t0011 cargo build --release)
+
+# from GO/: always name the engine, and alternate the two binaries
+/tmp/t0010/release/zymbol run --vm 試験/自戦試験.zy 19
+/tmp/t0011/release/zymbol run --vm 試験/自戦試験.zy 19
+/tmp/t0011/release/zymbol run --vm --count 試験/自戦試験.zy 19   # steps, calls, allocs, bytes
+```
+
+The tables further down were taken on other days against other builds, and are
+not compared with these: two days move the machine by more than some of the
+differences above.
+
+---
+
 ## v0.0.9 — what got faster, and how it was measured
 
 The numbers further down this document were measured against the v0.0.8 engine.
@@ -550,7 +695,7 @@ that listing changes if a single move changes. Every number in the table below
 was taken with the before and after games **byte-identical**.
 
 ```bash
-zymbol run 試験/自戦試験.zy            # 9×9, seed 424242
+zymbol run --tw 試験/自戦試験.zy       # 9×9, seed 424242
 zymbol run --vm 試験/自戦試験.zy 19    # 19×19
 ```
 
