@@ -550,7 +550,7 @@ How it was measured, on 2026-10-27:
 
 - **Two builds, each from its own source and target directory.** v0.0.10 from
   its tag with `cargo build --release -p zymbol-cli --no-default-features` (no
-  `std/db`, as its Linux release); v0.0.11 at `5d9d023`, before its tag, with
+  `std/db`, as its Linux release); v0.0.11 at `5d9369e`, before its tag, with
   `cargo build --release` (no `std/db` by default since this release). `zyjs`
   is `web` at its `v0.0.10` tag and at `66eabb7`, run by
   `web/tests/run_one.mjs` under Node 24.16.
@@ -664,7 +664,7 @@ mkdir -p /tmp/v0010 /tmp/v0011
 git archive v0.0.10 | tar -x -C /tmp/v0010
 (cd /tmp/v0010 && CARGO_TARGET_DIR=/tmp/t0010 \
    cargo build --release -p zymbol-cli --no-default-features)
-git archive 5d9d023 | tar -x -C /tmp/v0011
+git archive 5d9369e | tar -x -C /tmp/v0011
 (cd /tmp/v0011 && CARGO_TARGET_DIR=/tmp/t0011 cargo build --release)
 
 # from GO/: always name the engine, and alternate the two binaries

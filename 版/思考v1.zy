@@ -2,7 +2,7 @@
 // 版/思考v1.zy — 凍結した engine、第一版
 //
 // これは 核/思考.zy を v0.0.8 の姿のまま写し取ったものである
-// （zy-GO の da936dc）。**もう変えない。** 手を入れるべき engine は
+// （zy-GO の 7208789）。**もう変えない。** 手を入れるべき engine は
 // 核/思考.zy であって、こちらではない。
 //
 // なぜ在るのか。改良したと言うためには、改良する前と打ち合わせて
@@ -22,7 +22,7 @@
 //
 // EN: 版/思考v1.zy — the first engine, frozen
 //
-// A copy of 核/思考.zy exactly as it stood at v0.0.8 (zy-GO da936dc).
+// A copy of 核/思考.zy exactly as it stood at v0.0.8 (zy-GO 7208789).
 // **It is never edited again.** The engine to improve is 核/思考.zy.
 //
 // Why it exists: the only way to say an engine got better is to play

@@ -79,7 +79,7 @@ esperando la entrada real.
   (`表示/描画.zy:340-341` lee `設定[7]` cuando juega blanco): la pantalla dice
   «v3» mientras blanco piensa con v1.
 - **Origen:** no es un refactor que dejara atrás a la función. `_版選び` nació
-  en f893081 (2026-09-01, *Choose the engine per colour*), **el mismo commit**
+  en 5183dcc (2026-09-01, *Choose the engine per colour*), **el mismo commit**
   que creó `設定[7]` y el selector de blanco, y ya entonces leía solo
   `設定[6]`. La rama `版 == 0` es el resto del diseño anterior, un selector
   único con «v1 contra v2», que el commit reemplazó en el menú y no en la
@@ -111,7 +111,7 @@ esperando la entrada real.
 - **Por qué no lo vio ninguna herramienta:** HLZ-015. Desde el 2026-09-27
   los tres motores avisan `import '思2' is never used`; con la línea del
   despacho puesta, ya no hay nada que avisar.
-- **Origen:** 4972446 (2026-09-02, *v3: defend a chain at two liberties*). Al
+- **Origen:** 56f7c63 (2026-09-02, *v3: defend a chain at two liberties*). Al
   llegar v3 se congeló v2 en `版/思考v2.zy`, se añadieron su import y el `2`
   del menú (`版一覧 = [3, 2, 1]`), y faltó la línea del despacho, que es
   justo lo que el comentario de `_設定画面` pide: *«Adding a version is one
