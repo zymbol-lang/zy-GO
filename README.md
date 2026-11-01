@@ -64,8 +64,9 @@ cd zy-GO
 zymbol run 囲碁.zy
 ```
 
-> Run with the tree-walker (the default). The register VM (`--vm`) has only
-> partial module support; see [Limitations](#limitations).
+> Runs under the register VM, Zymbol's default engine since v0.0.11.
+> `zymbol run --tw 囲碁.zy` plays the same game under the tree-walker; see
+> [Limitations](#limitations).
 
 ### Terminal size
 
@@ -591,7 +592,7 @@ returns. `試験/api試験.zy` plays the same move under both names and compares
 board, the capture count and the ko point — including the output parameters of
 `着手`, which is where a broken re-export would show up first.
 
-This is the three-layer pattern from [I18N.md](../interpreter/I18N.md), applied
+This is the three-layer pattern from `zymbol-design/I18N.md`, applied
 to a real engine rather than a test fixture.
 
 **Vocabulary for the instruments** (`言語/道具.zy`) — `棋戦` and `集計` are not the
@@ -624,7 +625,8 @@ so.
    silently dropped output parameters of module functions (HLZ-008) and could
    not slice a String inside one (HLZ-009). Both are fixed in the interpreter,
    and all six suites — plus the game itself — now run identically under
-   `zymbol run` and `zymbol run --vm`.
+   `zymbol run --tw` and `zymbol run --vm`. Name the engine: since Zymbol
+   v0.0.11 a bare `zymbol run` is the VM, and before it was the tree-walker.
 
 ---
 
