@@ -516,6 +516,10 @@ captures black={黒取} white={白取}
         // first.
         ? 設定[5] == 2 {
             _全描画(局面, 設定, 状況, 配置, 上, 左, 側上, 側左, 下行, 状行, 行, 列, 言::語("報せ.考慮中"))
+            // 考える前に見せる。思考は何も待たないので、`@~ 0` で今の画面を出す。
+            // EN: Show it before thinking: the search waits for nothing, so `@~ 0`
+            // puts the screen up now (GAP-ZYE-015).
+            @~ 0
             _思考一手(局面<~, 設定, 状況<~, 伝言<~, 控<~)
         }
         _全描画(局面, 設定, 状況, 配置, 上, 左, 側上, 側左, 下行, 状行, 行, 列, 伝言)
@@ -583,6 +587,10 @@ captures black={黒取} white={白取}
 
                         ? 状況[1] <> 設定[5] {
                             描::状態描画(言::語("報せ.考慮中"), 状行, 左, 路)
+                            // 考える前に見せる。思考は何も待たないので、`@~ 0` で今の画面を出す。
+                            // EN: Show it before thinking: the search waits for nothing, so `@~ 0`
+                            // puts the screen up now (GAP-ZYE-015).
+                            @~ 0
                             _思考一手(局面<~, 設定, 状況<~, 伝言<~, 控<~)
                             ? 規則::終局(状況[7]) {
                                 _棋譜尾(控<~, 局面, 設定, 状況, 0, #0)
@@ -613,6 +621,10 @@ captures black={黒取} white={白取}
                     }
                     ? 状況[1] <> 設定[5] {
                         描::状態描画(言::語("報せ.考慮中"), 状行, 左, 路)
+                        // 考える前に見せる。思考は何も待たないので、`@~ 0` で今の画面を出す。
+                        // EN: Show it before thinking: the search waits for nothing, so `@~ 0`
+                        // puts the screen up now (GAP-ZYE-015).
+                        @~ 0
                         _思考一手(局面<~, 設定, 状況<~, 伝言<~, 控<~)
                         ? 規則::終局(状況[7]) {
                             _棋譜尾(控<~, 局面, 設定, 状況, 0, #0)
