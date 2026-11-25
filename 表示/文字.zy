@@ -45,12 +45,12 @@
         切詰
     }
 
-    // 一文字の Unicode 符号位置。v0.0.12 から 0d|文字| が Char を
+    // 一文字の Unicode 符号位置。v0.0.12 から #|文字| が Char を
     // その符号位置（Int）へ直に変換する。v0.0.8〜v0.0.11 は ##! だった。
     //
-    // EN: Unicode code point of a character. Since v0.0.12 0d|c| gives
+    // EN: Unicode code point of a character. Since v0.0.12 #|c| gives
     // a Char's code point as an Int; it was ##! from v0.0.8 to v0.0.11.
-    符号点(文字) { <~ 0d|文字| }
+    符号点(文字) { <~ #|文字| }
 
     // 文字列の表示幅、端末の桁で。
     // EN: Display width of a string, in terminal columns.
